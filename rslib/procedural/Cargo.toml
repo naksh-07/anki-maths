@@ -1,0 +1,21 @@
+[package]
+name = "procedural"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+rust-version.workspace = true
+workspace = "../.."
+description = "Procedural practice engine subsystem for multi-domain problem generation and learning state"
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+rand.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true

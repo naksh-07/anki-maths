@@ -13,9 +13,11 @@ import { imageOcclusionAPI } from "$lib/../routes/image-occlusion/review";
 
 import { mutateNextCardStates } from "./answering";
 import { addBrowserClasses } from "./browser_selector";
+import { proceduralAPI } from "./procedural";
 
 globalThis.anki = globalThis.anki || {};
 globalThis.anki.mutateNextCardStates = mutateNextCardStates;
 globalThis.anki.imageOcclusion = imageOcclusionAPI;
 globalThis.anki.setupImageCloze = imageOcclusionAPI.setup; // deprecated
+globalThis.anki.procedural = proceduralAPI;
 globalThis.anki.addBrowserClasses = addBrowserClasses;

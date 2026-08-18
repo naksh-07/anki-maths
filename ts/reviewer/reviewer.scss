@@ -135,3 +135,273 @@ button {
 .nightMode img.drawing {
     filter: string.unquote("invert(1) hue-rotate(180deg)");
 }
+
+/* =========================================================================
+ * Procedural Card & Exam Reviewer Experience
+ * Built with native Anki design tokens
+ * ========================================================================= */
+
+.procedural-card-container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 24px;
+    background: var(--canvas-elevated, #ffffff);
+    color: var(--fg, #1f2937);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--border-radius-medium, 12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    box-sizing: border-box;
+    transition: background-color var(--transition-default, 180ms), color var(--transition-default, 180ms);
+}
+
+.nightMode .procedural-card-container {
+    background: var(--canvas-elevated, #24272e);
+    color: var(--fg, #d7dae0);
+    border-color: var(--border, #3b4048);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.proc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+}
+
+.proc-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.proc-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--canvas-inset, #e0e7ff);
+    color: var(--fg-link, #3730a3);
+    border: 1px solid var(--border, rgba(59, 130, 246, 0.3));
+    padding: 4px 10px;
+    border-radius: 9999px;
+}
+
+.proc-diff-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(245, 158, 11, 0.15);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.nightMode .proc-diff-badge {
+    background: rgba(245, 158, 11, 0.25);
+    color: #fcd34d;
+}
+
+.proc-variant-tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    background: var(--canvas-inset, #f3f4f6);
+    color: var(--fg-subtle, #4b5563);
+    border: 1px solid var(--border, #d1d5db);
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.proc-timer {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--fg-subtle, #4b5563);
+}
+
+.proc-prompt {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    white-space: pre-wrap;
+}
+
+.proc-mode-switch {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.proc-tab {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--button-bg, #f3f4f6);
+    border: 1px solid var(--border, #d1d5db);
+    border-radius: var(--border-radius-default, 5px);
+    cursor: pointer;
+    color: var(--fg, #4b5563);
+    transition: all var(--transition-default, 180ms);
+}
+
+.proc-tab:hover {
+    border-color: var(--button-hover-border, #9ca3af);
+}
+
+.proc-tab.active {
+    background: var(--button-primary-bg, #2563eb);
+    color: #ffffff;
+    border-color: var(--button-primary-bg, #2563eb);
+}
+
+.proc-step-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.proc-step-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    width: 60px;
+    color: var(--fg-subtle, #6b7280);
+    flex-shrink: 0;
+}
+
+.proc-input {
+    flex: 1;
+    padding: 10px 14px;
+    font-size: 1rem;
+    background: var(--canvas-inset, #ffffff);
+    color: var(--fg, #111827);
+    border: 1px solid var(--border, #d1d5db);
+    border-radius: var(--border-radius-default, 5px);
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color var(--transition-default, 180ms);
+}
+
+.proc-input:focus {
+    border-color: var(--border-focus, #3b82f6);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.proc-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.proc-btn {
+    padding: 9px 18px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: var(--button-primary-bg, #2563eb);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--border-radius-default, 5px);
+    cursor: pointer;
+    transition: opacity var(--transition-default, 180ms);
+}
+
+.proc-btn:hover {
+    opacity: 0.9;
+}
+
+.proc-btn-secondary {
+    background: var(--button-bg, #f3f4f6);
+    color: var(--fg, #374151);
+    border: 1px solid var(--border, #d1d5db);
+}
+
+.proc-btn-secondary:hover {
+    background: var(--canvas-inset, #e5e7eb);
+    border-color: var(--button-hover-border, #9ca3af);
+}
+
+.proc-hint-box {
+    margin-top: 12px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: var(--canvas-inset, #eff6ff);
+    border-left: 4px solid var(--border-focus, #3b82f6);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--fg, #1e40af);
+}
+
+.proc-hint-meta {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+
+.proc-result {
+    margin-top: 20px;
+    padding: 16px;
+    border-radius: var(--border-radius-default, 6px);
+    animation: procFadeIn 0.3s ease-in;
+}
+
+.proc-result.correct {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #065f46;
+}
+
+.nightMode .proc-result.correct {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.5);
+    color: #6ee7b7;
+}
+
+.proc-result.incorrect {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #991b1b;
+}
+
+.nightMode .proc-result.incorrect {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+}
+
+.proc-solution {
+    margin-top: 14px;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: var(--border-radius-default, 6px);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.nightMode .proc-solution {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.proc-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    margin-top: 6px;
+    opacity: 0.9;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@keyframes procFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
