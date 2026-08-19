@@ -9,6 +9,95 @@ import { bridgeCommand } from "@tslib/bridgecommand";
 
 declare const MathJax: any;
 
+export type ProceduralUIState =
+    | "loading"
+    | "ready"
+    | "solving"
+    | "hint"
+    | "submitting"
+    | "feedback"
+    | "worked_example"
+    | "next"
+    | "error"
+    | "teardown";
+
+export type LearningObjectKind =
+    | "problem"
+    | "concept_check"
+    | "strategy_drill"
+    | "worked_example"
+    | "declarative_recall"
+    | "prerequisite_review";
+
+export interface ConceptCheckOptionData {
+    id: string;
+    label: string;
+    is_correct: boolean;
+    concept_tag: string;
+    feedback: string;
+}
+
+export interface ConceptCheckData {
+    id?: string;
+    prompt: string;
+    context?: string;
+    options: ConceptCheckOptionData[];
+    expected_option_id: string;
+    explanation?: string;
+}
+
+export interface StrategyOptionData {
+    id: string;
+    label: string;
+    strategy_tag: string;
+    is_optimal: boolean;
+    feedback: string;
+}
+
+export interface StrategyDrillData {
+    id?: string;
+    prompt: string;
+    problem_context: string;
+    options: StrategyOptionData[];
+    preferred_option_id: string;
+    explanation?: string;
+}
+
+export interface WorkedExampleData {
+    id?: string;
+    prompt: string;
+    problem_context: string;
+    canonical_steps: string[];
+    highlighted_decision_point: string;
+    method_rationale: string;
+    common_mistakes_to_avoid?: string[];
+}
+
+export interface DeclarativeRecallData {
+    id?: string;
+    concept_name: string;
+    prompt_summary: string;
+    formula_or_fact: string;
+    target_anki_card_id?: number | null;
+    target_anki_tag?: string | null;
+}
+
+export interface PrerequisiteReviewData {
+    id?: string;
+    advisory_message: string;
+    recommendation_summary?: string;
+    primary_missing_prerequisite?: string;
+    executable_schema_id?: string;
+}
+
+export interface ContentProvenanceData {
+    exam?: string;
+    year?: number;
+    shift?: string;
+    paper?: string;
+    variant_type?: "practice" | "structural" | "transfer" | "authentic" | string;
+}
+
 export interface ProceduralSolutionStep {
     id?: string;
     description: string;
@@ -30,21 +119,31 @@ export interface ProceduralSetupOptions {
     instanceId: string;
     familyId: string;
     targetTimeMs: number;
-    correctAnswer: Record<string, any>;
+    correctAnswer?: Record<string, any>;
     parameters?: Record<string, any>;
     solutionGraph?: ProceduralSolutionGraph | null;
+    objectType?: LearningObjectKind;
+    conceptCheck?: ConceptCheckData | null;
+    strategyDrill?: StrategyDrillData | null;
+    workedExample?: WorkedExampleData | null;
+    declarativeRecall?: DeclarativeRecallData | null;
+    prerequisiteReview?: PrerequisiteReviewData | null;
+    provenance?: ContentProvenanceData | null;
+    remediationMessage?: string | null;
     onCompleted?: (result: ProceduralAttemptResult) => void;
 }
 
 export interface ProceduralAttemptResult {
     instanceId: string;
     answer: string;
-    mode: "quick" | "stepwise";
+    mode: "quick" | "stepwise" | "concept_check" | "strategy_drill" | "worked_example" | "declarative_recall" | "prerequisite_review";
     steps: string[];
     hintsUsed: number;
     timeTakenMs: number;
     isCorrect: boolean;
     score: number;
+    selectedOptionId?: string;
+    speedQuadrant?: "fluency_strength" | "speed_opportunity" | "strategy_trap" | "concept_setup";
 }
 
 export class ProceduralReviewer {
@@ -52,12 +151,13 @@ export class ProceduralReviewer {
     private options: ProceduralSetupOptions;
     private startTime: number;
     private timerInterval: any = null;
-    private isSubmitted = false;
+    private state: ProceduralUIState = "loading";
     private hintsUsed = 0;
     private hintTimestamps: number[] = [];
     private activeMode: "quick" | "stepwise" = "quick";
     private disposables: Array<() => void> = [];
     private focusTimeout: any = null;
+    private selectedOptionId: string | null = null;
 
     // DOM Elements
     private timerEl: HTMLElement | null = null;
@@ -83,9 +183,15 @@ export class ProceduralReviewer {
         this.container = container;
         this.options = options;
         this.startTime = Date.now();
+        this.state = "ready";
         this.bindElements();
         this.attachEventListeners();
         this.startTimer();
+        this.state = "solving";
+    }
+
+    public getState(): ProceduralUIState {
+        return this.state;
     }
 
     private bindElements(): void {
@@ -141,18 +247,63 @@ export class ProceduralReviewer {
         this.addListener(this.hintBtn, "click", () => this.requestHint());
         this.addListener(this.checkStepsBtn, "click", () => this.handleStepwiseSubmit());
 
-        // Next problem button
+        // Structured option items (ConceptCheck, StrategyDrill)
+        const optionItems = this.container.querySelectorAll<HTMLElement>(".proc-option-item");
+        optionItems.forEach((optEl) => {
+            const optId = optEl.dataset.optId || "";
+            this.addListener(optEl, "click", () => this.selectOption(optId, optEl));
+            this.addListener(optEl, "keydown", (e: KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    this.selectOption(optId, optEl);
+                }
+            });
+        });
+
+        // Keyboard option number keys (1-4) for quick accessible selection in option lists
+        this.addListener(this.container, "keydown", (e: KeyboardEvent) => {
+            if (this.state !== "solving") return;
+            const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+            if (targetTag === "input" || targetTag === "textarea") return;
+
+            const keyNum = parseInt(e.key, 10);
+            if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= optionItems.length) {
+                const targetOpt = optionItems[keyNum - 1];
+                if (targetOpt) {
+                    const optId = targetOpt.dataset.optId || "";
+                    this.selectOption(optId, targetOpt);
+                }
+            }
+        });
+
+        // WorkedExample "Try Similar" button
+        const trySimilarBtn = this.container.querySelector<HTMLButtonElement>("#proc-try-similar-btn");
+        this.addListener(trySimilarBtn, "click", () => this.handleTrySimilar());
+
+        // DeclarativeRecall "Review in Anki" button
+        const recallBtn = this.container.querySelector<HTMLButtonElement>("#proc-anki-recall-btn");
+        this.addListener(recallBtn, "click", () => this.handleDeclarativeRecallAction());
+
+        // Prerequisite "Practice Prerequisite" button
+        const prereqBtn = this.container.querySelector<HTMLButtonElement>("#proc-practice-prereq-btn");
+        this.addListener(prereqBtn, "click", () => this.handlePracticePrerequisite());
+
+        // Next problem / continue button
         this.addListener(this.nextBtn, "click", () => this.handleNext());
 
-        // Auto-focus initial input
+        // Auto-focus initial input or first option
         this.focusTimeout = setTimeout(() => {
-            this.quickInput?.focus();
+            if (this.quickInput) {
+                this.quickInput.focus();
+            } else if (optionItems.length > 0) {
+                optionItems[0].focus();
+            }
         }, 50);
     }
 
     private startTimer(): void {
         this.timerInterval = setInterval(() => {
-            if (this.isSubmitted) return;
+            if (this.state === "feedback" || this.state === "next" || this.state === "teardown") return;
             const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
             const m = String(Math.floor(elapsed / 60)).padStart(2, "0");
             const s = String(elapsed % 60).padStart(2, "0");
@@ -163,7 +314,7 @@ export class ProceduralReviewer {
     }
 
     public switchMode(mode: "quick" | "stepwise"): void {
-        if (this.isSubmitted) return;
+        if (this.state !== "solving") return;
         this.activeMode = mode;
         if (mode === "quick") {
             this.tabQuickBtn?.classList.add("active");
@@ -182,7 +333,7 @@ export class ProceduralReviewer {
     }
 
     public addStepRow(): void {
-        if (!this.stepsList || this.isSubmitted) return;
+        if (!this.stepsList || this.state !== "solving") return;
         const currentCount = this.stepsList.querySelectorAll(".proc-step-row").length;
         const stepNum = currentCount + 1;
 
@@ -201,7 +352,7 @@ export class ProceduralReviewer {
     }
 
     public resetSteps(): void {
-        if (!this.stepsList || this.isSubmitted) return;
+        if (!this.stepsList || this.state !== "solving") return;
         this.stepsList.innerHTML = `
             <div class="proc-step-row" data-step-idx="0">
                 <span class="proc-step-label">Step 1</span>
@@ -217,9 +368,10 @@ export class ProceduralReviewer {
     }
 
     public requestHint(): void {
-        if (this.isSubmitted) return;
+        if (this.state !== "solving") return;
         this.hintsUsed += 1;
         this.hintTimestamps.push(Date.now() - this.startTime);
+        this.state = "hint";
 
         let hintText = "";
         const graph = this.options.solutionGraph;
@@ -246,10 +398,71 @@ export class ProceduralReviewer {
             this.typesetMathJax(this.hintBox);
         }
 
+        this.state = "solving";
+
         bridgeCommand(`procedural_hint:${JSON.stringify({
             instance_id: this.options.instanceId,
             hint_level: this.hintsUsed,
         })}`);
+    }
+
+    public selectOption(optId: string, optEl: HTMLElement): void {
+        if (this.state !== "solving") return;
+        this.selectedOptionId = optId;
+        this.state = "submitting";
+
+        const allOpts = this.container.querySelectorAll<HTMLElement>(".proc-option-item");
+        allOpts.forEach((el) => {
+            el.classList.remove("selected");
+            el.setAttribute("aria-checked", "false");
+            el.classList.add("disabled");
+        });
+
+        optEl.classList.add("selected");
+        optEl.setAttribute("aria-checked", "true");
+
+        // Evaluate ConceptCheck or StrategyDrill
+        let isCorrect = false;
+        let feedbackText = "";
+        let expectedId = "";
+
+        if (this.options.conceptCheck) {
+            const cc = this.options.conceptCheck;
+            expectedId = cc.expected_option_id;
+            const chosen = cc.options.find((o) => o.id === optId);
+            isCorrect = chosen ? chosen.is_correct : false;
+            feedbackText = chosen?.feedback || (isCorrect ? "Correct concept understanding." : "Misconception detected.");
+        } else if (this.options.strategyDrill) {
+            const sd = this.options.strategyDrill;
+            expectedId = sd.preferred_option_id;
+            const chosen = sd.options.find((o) => o.id === optId);
+            isCorrect = chosen ? chosen.is_optimal : false;
+            feedbackText = chosen?.feedback || (isCorrect ? "Optimal strategy selected." : "Suboptimal method chosen.");
+        }
+
+        // Color options
+        allOpts.forEach((el) => {
+            const id = el.dataset.optId;
+            if (id === expectedId) {
+                el.classList.add("correct");
+            } else if (id === optId && !isCorrect) {
+                el.classList.add("incorrect");
+            }
+        });
+
+        const evalResult = {
+            isCorrect,
+            reason: feedbackText,
+            score: isCorrect ? 1.0 : 0.0,
+        };
+
+        const mode = this.options.conceptCheck
+            ? "concept_check"
+            : this.options.strategyDrill
+            ? "strategy_drill"
+            : "quick";
+
+        this.finishAttempt(evalResult, { answer: optId, steps: [] }, mode);
     }
 
     public parseNumericValue(val: string | null | undefined): number | null {
@@ -297,16 +510,50 @@ export class ProceduralReviewer {
         };
     }
 
+    public computeSpeedQuadrant(isCorrect: boolean, timeTakenMs: number, targetTimeMs: number): {
+        quadrant: "fluency_strength" | "speed_opportunity" | "strategy_trap" | "concept_setup";
+        label: string;
+        className: string;
+    } {
+        const isFast = timeTakenMs <= targetTimeMs;
+        if (isCorrect && isFast) {
+            return {
+                quadrant: "fluency_strength",
+                label: "⚡ Fluency Strength (Accurate & Fast)",
+                className: "proc-speed-quadrant proc-speed-fast-correct",
+            };
+        } else if (isCorrect && !isFast) {
+            return {
+                quadrant: "speed_opportunity",
+                label: "⏱ Speed Opportunity (Accurate but Slow)",
+                className: "proc-speed-quadrant proc-speed-slow-correct",
+            };
+        } else if (!isCorrect && isFast) {
+            return {
+                quadrant: "strategy_trap",
+                label: "⚠️ Check Strategy / Trap (Fast but Incorrect)",
+                className: "proc-speed-quadrant proc-speed-fast-wrong",
+            };
+        } else {
+            return {
+                quadrant: "concept_setup",
+                label: "💡 Review Concept / Setup (Slow & Incorrect)",
+                className: "proc-speed-quadrant proc-speed-slow-wrong",
+            };
+        }
+    }
+
     private handleQuickSubmit(): void {
         const answer = this.quickInput?.value.trim() || "";
-        if (!answer || this.isSubmitted) return;
+        if (!answer || this.state !== "solving") return;
 
+        this.state = "submitting";
         const evalResult = this.evaluateLocally(answer);
-        this.finishAttempt(evalResult, { answer, steps: [] });
+        this.finishAttempt(evalResult, { answer, steps: [] }, "quick");
     }
 
     private handleStepwiseSubmit(): void {
-        if (this.isSubmitted || !this.stepsList) return;
+        if (this.state !== "solving" || !this.stepsList) return;
         const stepInputs = this.stepsList.querySelectorAll<HTMLInputElement>(".proc-step-input");
         const steps: string[] = [];
 
@@ -316,15 +563,17 @@ export class ProceduralReviewer {
         });
 
         const lastAnswer = steps.length > 0 ? steps[steps.length - 1] : "";
+        this.state = "submitting";
         const evalResult = this.evaluateLocally(lastAnswer);
-        this.finishAttempt(evalResult, { answer: lastAnswer, steps });
+        this.finishAttempt(evalResult, { answer: lastAnswer, steps }, "stepwise");
     }
 
     private finishAttempt(
         outcome: { isCorrect: boolean; reason?: string; score: number },
         data: { answer: string; steps: string[] },
+        mode: "quick" | "stepwise" | "concept_check" | "strategy_drill" | "worked_example" | "declarative_recall" | "prerequisite_review" = "quick",
     ): void {
-        this.isSubmitted = true;
+        this.state = "feedback";
         clearInterval(this.timerInterval);
         const timeTakenMs = Date.now() - this.startTime;
 
@@ -334,8 +583,13 @@ export class ProceduralReviewer {
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
         this.resultPanel?.classList.remove("hidden");
 
+        const quadrantInfo = this.computeSpeedQuadrant(outcome.isCorrect, timeTakenMs, this.options.targetTimeMs);
+
         if (this.actualTimeEl) {
-            this.actualTimeEl.innerHTML = `<strong>Actual Time:</strong> ${(timeTakenMs / 1000).toFixed(1)}s`;
+            this.actualTimeEl.innerHTML = `
+                <div><strong>Actual Time:</strong> ${(timeTakenMs / 1000).toFixed(1)}s</div>
+                <div class="${quadrantInfo.className}">${quadrantInfo.label}</div>
+            `;
         }
 
         if (this.resultPanel) {
@@ -364,12 +618,14 @@ export class ProceduralReviewer {
         const attemptResult: ProceduralAttemptResult = {
             instanceId: this.options.instanceId,
             answer: data.answer,
-            mode: this.activeMode,
+            mode,
             steps: data.steps,
             hintsUsed: this.hintsUsed,
             timeTakenMs,
             isCorrect: outcome.isCorrect,
             score: outcome.score,
+            selectedOptionId: this.selectedOptionId || undefined,
+            speedQuadrant: quadrantInfo.quadrant,
         };
 
         if (this.options.onCompleted) {
@@ -378,9 +634,39 @@ export class ProceduralReviewer {
 
         // Bridge notification for Python/Qt backend telemetry recording
         bridgeCommand(`procedural_attempt:${JSON.stringify(attemptResult)}`);
+
+        // Focus next button
+        this.nextBtn?.focus();
+    }
+
+    public handleTrySimilar(): void {
+        this.state = "worked_example";
+        bridgeCommand(`procedural_try_similar:${JSON.stringify({
+            instance_id: this.options.instanceId,
+            family_id: this.options.familyId,
+        })}`);
+    }
+
+    public handleDeclarativeRecallAction(): void {
+        const recall = this.options.declarativeRecall;
+        bridgeCommand(`procedural_declarative_recall:${JSON.stringify({
+            instance_id: this.options.instanceId,
+            target_anki_card_id: recall?.target_anki_card_id ?? null,
+            target_anki_tag: recall?.target_anki_tag ?? null,
+        })}`);
+    }
+
+    public handlePracticePrerequisite(): void {
+        const prereq = this.options.prerequisiteReview;
+        bridgeCommand(`procedural_practice_prerequisite:${JSON.stringify({
+            instance_id: this.options.instanceId,
+            target_skill_id: prereq?.primary_missing_prerequisite ?? null,
+            executable_schema_id: prereq?.executable_schema_id ?? null,
+        })}`);
     }
 
     private handleNext(): void {
+        this.state = "next";
         // Trigger Anki's show answer / ease rating transition
         bridgeCommand("ans");
     }
@@ -394,6 +680,7 @@ export class ProceduralReviewer {
     }
 
     public destroy(): void {
+        this.state = "teardown";
         if (this.timerInterval) {
             clearInterval(this.timerInterval);
             this.timerInterval = null;
@@ -410,7 +697,6 @@ export class ProceduralReviewer {
             }
         }
         this.disposables = [];
-        this.isSubmitted = true;
     }
 }
 

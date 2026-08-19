@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use chrono::Utc;
 use rand::Rng;
@@ -17,7 +18,7 @@ use crate::exam::{
     ExamPracticeMode, ExamProfile, ExamSessionSelector, HumanReviewWorkflow, PyqMasteryAction,
     PyqMasteryBridge, PyqVariantPipeline, PYQSource, PyqMapping, ReviewAction, ReviewInspection,
 };
-use crate::practice::{ErrorEvent, PracticeAttempt, SchemaPracticeObject};
+use crate::practice::{ErrorEvent, PracticeAttempt, PracticeRequest, SchemaPracticeObject};
 use crate::problems::catalog::{
     MathsCatalog, MATHS_CATALOG_VERSION, SCHEMA_ALGEBRAIC_IDENTITIES, SCHEMA_AVERAGE,
     SCHEMA_CHEMISTRY_EQUILIBRIUM, SCHEMA_CHEMISTRY_STOICHIOMETRY,
@@ -31,10 +32,18 @@ use crate::problems::catalog::{
 use crate::problems::registry::ProblemRegistry;
 use crate::problems::validator::PercentageSuccessiveValidator;
 use crate::problems::{ProblemFamily, ProblemInstance};
-use crate::scheduling::{
-    derive_fsrs_rating, MultiSchemaSelector, PracticeMode, PracticeSessionObject, Rating,
-    SelectionDecision, SessionReadiness, VariantSelector,
+use crate::remediation::{
+    RemediationAction, RemediationAuditLog, RemediationAuditRecord, RemediationContext,
+    RemediationIntervention, RemediationOutcomeStatus, RemediationPolicy, RemediationQueue,
+    RemediationSelector,
 };
+use crate::scheduling::unified::{LearningObjectKind, UnifiedPracticeEngine};
+use crate::scheduling::{
+    derive_fsrs_rating, PracticeMode, PracticeSessionObject, Rating, SelectionDecision,
+    SessionReadiness, VariantSelector,
+};
+use crate::skills::prerequisites::{PrerequisiteEvaluation, PrerequisiteGraphService};
+use crate::skills::signals::MasteryEvidence;
 use crate::skills::{Skill, SkillState};
 use crate::storage::ProceduralStore;
 
@@ -44,18 +53,34 @@ use crate::storage::ProceduralStore;
 pub struct ProceduralService {
     store: ProceduralStore,
     registry: ProblemRegistry,
+    remediation_queue: Arc<Mutex<RemediationQueue>>,
+    audit_log: Arc<Mutex<RemediationAuditLog>>,
+    prerequisite_service: Arc<PrerequisiteGraphService>,
 }
 
 impl ProceduralService {
     pub fn new(store: ProceduralStore) -> Self {
+        let prereq_service = Arc::new(PrerequisiteGraphService::new());
+        let _ = prereq_service.sync_from_store(&store);
         Self {
             store,
             registry: ProblemRegistry::default_maths_registry(),
+            remediation_queue: Arc::new(Mutex::new(RemediationQueue::new())),
+            audit_log: Arc::new(Mutex::new(RemediationAuditLog::new())),
+            prerequisite_service: prereq_service,
         }
     }
 
     pub fn with_registry(store: ProceduralStore, registry: ProblemRegistry) -> Self {
-        Self { store, registry }
+        let prereq_service = Arc::new(PrerequisiteGraphService::new());
+        let _ = prereq_service.sync_from_store(&store);
+        Self {
+            store,
+            registry,
+            remediation_queue: Arc::new(Mutex::new(RemediationQueue::new())),
+            audit_log: Arc::new(Mutex::new(RemediationAuditLog::new())),
+            prerequisite_service: prereq_service,
+        }
     }
 
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
@@ -82,7 +107,43 @@ impl ProceduralService {
 
     /// Seed the store with built-in canonical Maths catalog definitions.
     pub fn init_default_maths_catalog(&self) -> Result<()> {
-        MathsCatalog::init_all(&self.store)
+        MathsCatalog::init_all(&self.store)?;
+        let _ = self.prerequisite_service.sync_from_store(&self.store);
+        Ok(())
+    }
+
+    /// Access the prerequisite graph service.
+    pub fn prerequisite_service(&self) -> &PrerequisiteGraphService {
+        &self.prerequisite_service
+    }
+
+    /// Evaluate prerequisite readiness and dependency chains for a given skill.
+    pub fn evaluate_prerequisites(&self, skill_id: &SkillId) -> Result<PrerequisiteEvaluation> {
+        let skills = self.store.list_all_skills()?;
+        let mut states = HashMap::new();
+        for s in skills {
+            if let Some(state) = self.store.get_skill_state(&s.id)? {
+                states.insert(s.id, state);
+            }
+        }
+        Ok(self.prerequisite_service.evaluate_readiness(skill_id, &states))
+    }
+
+    /// Enqueue a structured remediation action into the priority queue.
+    pub fn enqueue_remediation_action(&self, action: RemediationAction) -> Result<()> {
+        let mut q = self.remediation_queue.lock().unwrap();
+        q.enqueue(action);
+        Ok(())
+    }
+
+    /// Select concrete executable remediation intervention from action.
+    pub fn select_remediation_intervention(&self, action: &RemediationAction, seed: u64) -> Result<RemediationIntervention> {
+        RemediationSelector::select_intervention(action, &self.store, &self.registry, seed)
+    }
+
+    /// Access the remediation queue Arc mutex.
+    pub fn remediation_queue(&self) -> Arc<Mutex<RemediationQueue>> {
+        Arc::clone(&self.remediation_queue)
     }
 
     /// Resolve a schema reference by its ID. Supports canonical ID and standard aliases.
@@ -171,7 +232,10 @@ impl ProceduralService {
 
     /// Register or update a discrete skill node.
     pub fn register_skill(&self, skill: Skill) -> Result<()> {
-        self.store.insert_skill(&skill)
+        self.store.insert_skill(&skill)?;
+        self.prerequisite_service
+            .register_skill_prerequisites(skill.id.clone(), skill.prerequisites);
+        Ok(())
     }
 
     /// Register or update a problem generator family.
@@ -247,13 +311,23 @@ impl ProceduralService {
             .get("error_category")
             .and_then(|v| serde_json::from_value(v.clone()).ok());
 
+        let mut diagnostic_errors = Vec::new();
+        if let Some(cat) = err_cat {
+            diagnostic_errors.push(cat);
+        }
+
+        let evidence = crate::skills::signals::MasteryEvidence {
+            final_correctness: attempt.is_correct,
+            latency_evidence: attempt.time_taken_ms,
+            variant_exposure: variant.map(|s| s.to_string()),
+            diagnostic_errors,
+            ..Default::default()
+        };
+
         state.record_attempt_outcome(
-            attempt.is_correct,
+            &evidence,
             attempt.score,
-            attempt.time_taken_ms,
             target_latency_ms,
-            variant,
-            err_cat.as_ref(),
             attempt.attempted_at,
         );
 
@@ -348,10 +422,10 @@ impl ProceduralService {
         Ok(session)
     }
 
-    /// Prepare a multi-schema practice session from practice mode and candidate schemas.
-    pub fn prepare_multi_schema_session(
+    /// Prepare a unified practice session driven by a composable `PracticeRequest`.
+    pub fn prepare_unified_practice_session(
         &self,
-        mode: &PracticeMode,
+        request: &PracticeRequest,
         candidate_schema_ids: Option<&[SchemaId]>,
         last_schema_id: Option<&SchemaId>,
         seed_override: Option<u64>,
@@ -372,51 +446,95 @@ impl ProceduralService {
             return Err(ProceduralError::NotFound("No practice schemas available in catalog".to_string()));
         }
 
-        // Load skill states for all candidates
+        let mut schema_domains = HashMap::new();
         let mut skill_states = HashMap::new();
+        let mut eligible_pyqs = HashMap::new();
+
         for s in &all_schemas {
+            let domain = if s.id.as_str().contains("physics") {
+                Domain::Physics
+            } else if s.id.as_str().contains("chem") {
+                Domain::Chemistry
+            } else if s.id.as_str().contains("reasoning") {
+                Domain::Reasoning
+            } else {
+                Domain::Mathematics
+            };
+            schema_domains.insert(s.id.clone(), domain);
+
             if let Some(state) = self.load_skill_state(&s.skill_id)? {
                 skill_states.insert(s.skill_id.clone(), state);
             }
+
+            let pyq_list = self.store.list_eligible_pyqs_for_schema(&s.id)?;
+            if !pyq_list.is_empty() {
+                let pyq_sources = pyq_list.into_iter().map(|(source, _mapping)| source).collect();
+                eligible_pyqs.insert(s.id.clone(), pyq_sources);
+            }
         }
+
+        let exam_profile = if let Some(ref profile_id) = request.exam_profile {
+            self.store.get_exam_profile(profile_id)?.or_else(|| {
+                match profile_id.as_str() {
+                    "rrb_alp" => Some(ExamProfile::rrb_alp()),
+                    "ssc_cgl" => Some(ExamProfile::ssc_cgl()),
+                    "banking_po" => Some(ExamProfile::banking_po()),
+                    "jee_main_foundation" => Some(ExamProfile::jee_main_foundation()),
+                    _ => None,
+                }
+            })
+        } else {
+            None
+        };
 
         let seed = seed_override.unwrap_or_else(|| rand::rng().random::<u64>());
 
-        // Select optimal schema via MultiSchemaSelector
-        let decision = MultiSchemaSelector::select_next_schema(
-            mode,
+        let mut queue_lock = self.remediation_queue.lock().unwrap();
+        let decision = UnifiedPracticeEngine::select_next(
+            request,
             &all_schemas,
+            &schema_domains,
             &skill_states,
+            &self.prerequisite_service,
+            Some(&mut *queue_lock),
+            exam_profile.as_ref(),
+            &eligible_pyqs,
             last_schema_id,
+            &self.registry,
+            &self.store,
             seed,
         )
-        .ok_or_else(|| ProceduralError::NotFound("No eligible schema selected for practice".to_string()))?;
+        .ok_or_else(|| ProceduralError::NotFound("No eligible learning object selected for practice request".to_string()))?;
 
-        let family = self
-            .store
-            .get_problem_family(&decision.schema.problem_family_id)?
-            .ok_or_else(|| {
-                ProceduralError::NotFound(format!(
-                    "Problem family not found: {}",
-                    decision.schema.problem_family_id
-                ))
-            })?;
+        drop(queue_lock);
 
-        // Generate instance with chosen difficulty level
-        let instance = self.registry.generate(
-            &decision.schema.problem_family_id,
-            &family.template_ref,
-            seed,
-            decision.difficulty_level,
-            decision.selected_variant.as_deref(),
-        )?;
+        // If a generated problem was produced, persist it to the store
+        match &decision.learning_object {
+            LearningObjectKind::ProceduralProblem(p) | LearningObjectKind::PyqVariant(p) => {
+                let _ = self.store.insert_problem_instance(p);
+            }
+            LearningObjectKind::Remediation(RemediationIntervention::PrerequisiteReview(prereq_obj)) => {
+                if let Some(ref p) = prereq_obj.executable_problem {
+                    let _ = self.store.insert_problem_instance(p);
+                }
+            }
+            _ => {}
+        }
 
-        self.store.insert_problem_instance(&instance)?;
+        let state = skill_states.get(&decision.skill_id).cloned();
+        Ok(decision.into_practice_session(None, state))
+    }
 
-        let state = skill_states.get(&decision.schema.skill_id).cloned();
-        let mut session = PracticeSessionObject::new(decision.schema.clone(), instance, None, state);
-        session = session.with_multi_schema_decision(&decision);
-        Ok(session)
+    /// Prepare a multi-schema practice session from practice mode and candidate schemas (backward compatible).
+    pub fn prepare_multi_schema_session(
+        &self,
+        mode: &PracticeMode,
+        candidate_schema_ids: Option<&[SchemaId]>,
+        last_schema_id: Option<&SchemaId>,
+        seed_override: Option<u64>,
+    ) -> Result<PracticeSessionObject> {
+        let request = PracticeRequest::from_legacy_mode(mode);
+        self.prepare_unified_practice_session(&request, candidate_schema_ids, last_schema_id, seed_override)
     }
 
     /// Select next problem variant based on current skill state and seed.
@@ -751,6 +869,263 @@ impl ProceduralService {
     }
 
     // =========================================================================
+    // EXECUTABLE REMEDIATION ENGINE (R2)
+    // =========================================================================
+
+    /// Evaluates an attempt, records telemetry, and if failed, computes a typed RemediationAction,
+    /// enqueues it in the RemediationQueue, and logs an audit trail event.
+    pub fn evaluate_and_remediate_attempt(
+        &self,
+        instance_id: &ProblemInstanceId,
+        card_id: Option<i64>,
+        student_answer: serde_json::Value,
+        time_taken_ms: u64,
+        hints_used: u32,
+        attempt_count: u32,
+    ) -> Result<(ProceduralReviewOutcome, Option<RemediationAction>)> {
+        let outcome = self.evaluate_and_record_attempt(
+            instance_id,
+            card_id,
+            student_answer,
+            time_taken_ms,
+            hints_used,
+            attempt_count,
+        )?;
+
+        if !outcome.is_correct {
+            let skill_state = self
+                .load_skill_state(&outcome.skill_id)?
+                .unwrap_or_else(|| SkillState::new(outcome.skill_id.clone()));
+
+            let err_cat = outcome
+                .error_category
+                .clone()
+                .unwrap_or(ErrorCategory::Unknown);
+
+            let queue_lock = self.remediation_queue.lock().unwrap();
+            let recurrence = queue_lock.get_recurrence_count(&outcome.skill_id, &err_cat) + 1;
+            drop(queue_lock);
+
+            let schema = self.store.get_schema(&outcome.schema_id)?;
+            let domain = schema.as_ref().map(|s| {
+                if s.id.as_str().contains("physics") {
+                    Domain::Physics
+                } else if s.id.as_str().contains("chem") {
+                    Domain::Chemistry
+                } else if s.id.as_str().contains("reasoning") {
+                    Domain::Reasoning
+                } else {
+                    Domain::Mathematics
+                }
+            }).unwrap_or(Domain::Mathematics);
+
+            let ctx = RemediationContext {
+                skill_id: &outcome.skill_id,
+                schema_id: &outcome.schema_id,
+                domain,
+                primary_error: err_cat.clone(),
+                step_error: None,
+                decision_point_correct: if outcome.decision_points_presented > 0 {
+                    Some(outcome.decision_points_correct == outcome.decision_points_presented)
+                } else {
+                    None
+                },
+                independence: outcome.independence_level,
+                progression_state: skill_state.practice_state,
+                recent_attempts: &skill_state.recent_attempts,
+                source_attempt_id: &outcome.attempt_id,
+                recurrence_count: recurrence,
+                is_transfer_attempt: false,
+            };
+
+            let action = RemediationPolicy::evaluate(&ctx);
+
+            let mut queue_lock = self.remediation_queue.lock().unwrap();
+            queue_lock.enqueue(action.clone());
+
+            let mut audit_lock = self.audit_log.lock().unwrap();
+            let audit_rec = RemediationAuditRecord::new(
+                format!("audit-{}", action.id),
+                &outcome.attempt_id,
+                &outcome.skill_id,
+                &outcome.schema_id,
+                err_cat,
+                action.kind,
+                action.kind.as_str(),
+                action.recurrence_count,
+            );
+            audit_lock.record_event(audit_rec);
+
+            Ok((outcome, Some(action)))
+        } else {
+            Ok((outcome, None))
+        }
+    }
+
+    /// Stepwise evaluation and remediation deriving precise step-localized remediation actions.
+    pub fn evaluate_and_remediate_stepwise_attempt(
+        &self,
+        instance_id: &ProblemInstanceId,
+        card_id: Option<i64>,
+        submission: &crate::problems::steps::StepwiseSubmission,
+    ) -> Result<(ProceduralReviewOutcome, Option<RemediationAction>)> {
+        let outcome = self.evaluate_stepwise_attempt(instance_id, card_id, submission)?;
+
+        if !outcome.is_correct {
+            let skill_state = self
+                .load_skill_state(&outcome.skill_id)?
+                .unwrap_or_else(|| SkillState::new(outcome.skill_id.clone()));
+
+            let err_cat = outcome
+                .error_category
+                .clone()
+                .unwrap_or(ErrorCategory::Unknown);
+
+            let queue_lock = self.remediation_queue.lock().unwrap();
+            let recurrence = queue_lock.get_recurrence_count(&outcome.skill_id, &err_cat) + 1;
+            drop(queue_lock);
+
+            let schema = self.store.get_schema(&outcome.schema_id)?;
+            let domain = schema.as_ref().map(|s| {
+                if s.id.as_str().contains("physics") {
+                    Domain::Physics
+                } else if s.id.as_str().contains("chem") {
+                    Domain::Chemistry
+                } else if s.id.as_str().contains("reasoning") {
+                    Domain::Reasoning
+                } else {
+                    Domain::Mathematics
+                }
+            }).unwrap_or(Domain::Mathematics);
+
+            let ctx = RemediationContext {
+                skill_id: &outcome.skill_id,
+                schema_id: &outcome.schema_id,
+                domain,
+                primary_error: err_cat.clone(),
+                step_error: None,
+                decision_point_correct: if outcome.decision_points_presented > 0 {
+                    Some(outcome.decision_points_correct == outcome.decision_points_presented)
+                } else {
+                    None
+                },
+                independence: outcome.independence_level,
+                progression_state: skill_state.practice_state,
+                recent_attempts: &skill_state.recent_attempts,
+                source_attempt_id: &outcome.attempt_id,
+                recurrence_count: recurrence,
+                is_transfer_attempt: false,
+            };
+
+            let action = RemediationPolicy::evaluate(&ctx);
+
+            let mut queue_lock = self.remediation_queue.lock().unwrap();
+            queue_lock.enqueue(action.clone());
+
+            let mut audit_lock = self.audit_log.lock().unwrap();
+            let audit_rec = RemediationAuditRecord::new(
+                format!("audit-{}", action.id),
+                &outcome.attempt_id,
+                &outcome.skill_id,
+                &outcome.schema_id,
+                err_cat,
+                action.kind,
+                action.kind.as_str(),
+                action.recurrence_count,
+            );
+            audit_lock.record_event(audit_rec);
+
+            Ok((outcome, Some(action)))
+        } else {
+            Ok((outcome, None))
+        }
+    }
+
+    /// Select the next applicable concrete remediation intervention respecting practice mode and priority.
+    pub fn get_next_remediation_intervention(
+        &self,
+        mode: &PracticeMode,
+        seed: u64,
+    ) -> Result<Option<(RemediationAction, RemediationIntervention)>> {
+        let mut queue_lock = self.remediation_queue.lock().unwrap();
+        if let Some(action) = queue_lock.select_next_remediation(mode) {
+            drop(queue_lock);
+            let intervention = RemediationSelector::select_intervention(
+                &action,
+                &self.store,
+                &self.registry,
+                seed,
+            )?;
+            Ok(Some((action, intervention)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Record a learner's response to a remediation intervention, updating SkillState and audit logs.
+    pub fn record_remediation_response(
+        &self,
+        action: &RemediationAction,
+        is_correct: bool,
+        evidence: &MasteryEvidence,
+        score: f64,
+        target_latency_ms: u64,
+    ) -> Result<()> {
+        let mut state = self
+            .store
+            .get_skill_state(&action.skill_id)?
+            .unwrap_or_else(|| SkillState::new(action.skill_id.clone()));
+
+        state.record_attempt_outcome(
+            evidence,
+            score,
+            target_latency_ms,
+            Utc::now().timestamp(),
+        );
+
+        self.store.upsert_skill_state(&state)?;
+
+        let mut queue_lock = self.remediation_queue.lock().unwrap();
+        if is_correct {
+            queue_lock.record_resolution(&action.skill_id, &action.primary_error);
+        }
+
+        let mut audit_lock = self.audit_log.lock().unwrap();
+        let audit_id = format!("audit-{}", action.id);
+        if let Some(record) = audit_lock.get_record_mut(&audit_id) {
+            record.mark_completed(
+                is_correct,
+                evidence.clone(),
+                if is_correct {
+                    RemediationOutcomeStatus::Resolved
+                } else {
+                    RemediationOutcomeStatus::Escalated
+                },
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Number of currently pending remediation actions in queue.
+    pub fn remediation_queue_len(&self) -> usize {
+        let queue_lock = self.remediation_queue.lock().unwrap();
+        queue_lock.len()
+    }
+
+    /// List recent remediation audit records.
+    pub fn list_remediation_audit_records(&self, limit: usize) -> Vec<RemediationAuditRecord> {
+        let audit_lock = self.audit_log.lock().unwrap();
+        audit_lock.recent_records(limit).into_iter().cloned().collect()
+    }
+
+    /// Clear all pending remediation actions and recurrence counters.
+    pub fn clear_remediation_queue(&self) {
+        let mut queue_lock = self.remediation_queue.lock().unwrap();
+        queue_lock.clear();
+    }
+
+    // =========================================================================
     // EXAM & PYQ PLATFORM ENGINE
     // =========================================================================
 
@@ -1017,12 +1392,72 @@ impl ProceduralService {
             &state,
             err_cat.as_ref(),
             rating,
+            1,
         ))
     }
 
     /// Retrieve schemas experiencing high failure rates for a specific target exam.
     pub fn get_exam_failing_schemas(&self, exam_id: &str) -> Result<Vec<(SchemaId, f64, usize)>> {
         self.store.get_failing_schemas_for_exam(exam_id)
+    }
+
+    // =========================================================================
+    // R4 LEARNING DYNAMICS HARDENING HELPERS
+    // =========================================================================
+
+    /// Evaluates transfer eligibility for a skill given a desired transfer level.
+    pub fn evaluate_transfer_eligibility(
+        &self,
+        skill_id: &SkillId,
+        level: crate::scheduling::transfer::TransferLevel,
+        supporting_schemas_stable: bool,
+    ) -> Result<crate::scheduling::transfer::TransferEligibilityEvaluation> {
+        let state = self
+            .store
+            .get_skill_state(skill_id)?
+            .unwrap_or_else(|| SkillState::new(skill_id.clone()));
+        Ok(crate::scheduling::transfer::TransferEngine::evaluate_eligibility(
+            &state,
+            level,
+            supporting_schemas_stable,
+        ))
+    }
+
+    /// Evaluates if a skill qualifies for retirement into low-frequency maintenance.
+    pub fn evaluate_skill_retirement(
+        &self,
+        skill_id: &SkillId,
+    ) -> Result<crate::skills::lifecycle::RetirementEvaluation> {
+        let state = self
+            .store
+            .get_skill_state(skill_id)?
+            .unwrap_or_else(|| SkillState::new(skill_id.clone()));
+        let policy = crate::skills::lifecycle::RetirementPolicy::default();
+        Ok(policy.evaluate_retirement_eligibility(&state))
+    }
+
+    /// Evaluates latency performance for an attempt against domain and stage policy.
+    pub fn evaluate_stage_speed(
+        &self,
+        skill_id: &SkillId,
+        actual_latency_ms: u64,
+        target_override_ms: Option<u64>,
+    ) -> Result<crate::scheduling::speed::SpeedEvaluation> {
+        let state = self
+            .store
+            .get_skill_state(skill_id)?
+            .unwrap_or_else(|| SkillState::new(skill_id.clone()));
+        let skill = self
+            .store
+            .get_skill(skill_id)?
+            .ok_or_else(|| ProceduralError::NotFound(format!("Skill '{}' not found", skill_id)))?;
+
+        Ok(crate::scheduling::speed::StageSpeedPolicy::evaluate(
+            state.practice_state,
+            skill.domain,
+            actual_latency_ms,
+            target_override_ms,
+        ))
     }
 }
 

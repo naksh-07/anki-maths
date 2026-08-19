@@ -1,6 +1,8 @@
 // Copyright: Ankitects Pty Ltd and contributors
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
+pub mod hints;
+
 use std::collections::HashMap;
 use std::fmt;
 
@@ -8,6 +10,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::{AttemptId, ProblemFamilyId, SchemaId, SkillId};
 use crate::practice::{ErrorEvent, PracticeAttempt};
+use crate::skills::signals::IndependenceLevel;
+
+pub use hints::{HintDependencyStats, HintLevel, HintUsageRecord};
 
 /// Common taxonomic categories for procedural practice errors.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -88,6 +93,12 @@ pub struct ProceduralReviewOutcome {
     pub diagnostic_confidence: Option<String>,
     #[serde(default)]
     pub remediation_recommendation: Option<String>,
+    #[serde(default)]
+    pub decision_points_presented: usize,
+    #[serde(default)]
+    pub decision_points_correct: usize,
+    #[serde(default)]
+    pub independence_level: IndependenceLevel,
 }
 
 impl ProceduralReviewOutcome {
@@ -127,6 +138,9 @@ impl ProceduralReviewOutcome {
             first_action_latency_ms: None,
             diagnostic_confidence: None,
             remediation_recommendation: None,
+            decision_points_presented: 0,
+            decision_points_correct: 0,
+            independence_level: IndependenceLevel::default(),
         }
     }
 

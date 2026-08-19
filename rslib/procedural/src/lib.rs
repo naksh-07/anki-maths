@@ -18,6 +18,7 @@ pub mod physics;
 pub mod practice;
 pub mod problems;
 pub mod reasoning;
+pub mod remediation;
 pub mod reviewer;
 pub mod scheduling;
 pub mod service;
@@ -36,7 +37,11 @@ pub use core::{
     AttemptId, Domain, ErrorEventId, ExamProfileId, ProblemFamilyId, ProblemInstanceId,
     ProceduralError, PyqId, RejectedVariantId, Result, SchemaId, SkillId,
 };
-pub use diagnostics::{AttemptDiagnosticSummary, ErrorCategory, ProceduralReviewOutcome};
+pub use core::decision::{CognitiveDecisionPoint, DecisionOption};
+pub use diagnostics::{
+    AttemptDiagnosticSummary, ErrorCategory, HintDependencyStats, HintLevel, HintUsageRecord,
+    ProceduralReviewOutcome,
+};
 pub use exam::{
     ContentProvenance, ExamFailingSchemaSummary, ExamObjective, ExamPracticeMode, ExamProfile,
     ExamRelevanceScore, ExamRelevanceScorer, ExamSessionSelector, HumanReviewWorkflow,
@@ -52,14 +57,25 @@ pub use physics::{
     WorkEnergyGenerator, WorkEnergyValidator,
 };
 pub use reasoning::{
-    BloodRelationPuzzle, CognitiveDecisionPoint, CspConstraint, CspProblem, CspSolver,
-    DecisionOption, DirectionPuzzle, Heading, KinshipRelation, KinshipStatement,
+    BloodRelationPuzzle, CspConstraint, CspProblem, CspSolver,
+    DirectionPuzzle, Heading, KinshipRelation, KinshipStatement,
     ReasoningErrorCategory, ReasoningProblemMetadata, RelationsGenerator, RelationsValidator,
     SchemaKind as ReasoningSchemaKind, SeatingGenerator, SeatingPuzzle, SeatingValidator,
     SeriesGenerator, SeriesProblem, SeriesRule, SeriesValidator, StrategyKind,
     SyllogismGenerator, SyllogismProblem, SyllogismValidator,
 };
-pub use practice::{ErrorEvent, PracticeAttempt, SchemaPracticeObject};
+pub use practice::{
+    DifficultyConstraint, ErrorEvent, PracticeAttempt, PracticeObjective, PracticeRequest,
+    PracticeScope, RemediationPrecedence, SchemaPracticeObject, SessionBudget, TimeConstraint,
+};
+pub use remediation::{
+    ConceptCheckEvaluation, ConceptCheckObject, ConceptCheckOption, DeclarativeRecallBridge,
+    PrerequisiteReviewObject, RemediationAction, RemediationActionKind, RemediationAuditLog,
+    RemediationAuditRecord, RemediationContext, RemediationIntervention, RemediationOutcomeStatus,
+    RemediationPolicy, RemediationQueue, RemediationSelector, RemediationUrgency,
+    RepresentationDrillEvaluation, RepresentationDrillObject, RepresentationOption,
+    StrategyDrillEvaluation, StrategyDrillObject, StrategyOption, WorkedExampleObject,
+};
 pub use problems::{
     catalog::*,
     generator::{ProblemGenerator, VariantType},
@@ -67,18 +83,24 @@ pub use problems::{
     registry::ProblemRegistry,
     steps::*,
     validator::{AnswerEvaluation, NumericAnswerParser, PercentageSuccessiveValidator, ProblemValidator},
+    variation::*,
     ProblemFamily, ProblemInstance,
 };
 pub use reviewer::render_reviewer_html;
 pub use scheduling::{
-    derive_fsrs_rating, AdaptiveDifficultyEngine, DifficultyDecision,
-    MultiSchemaSelectionDecision, MultiSchemaSelector, PracticeMode, PracticeSessionObject,
-    Rating, RatingPolicy, SelectionDecision, SessionReadiness, StandardRatingPolicy,
-    TransferEligibility, TransferEligibilityEngine, VariantSelector,
+    derive_fsrs_rating, AdaptiveDifficultyEngine, DifficultyDecision, DomainSpeedConfig,
+    InterleavingPolicy, LearningObjectKind, MultiSchemaSelectionDecision, MultiSchemaSelector,
+    PracticeMode, PracticeSessionObject, PriorityTier, Rating, RatingPolicy, SelectionDecision,
+    SessionBudgetTracker, SessionReadiness, SpeedEvaluation, SpeedRating, StandardRatingPolicy,
+    StageSpeedPolicy, TransferEligibility, TransferEligibilityEngine, TransferEligibilityEvaluation,
+    TransferEngine, TransferLevel, UnifiedPracticeEngine, UnifiedSelectionDecision, VariantSelector,
+    WorkloadSafeguards, WorkloadSnapshot, WorkloadState,
 };
 pub use service::ProceduralService;
 pub use skills::{
-    ErrorFrequencyCounts, MovingLatencyStats, PracticeProgressionState, RecentAttemptRecord, Skill,
-    SkillState, VariantPerformance,
+    DEFAULT_MAX_PREREQUISITE_DEPTH, ErrorFrequencyCounts, MaintenanceReviewOutcome,
+    MovingLatencyStats, PracticeProgressionState, PrerequisiteEvaluation,
+    PrerequisiteGraphService, PrerequisitePolicy, PrerequisiteReadiness, RecentAttemptRecord,
+    RetirementEvaluation, RetirementPolicy, Skill, SkillState, VariantPerformance,
 };
 pub use storage::{MigrationRunner, ProceduralStore};

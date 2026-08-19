@@ -13,20 +13,21 @@ use procedural::problems::catalog::{
     SCHEMA_REASONING_RELATIONS, SCHEMA_REASONING_SEATING, SCHEMA_REASONING_SERIES,
     SCHEMA_REASONING_SYLLOGISM,
 };
+use procedural::skills::signals::{IndependenceLevel, MasteryEvidence};
 
 #[test]
 fn test_reasoning_models_and_decision_points() {
     let opt1 = DecisionOption::new(
         "opt_anchor",
         "Place fixed person at slot 1 first",
-        StrategyKind::AnchorFixed,
+        StrategyKind::AnchorFixed.as_str(),
         true,
         "Anchor positions bound variable domains immediately.",
     );
     let opt2 = DecisionOption::new(
         "opt_random",
         "Place flexible person at slot 3",
-        StrategyKind::BranchCases,
+        StrategyKind::BranchCases.as_str(),
         false,
         "Sub-optimal: Branching before anchoring fixed elements increases search space.",
     );
@@ -36,18 +37,18 @@ fn test_reasoning_models_and_decision_points() {
         "Which constraint should be applied first?",
         vec![opt1, opt2],
         "opt_anchor",
-        StrategyKind::AnchorFixed,
+        StrategyKind::AnchorFixed.as_str(),
         "Always anchor invariant elements first.",
     );
 
     let (is_valid, strategy, feedback) = dp.evaluate_choice("opt_anchor");
     assert!(is_valid);
-    assert_eq!(strategy, Some(StrategyKind::AnchorFixed));
+    assert_eq!(strategy, Some(StrategyKind::AnchorFixed.as_str().to_string()));
     assert!(feedback.contains("Anchor positions"));
 
     let (is_valid2, strategy2, _) = dp.evaluate_choice("opt_random");
     assert!(!is_valid2);
-    assert_eq!(strategy2, Some(StrategyKind::BranchCases));
+    assert_eq!(strategy2, Some(StrategyKind::BranchCases.as_str().to_string()));
 }
 
 #[test]
@@ -372,8 +373,22 @@ fn test_reasoning_transfer_eligibility_gating() {
     assert!(!elig.is_eligible);
 
     // Add 2 consecutive successful attempts
-    state.record_attempt_outcome(true, 1.0, 20_000, 35_000, Some("linear_4person"), None, 1000);
-    state.record_attempt_outcome(true, 1.0, 22_000, 35_000, Some("linear_5person"), None, 2000);
+    let ev1 = MasteryEvidence {
+        final_correctness: true,
+        latency_evidence: 20_000,
+        variant_exposure: Some("linear_4person".to_string()),
+        independence: IndependenceLevel::Independent,
+        ..Default::default()
+    };
+    state.record_attempt_outcome(&ev1, 1.0, 35_000, 1000);
+    let ev2 = MasteryEvidence {
+        final_correctness: true,
+        latency_evidence: 22_000,
+        variant_exposure: Some("linear_5person".to_string()),
+        independence: IndependenceLevel::Independent,
+        ..Default::default()
+    };
+    state.record_attempt_outcome(&ev2, 1.0, 35_000, 2000);
 
     let elig_after = TransferEligibilityEngine::evaluate_eligibility(Some(&state));
     assert!(elig_after.is_eligible);

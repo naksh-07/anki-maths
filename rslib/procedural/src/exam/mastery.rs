@@ -26,6 +26,13 @@ pub enum PyqMasteryAction {
         remediation_difficulty: u32,
         primary_error: Option<ErrorCategory>,
     },
+    /// Repeated authentic PYQ success reached familiarity threshold: requires structural/transfer
+    /// variant to prevent rote answer recall from masquerading as deep mastery.
+    FamiliarityCapReached {
+        skill_id: SkillId,
+        authentic_exposures: usize,
+        suggested_variant_type: String,
+    },
     /// Routine mastery update recorded.
     MasteryProgress {
         skill_id: SkillId,
@@ -37,14 +44,35 @@ pub enum PyqMasteryAction {
 pub struct PyqMasteryBridge;
 
 impl PyqMasteryBridge {
+    /// Calculates the familiarity discount factor for repeated exposures to the exact same authentic PYQ.
+    pub fn compute_familiarity_weight(authentic_exposures: usize) -> f64 {
+        match authentic_exposures {
+            0 | 1 => 1.0,
+            2 => 0.8,
+            3 => 0.5,
+            4 => 0.25,
+            _ => 0.1,
+        }
+    }
+
     /// Evaluate the outcome of a PYQ practice attempt and determine the required pedagogical follow-up.
     pub fn evaluate_pyq_attempt(
         attempt: &PracticeAttempt,
         skill_state: &SkillState,
         error_category: Option<&ErrorCategory>,
         fsrs_rating: Rating,
+        authentic_exposures: usize,
     ) -> PyqMasteryAction {
         if attempt.is_correct {
+            // If repeated authentic exposures exceed 2 without fresh variant validation, cap familiarity
+            if authentic_exposures >= 3 {
+                return PyqMasteryAction::FamiliarityCapReached {
+                    skill_id: attempt.skill_id.clone(),
+                    authentic_exposures,
+                    suggested_variant_type: "structural_variant".to_string(),
+                };
+            }
+
             // Success on authentic PYQ: verify with structural/isomorphic variant confirmation
             let target_successes = if fsrs_rating == Rating::Easy { 1 } else { 2 };
             let variant = if skill_state.consecutive_successes >= 2 {
@@ -93,6 +121,7 @@ mod tests {
             &state,
             None,
             Rating::Good,
+            1,
         );
 
         match action {
@@ -120,6 +149,7 @@ mod tests {
             &state,
             Some(&ErrorCategory::Concept),
             Rating::Again,
+            1,
         );
 
         match action_fail {
@@ -130,5 +160,42 @@ mod tests {
             }
             _ => panic!("Expected TargetedRemediationRequired"),
         }
+    }
+
+    #[test]
+    fn test_pyq_familiarity_cap_protection() {
+        let attempt_repeat = PracticeAttempt::new(
+            "att_3",
+            "inst_3",
+            "schema_1",
+            "skill.time_work",
+            serde_json::json!({ "answer": 12 }),
+            true,
+            1.0,
+            15_000,
+        );
+
+        let state = SkillState::new("skill.time_work");
+        let action = PyqMasteryBridge::evaluate_pyq_attempt(
+            &attempt_repeat,
+            &state,
+            None,
+            Rating::Good,
+            4, // 4th authentic exposure
+        );
+
+        match action {
+            PyqMasteryAction::FamiliarityCapReached { skill_id, authentic_exposures, suggested_variant_type } => {
+                assert_eq!(skill_id.as_str(), "skill.time_work");
+                assert_eq!(authentic_exposures, 4);
+                assert_eq!(suggested_variant_type, "structural_variant");
+            }
+            _ => panic!("Expected FamiliarityCapReached"),
+        }
+
+        assert_eq!(PyqMasteryBridge::compute_familiarity_weight(1), 1.0);
+        assert_eq!(PyqMasteryBridge::compute_familiarity_weight(2), 0.8);
+        assert_eq!(PyqMasteryBridge::compute_familiarity_weight(3), 0.5);
+        assert_eq!(PyqMasteryBridge::compute_familiarity_weight(4), 0.25);
     }
 }

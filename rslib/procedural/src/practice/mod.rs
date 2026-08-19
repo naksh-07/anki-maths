@@ -1,10 +1,17 @@
 // Copyright: Ankitects Pty Ltd and contributors
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
+pub mod request;
+
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{AttemptId, ErrorEventId, ProblemFamilyId, ProblemInstanceId, SchemaId, SkillId};
+
+pub use request::{
+    DifficultyConstraint, PracticeObjective, PracticeRequest, PracticeScope, RemediationPrecedence,
+    SessionBudget, TimeConstraint,
+};
 
 /// Procedural learning object schema referenced by Anki cards as practice targets.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -12,7 +12,8 @@ use crate::problems::steps::{HintLevel, SolutionGraph, StepHint, StepNode, StepT
 use crate::problems::validator::{AnswerEvaluation, ProblemValidator};
 use crate::problems::ProblemInstance;
 use crate::reasoning::generators::{FAMILY_REASONING_RELATIONS, TEMPLATE_REASONING_RELATIONS_V1};
-use crate::reasoning::models::{CognitiveDecisionPoint, DecisionOption, ReasoningProblemMetadata, SchemaKind, StrategyKind};
+use crate::core::decision::{CognitiveDecisionPoint, DecisionOption};
+use crate::reasoning::models::{ReasoningProblemMetadata, SchemaKind, StrategyKind};
 use crate::reasoning::relations::{BloodRelationPuzzle, DirectionPuzzle};
 
 /// Generator for Blood Relations and Direction Sense relational graph problems.
@@ -66,26 +67,26 @@ impl RelationsGenerator {
 
         let dp = CognitiveDecisionPoint::new(
             "dp_kinship_graph",
-            "What representation is best suited for multi-step kinship relations?",
+            "Which strategy should you use to map out these complex family relations?",
             vec![
                 DecisionOption::new(
-                    "opt_tree",
-                    "Construct a generational family tree with gender and lineage markers",
-                    StrategyKind::ConstructKinshipGraph,
+                    "opt_kinship",
+                    "Draw a family tree graph starting from a reference person",
+                    StrategyKind::ConstructKinshipGraph.as_str(),
                     true,
-                    "Generational graphs prevent confusion between maternal and paternal lines.",
+                    "Correct: A kinship graph is the most robust way to resolve indirect relations.",
                 ),
                 DecisionOption::new(
-                    "opt_invert",
-                    "Invert the relationship subject and object randomly",
-                    StrategyKind::EliminateInvalid,
+                    "opt_branch",
+                    "Try to mentally guess relations and test them",
+                    StrategyKind::BranchCases.as_str(),
                     false,
-                    "Inversion error: A related to C is opposite to C related to A.",
+                    "Sub-optimal: Guessing is highly error-prone for multiple generational leaps.",
                 ),
             ],
-            "opt_tree",
-            StrategyKind::ConstructKinshipGraph,
-            "Build family tree graph tracking generational levels (+1 for parents, 0 for siblings).",
+            "opt_kinship",
+            StrategyKind::ConstructKinshipGraph.as_str(),
+            "Blood relations are best solved by systematically constructing a family tree graph.",
         );
 
         let mut meta = ReasoningProblemMetadata::new(SchemaKind::BloodRelations, StrategyKind::ConstructKinshipGraph)
@@ -170,18 +171,18 @@ impl RelationsGenerator {
 
         let dp = CognitiveDecisionPoint::new(
             "dp_direction_vector",
-            "What strategy simplifies multi-turn direction path problems?",
+            "Which strategy should you use to track these movements?",
             vec![
                 DecisionOption::new(
-                    "opt_vector",
-                    "Track independent horizontal (East-West) and vertical (North-South) coordinate sums",
-                    StrategyKind::TraceDirectionVectors,
+                    "opt_trace",
+                    "Trace the path using 2D coordinate vectors",
+                    StrategyKind::TraceDirectionVectors.as_str(),
                     true,
-                    "Orthogonal coordinate projection allows exact displacement calculation.",
+                    "Correct: Breaking down movements into horizontal and vertical components avoids confusion.",
                 ),
             ],
             "opt_vector",
-            StrategyKind::TraceDirectionVectors,
+            StrategyKind::TraceDirectionVectors.as_str(),
             "Sum vector components: Net X = East - West, Net Y = North - South.",
         );
 

@@ -4,7 +4,28 @@
 use procedural::diagnostics::ErrorCategory;
 use procedural::problems::generators::percentage_successive::PercentageVariant;
 use procedural::scheduling::VariantSelector;
+use procedural::skills::signals::{IndependenceLevel, MasteryEvidence};
 use procedural::skills::{PracticeProgressionState, SkillState};
+
+fn ev_ok(latency: u64, variant: &str) -> MasteryEvidence {
+    MasteryEvidence {
+        final_correctness: true,
+        latency_evidence: latency,
+        variant_exposure: Some(variant.to_string()),
+        independence: IndependenceLevel::Independent,
+        ..Default::default()
+    }
+}
+
+fn ev_fail(latency: u64, variant: &str, error: ErrorCategory) -> MasteryEvidence {
+    MasteryEvidence {
+        final_correctness: false,
+        latency_evidence: latency,
+        variant_exposure: Some(variant.to_string()),
+        diagnostic_errors: vec![error],
+        ..Default::default()
+    }
+}
 
 #[test]
 fn test_concept_failure_triggers_standard_variant() {
@@ -12,12 +33,9 @@ fn test_concept_failure_triggers_standard_variant() {
     state.practice_state = PracticeProgressionState::Fluent;
     // Failed on a hard variant due to concept error
     state.record_attempt_outcome(
-        false,
+        &ev_fail(30_000, "forward_three_step", ErrorCategory::Concept),
         0.0,
-        30_000,
         45_000,
-        Some("forward_three_step"),
-        Some(&ErrorCategory::Concept),
         1000,
     );
 
@@ -35,12 +53,9 @@ fn test_reverse_initial_failure_remediation() {
     state.practice_state = PracticeProgressionState::Variation;
     // Failed on ReverseInitial due to calculation
     state.record_attempt_outcome(
-        false,
+        &ev_fail(40_000, "reverse_initial", ErrorCategory::Calculation),
         0.0,
-        40_000,
         45_000,
-        Some("reverse_initial"),
-        Some(&ErrorCategory::Calculation),
         1000,
     );
 
@@ -58,12 +73,9 @@ fn test_slow_success_reinforces_fluency_without_structural_jump() {
     state.practice_state = PracticeProgressionState::Fluent;
     // Target 35s, learner took 60s (> 1.25x 35s = 43.75s)
     state.record_attempt_outcome(
-        true,
+        &ev_ok(60_000, "forward_two_step"),
         1.0,
-        60_000,
         35_000,
-        Some("forward_two_step"),
-        None,
         1000,
     );
 
@@ -80,24 +92,8 @@ fn test_fast_strong_performance_introduces_advanced_variation() {
     let mut state = SkillState::new("skill.percentage.successive");
     state.practice_state = PracticeProgressionState::Fluent;
     // 2 consecutive fast successes (12s and 14s on 35s target)
-    state.record_attempt_outcome(
-        true,
-        1.0,
-        12_000,
-        35_000,
-        Some("forward_two_step"),
-        None,
-        1000,
-    );
-    state.record_attempt_outcome(
-        true,
-        1.0,
-        14_000,
-        35_000,
-        Some("forward_two_step"),
-        None,
-        1050,
-    );
+    state.record_attempt_outcome(&ev_ok(12_000, "forward_two_step"), 1.0, 35_000, 1000);
+    state.record_attempt_outcome(&ev_ok(14_000, "forward_two_step"), 1.0, 35_000, 1050);
 
     let decision = VariantSelector::select_variant(Some(&state), None, 999);
     assert_ne!(decision.variant, PercentageVariant::ForwardTwoStep);
@@ -112,15 +108,7 @@ fn test_anti_priming_prevents_immediate_sibling_repetition() {
     let mut state = SkillState::new("skill.percentage.successive");
     state.practice_state = PracticeProgressionState::Variation;
     // Just solved ReverseInitial successfully
-    state.record_attempt_outcome(
-        true,
-        1.0,
-        35_000,
-        45_000,
-        Some("reverse_initial"),
-        None,
-        1000,
-    );
+    state.record_attempt_outcome(&ev_ok(35_000, "reverse_initial"), 1.0, 45_000, 1000);
 
     // Anti-priming should suppress ReverseInitial from being selected next
     let decision = VariantSelector::select_variant(Some(&state), None, 54321);
@@ -131,15 +119,7 @@ fn test_anti_priming_prevents_immediate_sibling_repetition() {
 fn test_deterministic_seed_selection_reproducibility() {
     let mut state = SkillState::new("skill.percentage.successive");
     state.practice_state = PracticeProgressionState::Variation;
-    state.record_attempt_outcome(
-        true,
-        1.0,
-        25_000,
-        35_000,
-        Some("forward_two_step"),
-        None,
-        1000,
-    );
+    state.record_attempt_outcome(&ev_ok(25_000, "forward_two_step"), 1.0, 35_000, 1000);
 
     let d1 = VariantSelector::select_variant(Some(&state), None, 88888);
     let d2 = VariantSelector::select_variant(Some(&state), None, 88888);

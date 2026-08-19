@@ -6,6 +6,7 @@ use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
 use crate::core::{ProblemFamilyId, Result};
+use crate::core::decision::{CognitiveDecisionPoint, DecisionOption};
 use crate::diagnostics::ErrorCategory;
 use crate::physics::diagnostics::PhysicsErrorCategory;
 use crate::physics::models::{
@@ -70,13 +71,58 @@ impl Kinematics1DGenerator {
             }
         };
 
-        match chosen_variant {
+        let mut instance = match chosen_variant {
             KinematicsVariant::UniformMotion => Self::generate_level_1(&mut rng, seed),
             KinematicsVariant::ConstantAccelerationUnitConversion => Self::generate_level_2(&mut rng, seed),
             KinematicsVariant::KinematicEquationSelection => Self::generate_level_3(&mut rng, seed),
             KinematicsVariant::StoppingDistanceReverse => Self::generate_level_4(&mut rng, seed),
             KinematicsVariant::VerticalProjectileTransfer => Self::generate_level_5(&mut rng, seed),
+        };
+
+        let dp = CognitiveDecisionPoint::new(
+            "dp_kinematic_equation",
+            "Which kinematic equation is best suited to solve this problem?",
+            vec![
+                DecisionOption::new(
+                    "opt_v_u_at",
+                    "v = u + at",
+                    "eq_v_u_at",
+                    chosen_variant == KinematicsVariant::ConstantAccelerationUnitConversion,
+                    "Use when displacement (s) is neither given nor requested.",
+                ),
+                DecisionOption::new(
+                    "opt_s_ut",
+                    "s = ut + 1/2 at^2",
+                    "eq_s_ut",
+                    chosen_variant == KinematicsVariant::StoppingDistanceReverse || chosen_variant == KinematicsVariant::VerticalProjectileTransfer,
+                    "Use when final velocity (v) is neither given nor requested.",
+                ),
+                DecisionOption::new(
+                    "opt_v2_u2",
+                    "v^2 = u^2 + 2as",
+                    "eq_v2_u2",
+                    chosen_variant == KinematicsVariant::KinematicEquationSelection,
+                    "Use when time (t) is neither given nor requested.",
+                ),
+            ],
+            match chosen_variant {
+                KinematicsVariant::ConstantAccelerationUnitConversion => "opt_v_u_at",
+                KinematicsVariant::KinematicEquationSelection => "opt_v2_u2",
+                _ => "opt_s_ut",
+            },
+            match chosen_variant {
+                KinematicsVariant::ConstantAccelerationUnitConversion => "eq_v_u_at",
+                KinematicsVariant::KinematicEquationSelection => "eq_v2_u2",
+                _ => "eq_s_ut",
+            },
+            "Identify the missing variable (the one not given and not requested) to select the correct equation.",
+        );
+
+        if let Some(obj) = instance.metadata.as_object_mut() {
+            obj.insert("decision_point".to_string(), serde_json::to_value(dp).unwrap());
         }
+
+        instance
     }
 
     /// Level 1: Uniform Motion (Zero acceleration): s = v * t

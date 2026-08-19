@@ -12,7 +12,8 @@ use crate::problems::steps::{HintLevel, SolutionGraph, StepHint, StepNode, StepT
 use crate::problems::validator::{AnswerEvaluation, ProblemValidator};
 use crate::problems::ProblemInstance;
 use crate::reasoning::generators::{FAMILY_REASONING_SERIES, TEMPLATE_REASONING_SERIES_V1};
-use crate::reasoning::models::{CognitiveDecisionPoint, DecisionOption, ReasoningProblemMetadata, SchemaKind, StrategyKind};
+use crate::core::decision::{CognitiveDecisionPoint, DecisionOption};
+use crate::reasoning::models::{ReasoningProblemMetadata, SchemaKind, StrategyKind};
 use crate::reasoning::series::{SeriesProblem, SeriesRule};
 
 /// Generator for Number and Alphabet Series pattern problems.
@@ -104,28 +105,33 @@ impl SeriesGenerator {
                 DecisionOption::new(
                     "opt_diff",
                     "Inspect successive first differences between terms",
-                    StrategyKind::InspectDifferences,
+                    StrategyKind::InspectDifferences.as_str(),
                     matches!(prob.rule, SeriesRule::ConstantDifference { .. } | SeriesRule::IncreasingDifference { .. }),
                     "First differences reveal arithmetic and progressive difference patterns.",
                 ),
                 DecisionOption::new(
                     "opt_ratio",
                     "Inspect successive ratios / multiplication factors",
-                    StrategyKind::InspectRatios,
+                    StrategyKind::InspectRatios.as_str(),
                     matches!(prob.rule, SeriesRule::Geometric { .. }),
                     "Ratios reveal exponential / geometric growth patterns.",
                 ),
                 DecisionOption::new(
                     "opt_alt",
                     "Inspect alternating dual operations",
-                    StrategyKind::InspectAlternating,
+                    StrategyKind::InspectAlternating.as_str(),
                     matches!(prob.rule, SeriesRule::Alternating { .. }),
                     "Alternating checks reveal multi-operation oscillation patterns.",
                 ),
             ],
-            "opt_diff",
-            preferred_strategy,
-            prob.rule.description(),
+            match preferred_strategy {
+                StrategyKind::InspectDifferences => "opt_diff",
+                StrategyKind::InspectRatios => "opt_ratio",
+                StrategyKind::InspectAlternating => "opt_alt",
+                _ => "opt_diff",
+            },
+            preferred_strategy.as_str(),
+            "Identifying the growth rate visually (linear vs exponential vs erratic) guides strategy selection.",
         );
 
         let mut meta = ReasoningProblemMetadata::new(SchemaKind::NumberSeries, preferred_strategy)
@@ -209,14 +215,14 @@ impl SeriesGenerator {
             vec![
                 DecisionOption::new(
                     "opt_shift",
-                    "Map characters to alphabetical numbers (1..26) and find constant shift",
-                    StrategyKind::InspectAlphabetShift,
+                    "Calculate positional character shifts (e.g. +2, -1)",
+                    StrategyKind::InspectAlphabetShift.as_str(),
                     true,
-                    "Alphabet sequences represent integer modular addition over position indices.",
+                    "Alphabet series are isomorphic to number difference series via positional indexes.",
                 ),
             ],
             "opt_shift",
-            StrategyKind::InspectAlphabetShift,
+            StrategyKind::InspectAlphabetShift.as_str(),
             prob.rule.description(),
         );
 

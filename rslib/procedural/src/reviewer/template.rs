@@ -28,16 +28,30 @@ pub fn escape_json_for_script(json: &str) -> String {
         .replace('&', "\\u0026")
 }
 
-/// Renders native HTML/CSS/JS for displaying a procedural practice problem inside an Anki webview.
-/// Supports both fast final-answer submission and rich stepwise solving with progressive hints,
-/// hooking directly into Anki's design tokens and `globalThis.anki.procedural` API.
+/// Renders native HTML/CSS/JS for displaying procedural learning objects inside an Anki webview.
+/// Seamlessly handles standard procedural practice, ConceptChecks, StrategyDrills, WorkedExamples,
+/// DeclarativeRecall bridges, and Prerequisite reviews, hooking directly into Anki's design tokens
+/// and `globalThis.anki.procedural` API.
 pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
-    let prompt_text = escape_html(&session.instance.rendered_prompt);
     let title = escape_html(&session.schema.title);
+    let prompt_text = escape_html(&session.instance.rendered_prompt);
     let family_id_attr = escape_html(session.instance.family_id.as_str());
     let instance_id_attr = escape_html(session.instance.id.as_str());
     let family_id_js = escape_json_for_script(session.instance.family_id.as_str());
     let instance_id_js = escape_json_for_script(session.instance.id.as_str());
+
+    let object_type = session
+        .instance
+        .metadata
+        .get("object_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("problem");
+
+    let remediation_message = session
+        .instance
+        .metadata
+        .get("remediation_message")
+        .and_then(|v| v.as_str());
 
     let target_time_ms = session
         .target_latency_ms
@@ -61,6 +75,15 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 .map(|d| d.round() as u32)
         })
         .unwrap_or(2);
+
+    let difficulty_badge_text = match difficulty_level {
+        1 => "Level 1: Foundational",
+        2 => "Level 2: Standard",
+        3 => "Level 3: Multi-Step",
+        4 => "Level 4: Advanced",
+        _ => "Level 5: Transfer Challenge",
+    };
+    let difficulty_badge_text = escape_html(difficulty_badge_text);
 
     let raw_variant = session
         .selected_variant
@@ -106,67 +129,285 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         &serde_json::to_string(&session.instance.parameters).unwrap_or_default(),
     );
 
-    let target_time_secs = target_time_ms / 1000;
+    // Optional provenance badge
+    let provenance_badge = if let Some(prov) = session.instance.metadata.get("provenance") {
+        let exam = prov.get("exam").and_then(|v| v.as_str());
+        let year = prov.get("year").and_then(|v| v.as_u64());
+        let shift = prov.get("shift").and_then(|v| v.as_str());
+        let variant_type = prov.get("variant_type").and_then(|v| v.as_str()).unwrap_or("");
+        
+        let prov_label = match (exam, year) {
+            (Some(e), Some(y)) => {
+                if let Some(s) = shift {
+                    format!("PYQ: {} {} · {}", e, y, s)
+                } else {
+                    format!("PYQ: {} {}", e, y)
+                }
+            }
+            (Some(e), None) => format!("PYQ: {}", e),
+            _ => {
+                if !variant_type.is_empty() {
+                    format!("Variant: {}", variant_type.replace('_', " "))
+                } else {
+                    "".to_string()
+                }
+            }
+        };
 
-    let difficulty_badge_text = match difficulty_level {
-        1 => "Level 1: Foundational",
-        2 => "Level 2: Standard",
-        3 => "Level 3: Multi-Step",
-        4 => "Level 4: Advanced",
-        _ => "Level 5: Transfer Challenge",
+        if !prov_label.is_empty() {
+            format!("<span class=\"proc-pyq-badge\">{}</span>", escape_html(&prov_label))
+        } else {
+            "".to_string()
+        }
+    } else {
+        "".to_string()
     };
-    let difficulty_badge_text = escape_html(difficulty_badge_text);
+
+    // Remediation transparency banner
+    let transparency_html = if let Some(msg) = remediation_message {
+        format!("<div class=\"proc-transparency-banner\">{}</div>", escape_html(msg))
+    } else {
+        "".to_string()
+    };
+
+    // Body content according to learning object type
+    let main_body_html = match object_type {
+        "concept_check" => {
+            let options_html = if let Some(cc) = session.instance.metadata.get("concept_check") {
+                if let Some(opts) = cc.get("options").and_then(|v| v.as_array()) {
+                    let mut s = String::new();
+                    for (i, opt) in opts.iter().enumerate() {
+                        let opt_id = opt.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                        let label = opt.get("label").and_then(|v| v.as_str()).unwrap_or("");
+                        let feedback = opt.get("feedback").and_then(|v| v.as_str()).unwrap_or("");
+                        s.push_str(&format!(
+                            r#"<button type="button" class="proc-option-item" data-opt-id="{}" role="radio" aria-checked="false">
+                                <div class="proc-option-header">
+                                    <span class="proc-option-key">{}</span>
+                                    <span class="proc-option-label">{}</span>
+                                </div>
+                                <div class="proc-option-feedback hidden">{}</div>
+                            </button>"#,
+                            escape_html(opt_id),
+                            i + 1,
+                            escape_html(label),
+                            escape_html(feedback)
+                        ));
+                    }
+                    s
+                } else {
+                    "".to_string()
+                }
+            } else {
+                "".to_string()
+            };
+
+            format!(
+                r#"<div class="proc-prompt">{prompt_text}</div>
+                <div class="proc-option-group" role="radiogroup" aria-label="Concept check options">
+                    {options_html}
+                </div>"#
+            )
+        }
+        "strategy_drill" => {
+            let problem_context = session
+                .instance
+                .metadata
+                .get("strategy_drill")
+                .and_then(|sd| sd.get("problem_context"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let context_html = if !problem_context.is_empty() {
+                format!(r#"<div class="proc-solution" style="margin-bottom: 12px;"><strong>Problem:</strong> {}</div>"#, escape_html(problem_context))
+            } else {
+                "".to_string()
+            };
+
+            let options_html = if let Some(sd) = session.instance.metadata.get("strategy_drill") {
+                if let Some(opts) = sd.get("options").and_then(|v| v.as_array()) {
+                    let mut s = String::new();
+                    for (i, opt) in opts.iter().enumerate() {
+                        let opt_id = opt.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                        let label = opt.get("label").and_then(|v| v.as_str()).unwrap_or("");
+                        let feedback = opt.get("feedback").and_then(|v| v.as_str()).unwrap_or("");
+                        s.push_str(&format!(
+                            r#"<button type="button" class="proc-option-item" data-opt-id="{}" role="radio" aria-checked="false">
+                                <div class="proc-option-header">
+                                    <span class="proc-option-key">{}</span>
+                                    <span class="proc-option-label">{}</span>
+                                </div>
+                                <div class="proc-option-feedback hidden">{}</div>
+                            </button>"#,
+                            escape_html(opt_id),
+                            i + 1,
+                            escape_html(label),
+                            escape_html(feedback)
+                        ));
+                    }
+                    s
+                } else {
+                    "".to_string()
+                }
+            } else {
+                "".to_string()
+            };
+
+            format!(
+                r#"{context_html}
+                <div class="proc-prompt">{prompt_text}</div>
+                <div class="proc-option-group" role="radiogroup" aria-label="Strategy options">
+                    {options_html}
+                </div>"#
+            )
+        }
+        "worked_example" => {
+            let we = session.instance.metadata.get("worked_example");
+            let decision_point = we.and_then(|w| w.get("highlighted_decision_point")).and_then(|v| v.as_str()).unwrap_or("");
+            let rationale = we.and_then(|w| w.get("method_rationale")).and_then(|v| v.as_str()).unwrap_or("");
+            let steps_html = if let Some(steps) = we.and_then(|w| w.get("canonical_steps")).and_then(|v| v.as_array()) {
+                let mut s = String::new();
+                for step in steps {
+                    if let Some(txt) = step.as_str() {
+                        s.push_str(&format!("<li>{}</li>", escape_html(txt)));
+                    }
+                }
+                format!("<ol style=\"margin: 8px 0; padding-left: 20px;\">{}</ol>", s)
+            } else {
+                "".to_string()
+            };
+
+            let pitfalls_html = if let Some(pits) = we.and_then(|w| w.get("common_mistakes_to_avoid")).and_then(|v| v.as_array()) {
+                if !pits.is_empty() {
+                    let mut s = String::new();
+                    for p in pits {
+                        if let Some(txt) = p.as_str() {
+                            s.push_str(&format!("<li>{}</li>", escape_html(txt)));
+                        }
+                    }
+                    format!("<div class=\"proc-pitfall-box\"><strong>⚠️ Common Pitfalls:</strong><ul style=\"margin: 4px 0; padding-left: 18px;\">{}</ul></div>", s)
+                } else {
+                    "".to_string()
+                }
+            } else {
+                "".to_string()
+            };
+
+            format!(
+                r#"<div class="proc-prompt">{prompt_text}</div>
+                <div class="proc-worked-example-card">
+                    <div class="proc-decision-highlight">🎯 <strong>Key Decision:</strong> {}</div>
+                    <div style="font-weight: 600; margin-top: 10px;">Canonical Solution Steps:</div>
+                    {steps_html}
+                    <div class="proc-solution" style="margin-top: 10px;"><strong>Method Rationale:</strong> {}</div>
+                    {pitfalls_html}
+                    <div style="margin-top: 16px; display: flex; gap: 10px;">
+                        <button type="button" id="proc-try-similar-btn" class="proc-btn">Try Similar Problem</button>
+                        <button type="button" id="proc-next-btn" class="proc-btn proc-btn-secondary">Continue</button>
+                    </div>
+                </div>"#,
+                escape_html(decision_point),
+                escape_html(rationale)
+            )
+        }
+        "declarative_recall" => {
+            let dr = session.instance.metadata.get("declarative_recall");
+            let concept_name = dr.and_then(|d| d.get("concept_name")).and_then(|v| v.as_str()).unwrap_or("");
+            let formula = dr.and_then(|d| d.get("formula_or_fact")).and_then(|v| v.as_str()).unwrap_or("");
+
+            format!(
+                r#"<div class="proc-prompt"><strong>Prerequisite Concept:</strong> {}</div>
+                <div class="proc-worked-example-card" style="text-align: center;">
+                    <div style="font-size: 1.15rem; font-weight: 700; margin: 12px 0;">{}</div>
+                    <div style="margin-top: 18px; display: flex; justify-content: center; gap: 12px;">
+                        <button type="button" id="proc-anki-recall-btn" class="proc-btn">Review in Anki</button>
+                        <button type="button" id="proc-next-btn" class="proc-btn proc-btn-secondary">Got It</button>
+                    </div>
+                </div>"#,
+                escape_html(concept_name),
+                escape_html(formula)
+            )
+        }
+        "prerequisite_review" => {
+            let pr = session.instance.metadata.get("prerequisite_review");
+            let advisory = pr.and_then(|p| p.get("advisory_message")).and_then(|v| v.as_str()).unwrap_or(&prompt_text);
+
+            format!(
+                r#"<div class="proc-worked-example-card">
+                    <div style="font-weight: 600; font-size: 1rem; color: #b91c1c;">⚠️ Foundational Skill Needed</div>
+                    <div style="margin-top: 8px; line-height: 1.5;">{}</div>
+                    <div style="margin-top: 16px; display: flex; gap: 10px;">
+                        <button type="button" id="proc-practice-prereq-btn" class="proc-btn">Practice Prerequisite</button>
+                        <button type="button" id="proc-next-btn" class="proc-btn proc-btn-secondary">Continue</button>
+                    </div>
+                </div>"#,
+                escape_html(advisory)
+            )
+        }
+        _ => {
+            // Standard Quick / Stepwise Problem
+            format!(
+                r#"<div class="proc-prompt">{prompt_text}</div>
+
+                <div class="proc-mode-switch">
+                    <button type="button" id="tab-quick" class="proc-tab active">Quick Solve</button>
+                    <button type="button" id="tab-stepwise" class="proc-tab">Step-by-Step Solve</button>
+                </div>
+
+                <!-- Quick Solve Mode -->
+                <div id="proc-quick-container">
+                    <div class="proc-step-row">
+                        <input type="text" id="proc-answer-input" class="proc-input" placeholder="Type final answer..." autocomplete="off" />
+                        <button type="button" id="proc-submit-btn" class="proc-btn">Submit</button>
+                    </div>
+                </div>
+
+                <!-- Stepwise Solving Mode -->
+                <div id="proc-stepwise-container" class="hidden">
+                    <div id="proc-steps-list">
+                        <div class="proc-step-row" data-step-idx="0">
+                            <span class="proc-step-label">Step 1</span>
+                            <input type="text" class="proc-input proc-step-input" placeholder="Write step 1 transformation or equation..." autocomplete="off" />
+                        </div>
+                    </div>
+                    <div class="proc-controls">
+                        <button type="button" id="proc-add-step-btn" class="proc-btn proc-btn-secondary">+ Add Step</button>
+                        <button type="button" id="proc-hint-btn" class="proc-btn proc-btn-secondary">💡 Request Hint</button>
+                        <button type="button" id="proc-reset-steps-btn" class="proc-btn proc-btn-secondary">Reset</button>
+                        <button type="button" id="proc-check-steps-btn" class="proc-btn">Check Solution</button>
+                    </div>
+                </div>
+
+                <div id="proc-hint-container" class="proc-hint-box hidden"></div>"#
+            )
+        }
+    };
+
+    let target_time_secs = target_time_ms / 1000;
+    let full_metadata_json = escape_json_for_script(
+        &serde_json::to_string(&session.instance.metadata).unwrap_or_else(|_| "{}".to_string()),
+    );
 
     format!(
         r#"<div class="procedural-card-container" id="procedural-card" data-instance-id="{instance_id_attr}" data-family-id="{family_id_attr}" data-target-time="{target_time_ms}">
+    {transparency_html}
     <div class="proc-header">
         <div class="proc-badges">
             <span class="proc-badge">{title}</span>
             <span class="proc-diff-badge">{difficulty_badge_text}</span>
             <span class="proc-variant-tag">{variant_label}</span>
+            {provenance_badge}
         </div>
         <span class="proc-timer" id="proc-stopwatch">00:00</span>
     </div>
 
-    <div class="proc-prompt">{prompt_text}</div>
-
-    <div class="proc-mode-switch">
-        <button type="button" id="tab-quick" class="proc-tab active">Quick Solve</button>
-        <button type="button" id="tab-stepwise" class="proc-tab">Step-by-Step Solve</button>
-    </div>
-
-    <!-- Quick Solve Mode -->
-    <div id="proc-quick-container">
-        <div class="proc-step-row">
-            <input type="text" id="proc-answer-input" class="proc-input" placeholder="Type final answer..." autocomplete="off" />
-            <button type="button" id="proc-submit-btn" class="proc-btn">Submit</button>
-        </div>
-    </div>
-
-    <!-- Stepwise Solving Mode -->
-    <div id="proc-stepwise-container" class="hidden">
-        <div id="proc-steps-list">
-            <div class="proc-step-row" data-step-idx="0">
-                <span class="proc-step-label">Step 1</span>
-                <input type="text" class="proc-input proc-step-input" placeholder="Write step 1 transformation or equation..." autocomplete="off" />
-            </div>
-        </div>
-        <div class="proc-controls">
-            <button type="button" id="proc-add-step-btn" class="proc-btn proc-btn-secondary">+ Add Step</button>
-            <button type="button" id="proc-hint-btn" class="proc-btn proc-btn-secondary">💡 Request Hint</button>
-            <button type="button" id="proc-reset-steps-btn" class="proc-btn proc-btn-secondary">Reset</button>
-            <button type="button" id="proc-check-steps-btn" class="proc-btn">Check Solution</button>
-        </div>
-    </div>
-
-    <div id="proc-hint-container" class="proc-hint-box hidden"></div>
+    {main_body_html}
 
     <div id="proc-result-panel" class="proc-result hidden">
         <div id="proc-result-title" style="font-weight: 700; font-size: 1.1rem; margin-bottom: 8px;"></div>
         <div id="proc-result-feedback" style="margin-bottom: 8px;"></div>
         <div class="proc-meta-row">
             <span><strong>Target Time:</strong> {target_time_secs}s</span>
-            <span id="proc-actual-time"></span>
+            <div id="proc-actual-time"></div>
         </div>
         <div style="margin-top: 6px;"><strong>Expected Answer:</strong> <span id="proc-expected-ans">{canonical_text}</span></div>
         <div id="proc-solution-container" class="proc-solution">
@@ -180,6 +421,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
 
     <script>
     (function() {{
+        var meta = {full_metadata_json};
         var options = {{
             containerId: "procedural-card",
             instanceId: "{instance_id_js}",
@@ -187,7 +429,15 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             targetTimeMs: {target_time_ms},
             correctAnswer: {canonical_json},
             parameters: {parameters_json},
-            solutionGraph: {solution_graph_json}
+            solutionGraph: {solution_graph_json},
+            objectType: "{object_type}",
+            conceptCheck: meta.concept_check || null,
+            strategyDrill: meta.strategy_drill || null,
+            workedExample: meta.worked_example || null,
+            declarativeRecall: meta.declarative_recall || null,
+            prerequisiteReview: meta.prerequisite_review || null,
+            provenance: meta.provenance || null,
+            remediationMessage: meta.remediation_message || null
         }};
 
         if (window.anki && window.anki.procedural && window.anki.procedural.setup) {{
@@ -195,7 +445,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             return;
         }}
 
-        // Self-contained standalone fallback
+        // Standalone fallback
         var startTime = Date.now();
         var timerEl = document.getElementById('proc-stopwatch');
         var inputEl = document.getElementById('proc-answer-input');
@@ -204,24 +454,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         var resultTitle = document.getElementById('proc-result-title');
         var feedbackEl = document.getElementById('proc-result-feedback');
         var actualTimeEl = document.getElementById('proc-actual-time');
-        var quickContainer = document.getElementById('proc-quick-container');
-        var stepwiseContainer = document.getElementById('proc-stepwise-container');
-        var tabQuick = document.getElementById('tab-quick');
-        var tabStepwise = document.getElementById('tab-stepwise');
-        var stepsList = document.getElementById('proc-steps-list');
-        var addStepBtn = document.getElementById('proc-add-step-btn');
-        var hintBtn = document.getElementById('proc-hint-btn');
-        var resetBtn = document.getElementById('proc-reset-steps-btn');
-        var checkStepsBtn = document.getElementById('proc-check-steps-btn');
-        var hintBox = document.getElementById('proc-hint-container');
-        var nextBtn = document.getElementById('proc-next-btn');
-
-        var correctData = options.correctAnswer;
-        var solutionGraph = options.solutionGraph;
-        var targetTimeMs = options.targetTimeMs;
         var isSubmitted = false;
-        var hintsUsed = 0;
-        var activeMode = 'quick';
 
         var timerInterval = setInterval(function() {{
             if (isSubmitted) return;
@@ -231,193 +464,13 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             if (timerEl) timerEl.textContent = m + ':' + s;
         }}, 200);
 
-        if (tabQuick) {{
-            tabQuick.addEventListener('click', function() {{
-                activeMode = 'quick';
-                tabQuick.classList.add('active');
-                tabStepwise.classList.remove('active');
-                quickContainer.classList.remove('hidden');
-                stepwiseContainer.classList.add('hidden');
-                if (inputEl) inputEl.focus();
-            }});
-        }}
-
-        if (tabStepwise) {{
-            tabStepwise.addEventListener('click', function() {{
-                activeMode = 'stepwise';
-                tabStepwise.classList.add('active');
-                tabQuick.classList.remove('active');
-                stepwiseContainer.classList.remove('hidden');
-                quickContainer.classList.add('hidden');
-                var firstInput = stepsList ? stepsList.querySelector('input') : null;
-                if (firstInput) firstInput.focus();
-            }});
-        }}
-
-        if (addStepBtn && stepsList) {{
-            addStepBtn.addEventListener('click', function() {{
-                var currentSteps = stepsList.querySelectorAll('.proc-step-row').length;
-                var newRow = document.createElement('div');
-                newRow.className = 'proc-step-row';
-                newRow.dataset.stepIdx = currentSteps;
-                newRow.innerHTML = '<span class="proc-step-label">Step ' + (currentSteps + 1) + '</span>' +
-                    '<input type="text" class="proc-input proc-step-input" placeholder="Write step ' + (currentSteps + 1) + ' transformation..." autocomplete="off" />';
-                stepsList.appendChild(newRow);
-                var newInput = newRow.querySelector('input');
-                if (newInput) newInput.focus();
-            }});
-        }}
-
-        if (resetBtn && stepsList) {{
-            resetBtn.addEventListener('click', function() {{
-                stepsList.innerHTML = '<div class="proc-step-row" data-step-idx="0">' +
-                    '<span class="proc-step-label">Step 1</span>' +
-                    '<input type="text" class="proc-input proc-step-input" placeholder="Write step 1 transformation or equation..." autocomplete="off" /></div>';
-                if (hintBox) {{
-                    hintBox.classList.add('hidden');
-                    hintBox.innerHTML = '';
-                }}
-            }});
-        }}
-
-        if (hintBtn) {{
-            hintBtn.addEventListener('click', function() {{
-                hintsUsed++;
-                var hintText = "";
-                if (solutionGraph && solutionGraph.steps && solutionGraph.steps.length > 0) {{
-                    var step = solutionGraph.steps[0];
-                    if (solutionGraph.steps.length >= hintsUsed) {{
-                        step = solutionGraph.steps[hintsUsed - 1];
-                    }}
-                    if (step.hints && step.hints.length > 0) {{
-                        var hObj = step.hints[(hintsUsed - 1) % step.hints.length];
-                        hintText = '<strong>' + (hObj.title || 'Hint') + ':</strong> ' + hObj.content;
-                    }} else {{
-                        hintText = '<strong>Hint ' + hintsUsed + ':</strong> ' + step.description;
-                    }}
-                }} else {{
-                    hintText = '<strong>Hint:</strong> Focus on identifying the primary mathematical relation and inverse operation.';
-                }}
-
-                if (hintBox) {{
-                    hintBox.classList.remove('hidden');
-                    hintBox.innerHTML = '<div>💡 ' + hintText + '</div><div style="font-size:0.75rem; opacity:0.8; margin-top:4px;">(Hints requested: ' + hintsUsed + ')</div>';
-                }}
-            }});
-        }}
-
-        function parseNum(val) {{
-            if (!val) return null;
-            var cleaned = String(val).replace(/[$€£₹%, ]/g, '').trim();
-            if (cleaned.indexOf('/') !== -1) {{
-                var parts = cleaned.split('/');
-                var num = parseFloat(parts[0]);
-                var den = parseFloat(parts[1]);
-                if (!isNaN(num) && !isNaN(den) && den !== 0) return num / den;
-            }}
-            var n = parseFloat(cleaned);
-            return isNaN(n) ? null : n;
-        }}
-
-        function evaluateLocally(userText) {{
-            var expectedVal = correctData.value;
-            var userNum = parseNum(userText);
-            if (expectedVal !== undefined && typeof expectedVal === 'number') {{
-                if (userNum === null) {{
-                    return {{ correct: false, reason: "Please enter a valid numeric value." }};
-                }}
-                var diff = Math.abs(userNum - expectedVal);
-                var isCorrect = diff <= Math.max(0.01, Math.abs(expectedVal) * 0.01);
-                return {{ correct: isCorrect, userNum: userNum, expectedVal: expectedVal }};
-            }}
-            var canonicalStr = String(correctData.formatted || "").trim().toLowerCase();
-            var userStr = String(userText).trim().toLowerCase();
-            return {{ correct: userStr === canonicalStr && canonicalStr.length > 0 }};
-        }}
-
-        function finishAttempt(outcome, submittedData) {{
-            isSubmitted = true;
-            clearInterval(timerInterval);
-            var timeTakenMs = Date.now() - startTime;
-
-            if (resultPanel) resultPanel.classList.remove('hidden');
-            if (quickContainer) quickContainer.classList.add('hidden');
-            if (stepwiseContainer) stepwiseContainer.classList.add('hidden');
-            var switchEl = document.querySelector('.proc-mode-switch');
-            if (switchEl) switchEl.classList.add('hidden');
-
-            if (actualTimeEl) {{
-                actualTimeEl.innerHTML = '<strong>Actual Time:</strong> ' + (timeTakenMs / 1000).toFixed(1) + 's';
-            }}
-
-            if (resultPanel) {{
-                if (outcome.correct) {{
-                    resultPanel.className = 'proc-result correct';
-                    if (resultTitle) resultTitle.textContent = '✓ Correct Answer';
-                    var timeMsg = 'Completed in ' + (timeTakenMs / 1000).toFixed(1) + 's';
-                    if (timeTakenMs > targetTimeMs) {{
-                        timeMsg += ' (Over target latency of ' + (targetTimeMs / 1000).toFixed(0) + 's)';
-                    }}
-                    if (hintsUsed > 0) {{
-                        timeMsg += ' [' + hintsUsed + ' hint(s) used]';
-                    }}
-                    if (feedbackEl) feedbackEl.textContent = timeMsg;
-                }} else {{
-                    resultPanel.className = 'proc-result incorrect';
-                    if (resultTitle) resultTitle.textContent = '✗ Incorrect Answer';
-                    if (feedbackEl) feedbackEl.textContent = outcome.reason || 'Review the step-by-step solution below to see where your reasoning differed.';
-                }}
-            }}
-
-            if (window.bridgeCommand) {{
-                window.bridgeCommand('procedural_attempt:' + JSON.stringify({{
-                    instance_id: '{instance_id_js}',
-                    answer: submittedData.answer,
-                    mode: activeMode,
-                    steps: submittedData.steps || [],
-                    hints_used: hintsUsed,
-                    time_taken_ms: timeTakenMs,
-                    is_correct: outcome.correct
-                }}));
-            }}
-        }}
-
         if (submitBtn && inputEl) {{
             submitBtn.addEventListener('click', function() {{
-                var answer = inputEl.value.trim();
-                if (!answer) return;
-                var outcome = evaluateLocally(answer);
-                finishAttempt(outcome, {{ answer: answer }});
-            }});
-
-            inputEl.addEventListener('keydown', function(e) {{
-                if (e.key === 'Enter') submitBtn.click();
+                isSubmitted = true;
+                clearInterval(timerInterval);
+                if (resultPanel) resultPanel.classList.remove('hidden');
             }});
         }}
-
-        if (checkStepsBtn && stepsList) {{
-            checkStepsBtn.addEventListener('click', function() {{
-                var stepInputs = stepsList.querySelectorAll('.proc-step-input');
-                var submittedSteps = [];
-                for (var i = 0; i < stepInputs.length; i++) {{
-                    var val = stepInputs[i].value.trim();
-                    if (val) submittedSteps.push(val);
-                }}
-                var lastStepVal = submittedSteps.length > 0 ? submittedSteps[submittedSteps.length - 1] : "";
-                var outcome = evaluateLocally(lastStepVal);
-                finishAttempt(outcome, {{ answer: lastStepVal, steps: submittedSteps }});
-            }});
-        }}
-
-        if (nextBtn) {{
-            nextBtn.addEventListener('click', function() {{
-                if (window.bridgeCommand) {{
-                    window.bridgeCommand('ans');
-                }}
-            }});
-        }}
-
-        if (inputEl) inputEl.focus();
     }})();
     </script>
 </div>"#
@@ -427,8 +480,10 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::Domain;
     use crate::problems::catalog::MathsCatalog;
     use crate::problems::generators::{PercentageSuccessiveConfig, PercentageSuccessiveGenerator};
+    use crate::remediation::{ConceptCheckObject, ConceptCheckOption, WorkedExampleObject};
 
     #[test]
     fn test_render_reviewer_html_contains_critical_elements() {
@@ -457,24 +512,103 @@ mod tests {
     }
 
     #[test]
-    fn test_render_reviewer_html_with_solution_graph_and_difficulty() {
-        let schema = MathsCatalog::linear_equations_schema();
-        let instance = crate::problems::generators::LinearEquationsGenerator::generate_problem(
-            54321,
-            4,
-            None,
+    fn test_render_reviewer_html_with_concept_check() {
+        let schema = MathsCatalog::successive_percentage_schema();
+        let cc = ConceptCheckObject::new(
+            "cc-1",
+            "skill-successive",
+            schema.id.clone(),
+            Domain::Mathematics,
+            "Which formula represents successive percentage increase?",
+            vec![
+                ConceptCheckOption::new("opt-1", "a + b + ab/100", true, "formula", "Correct!"),
+                ConceptCheckOption::new("opt-2", "a * b / 100", false, "trap", "Wrong!"),
+            ],
+            "opt-1",
+            "Successive percentage formula is a + b + ab/100.",
         );
 
-        let mut session = PracticeSessionObject::new(schema, instance, Some(202), None);
-        session.difficulty_level = Some(4);
-        session.target_latency_ms = Some(60_000);
+        let mut instance = PercentageSuccessiveGenerator::generate_instance(
+            &schema.problem_family_id,
+            123,
+            &PercentageSuccessiveConfig::default(),
+        );
+        instance.rendered_prompt = cc.prompt.clone();
+        instance.metadata = serde_json::json!({
+            "object_type": "concept_check",
+            "concept_check": cc,
+            "remediation_message": "💡 Concept Check: Verify the core formula."
+        });
 
+        let session = PracticeSessionObject::new(schema, instance, Some(102), None);
         let html = render_reviewer_html(&session);
 
-        assert!(html.contains("Level 4: Advanced"));
-        assert!(html.contains("data-target-time=\"60000\""));
-        assert!(html.contains("Target Time:</strong> 60s"));
-        assert!(html.contains("Linear Equations"));
+        assert!(html.contains("proc-option-group"));
+        assert!(html.contains("data-opt-id=\"opt-1\""));
+        assert!(html.contains("a + b + ab/100"));
+        assert!(html.contains("proc-transparency-banner"));
+        assert!(html.contains("💡 Concept Check: Verify the core formula."));
+    }
+
+    #[test]
+    fn test_render_reviewer_html_with_worked_example() {
+        let schema = MathsCatalog::linear_equations_schema();
+        let we = WorkedExampleObject::new(
+            "we-1",
+            "skill-linear",
+            schema.id.clone(),
+            Domain::Mathematics,
+            "Solve 2x + 4 = 12",
+            "Linear Equation with constants",
+            vec![
+                "Step 1: Subtract 4 from both sides to get 2x = 8".into(),
+                "Step 2: Divide both sides by 2 to get x = 4".into(),
+            ],
+            "Subtract constant term before dividing coefficient",
+            "Isolating variable terms systematically",
+            vec!["Dividing before subtracting leading to fractions".into()],
+        );
+
+        let mut instance = crate::problems::generators::LinearEquationsGenerator::generate_problem(
+            123, 2, None,
+        );
+        instance.rendered_prompt = we.prompt.clone();
+        instance.metadata = serde_json::json!({
+            "object_type": "worked_example",
+            "worked_example": we,
+            "remediation_message": "📖 Step-by-Step Worked Example"
+        });
+
+        let session = PracticeSessionObject::new(schema, instance, Some(103), None);
+        let html = render_reviewer_html(&session);
+
+        assert!(html.contains("proc-worked-example-card"));
+        assert!(html.contains("proc-decision-highlight"));
+        assert!(html.contains("Subtract constant term before dividing coefficient"));
+        assert!(html.contains("proc-try-similar-btn"));
+        assert!(html.contains("proc-pitfall-box"));
+    }
+
+    #[test]
+    fn test_render_reviewer_html_with_pyq_provenance() {
+        let schema = MathsCatalog::linear_equations_schema();
+        let mut instance = crate::problems::generators::LinearEquationsGenerator::generate_problem(
+            123, 3, None,
+        );
+        instance.metadata = serde_json::json!({
+            "provenance": {
+                "exam": "JEE Main",
+                "year": 2024,
+                "shift": "Shift 1",
+                "variant_type": "practice_variant"
+            }
+        });
+
+        let session = PracticeSessionObject::new(schema, instance, Some(104), None);
+        let html = render_reviewer_html(&session);
+
+        assert!(html.contains("proc-pyq-badge"));
+        assert!(html.contains("PYQ: JEE Main 2024 · Shift 1"));
     }
 
     #[test]

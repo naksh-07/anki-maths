@@ -7,6 +7,7 @@ use crate::chemistry::reaction::ReactionTemplates;
 use crate::chemistry::species::SpeciesCatalog;
 use crate::chemistry::units::ChemistryUnit;
 use crate::core::{ProblemFamilyId, Result};
+use crate::core::decision::{CognitiveDecisionPoint, DecisionOption};
 use crate::diagnostics::ErrorCategory;
 use crate::problems::catalog::{FAMILY_CHEMISTRY_STOICHIOMETRY, TEMPLATE_CHEMISTRY_STOICHIOMETRY_V1};
 use crate::problems::generator::ProblemGenerator;
@@ -18,15 +19,78 @@ pub struct StoichiometryGenerator;
 
 impl StoichiometryGenerator {
     pub fn generate_problem(seed: u64, difficulty_level: u32, variant: Option<&str>) -> ProblemInstance {
-        match difficulty_level {
+        let mut instance = match difficulty_level {
             1 => Self::generate_level_1(seed, variant),
             2 => Self::generate_level_2(seed, variant),
             3 => Self::generate_level_3(seed, variant),
             4 => Self::generate_level_4(seed, variant),
-            5 => Self::generate_level_5(seed, variant),
-            _ => Self::generate_level_2(seed, variant),
+            _ => Self::generate_level_5(seed, variant),
+        };
+
+        let dp = CognitiveDecisionPoint::new(
+            "dp_stoich_path",
+            "What is the required conversion path to solve this problem?",
+            vec![
+                DecisionOption::new(
+                    "opt_mass_moles",
+                    "Mass <-> Moles (Single species)",
+                    "path_mass_moles",
+                    difficulty_level == 1,
+                    "Use when converting between mass and moles of the same substance.",
+                ),
+                DecisionOption::new(
+                    "opt_moles_moles",
+                    "Mass A -> Moles A -> Moles B",
+                    "path_moles_moles",
+                    difficulty_level == 2,
+                    "Use molar ratios to find moles of a product from mass of a reactant.",
+                ),
+                DecisionOption::new(
+                    "opt_mass_mass",
+                    "Mass A -> Moles A -> Moles B -> Mass B",
+                    "path_mass_mass",
+                    difficulty_level == 3,
+                    "Full mass-to-mass stoichiometry requires converting to moles, using ratio, then back to mass.",
+                ),
+                DecisionOption::new(
+                    "opt_limiting",
+                    "Identify Limiting Reactant",
+                    "path_limiting",
+                    difficulty_level == 4,
+                    "When given amounts for multiple reactants, you must first determine which limits the reaction.",
+                ),
+                DecisionOption::new(
+                    "opt_conc_mass",
+                    "Concentration/Volume -> Moles -> Mass",
+                    "path_conc_mass",
+                    difficulty_level >= 5,
+                    "Use C = n/V to find initial moles before stoichiometric conversion.",
+                ),
+            ],
+            match difficulty_level {
+                1 => "opt_mass_moles",
+                2 => "opt_moles_moles",
+                3 => "opt_mass_mass",
+                4 => "opt_limiting",
+                _ => "opt_conc_mass",
+            },
+            match difficulty_level {
+                1 => "path_mass_moles",
+                2 => "path_moles_moles",
+                3 => "path_mass_mass",
+                4 => "path_limiting",
+                _ => "path_conc_mass",
+            },
+            "Always map out the conversion steps (Mass/Volume -> Moles A -> Molar Ratio -> Moles B -> Target Unit) before calculating.",
+        );
+
+        if let Some(obj) = instance.metadata.as_object_mut() {
+            obj.insert("decision_point".to_string(), serde_json::to_value(dp).unwrap());
         }
+
+        instance
     }
+
     /// Level 1: Direct Mass <-> Moles Conversion via Molar Mass: n = m / M
     pub fn generate_level_1(seed: u64, variant: Option<&str>) -> ProblemInstance {
         let mut rng = StdRng::seed_from_u64(seed);

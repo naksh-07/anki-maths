@@ -12,7 +12,8 @@ use crate::problems::steps::{HintLevel, SolutionGraph, StepHint, StepNode, StepT
 use crate::problems::validator::{AnswerEvaluation, ProblemValidator};
 use crate::problems::ProblemInstance;
 use crate::reasoning::generators::{FAMILY_REASONING_SEATING, TEMPLATE_REASONING_SEATING_V1};
-use crate::reasoning::models::{CognitiveDecisionPoint, DecisionOption, ReasoningProblemMetadata, SchemaKind, StrategyKind};
+use crate::core::decision::{CognitiveDecisionPoint, DecisionOption};
+use crate::reasoning::models::{ReasoningProblemMetadata, SchemaKind, StrategyKind};
 use crate::reasoning::seating::SeatingPuzzle;
 
 /// Generator for Linear Seating Arrangement CSP problems.
@@ -79,22 +80,22 @@ impl SeatingGenerator {
             vec![
                 DecisionOption::new(
                     "opt_anchor",
-                    format!("Place the fixed anchor: {} at position 1", anchor_person),
-                    StrategyKind::AnchorFixed,
+                    "Anchor the person whose absolute position is given",
+                    StrategyKind::AnchorFixed.as_str(),
                     true,
-                    "Correct: Placing fixed invariant positions immediately bounds the remaining search space.",
+                    "Anchoring fixed positions drastically reduces the domain for relative adjacent constraints.",
                 ),
                 DecisionOption::new(
                     "opt_guess",
                     "Randomly test arbitrary positions for the relative pair",
-                    StrategyKind::BranchCases,
+                    StrategyKind::BranchCases.as_str(),
                     false,
                     "Sub-optimal: Guessing before placing fixed anchors increases unnecessary search branching.",
                 ),
             ],
             "opt_anchor",
-            StrategyKind::AnchorFixed,
-            "Always fix definite anchor positions first, then propagate relative adjacent constraints.",
+            StrategyKind::AnchorFixed.as_str(),
+            "Always anchor invariant fixed positions before relative adjacent constraints.",
         );
 
         let mut meta = ReasoningProblemMetadata::new(SchemaKind::LinearSeating, StrategyKind::AnchorFixed)

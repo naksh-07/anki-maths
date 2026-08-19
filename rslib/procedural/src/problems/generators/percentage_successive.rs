@@ -6,6 +6,7 @@ use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 
 use crate::core::{ProblemFamilyId, Result};
+use crate::core::decision::{CognitiveDecisionPoint, DecisionOption};
 use crate::problems::generator::ProblemGenerator;
 use crate::problems::steps::{SolutionGraph, StepHint, StepNode, StepType};
 use crate::problems::ProblemInstance;
@@ -189,10 +190,42 @@ impl PercentageSuccessiveGenerator {
             "solution": problem.worked_solution,
         });
 
+        let dp = CognitiveDecisionPoint::new(
+            "dp_percentage_strategy",
+            "Which strategy is most efficient for computing successive percentage changes?",
+            vec![
+                DecisionOption::new(
+                    "opt_net",
+                    "Use the net equivalent change formula (a + b + ab/100) or decimal multipliers",
+                    "multiplier_or_net",
+                    true,
+                    "Correct: Multiplicative compounding is mathematically robust and independent of base values.",
+                ),
+                DecisionOption::new(
+                    "opt_step",
+                    "Assume a base of 100 and calculate intermediate values step by step",
+                    "step_by_step",
+                    true,
+                    "Valid but often slower: Calculating intermediate values can lead to messy decimals.",
+                ),
+                DecisionOption::new(
+                    "opt_add",
+                    "Simply add the percentages together (a + b)",
+                    "additive_fallacy",
+                    false,
+                    "Fallacy: Successive percentages compound, they do not simply add.",
+                ),
+            ],
+            "opt_net",
+            "multiplier_or_net",
+            "Successive percentages compound multiplicatively. Always use decimal multipliers (e.g., 1.20 * 0.80) or the net change formula.",
+        );
+
         let metadata = serde_json::json!({
             "difficulty": problem.difficulty,
             "target_time_ms": problem.target_time_ms,
             "generator": "math.percentage.successive.v1",
+            "decision_point": dp,
         });
 
         let graph = Self::build_solution_graph(&problem);
@@ -233,10 +266,42 @@ impl PercentageSuccessiveGenerator {
             "solution": problem.worked_solution,
         });
 
+        let dp = CognitiveDecisionPoint::new(
+            "dp_percentage_strategy",
+            "Which strategy is most efficient for computing successive percentage changes?",
+            vec![
+                DecisionOption::new(
+                    "opt_net",
+                    "Use the net equivalent change formula (a + b + ab/100) or decimal multipliers",
+                    "multiplier_or_net",
+                    true,
+                    "Correct: Multiplicative compounding is mathematically robust and independent of base values.",
+                ),
+                DecisionOption::new(
+                    "opt_step",
+                    "Assume a base of 100 and calculate intermediate values step by step",
+                    "step_by_step",
+                    true,
+                    "Valid but often slower: Calculating intermediate values can lead to messy decimals.",
+                ),
+                DecisionOption::new(
+                    "opt_add",
+                    "Simply add the percentages together (a + b)",
+                    "additive_fallacy",
+                    false,
+                    "Fallacy: Successive percentages compound, they do not simply add.",
+                ),
+            ],
+            "opt_net",
+            "multiplier_or_net",
+            "Successive percentages compound multiplicatively. Always use decimal multipliers (e.g., 1.20 * 0.80) or the net change formula.",
+        );
+
         let metadata = serde_json::json!({
             "difficulty": problem.difficulty,
             "target_time_ms": problem.target_time_ms,
             "generator": "math.percentage.successive.v1",
+            "decision_point": dp,
         });
 
         let graph = Self::build_solution_graph(&problem);

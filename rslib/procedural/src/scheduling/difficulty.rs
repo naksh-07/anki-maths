@@ -82,7 +82,9 @@ impl AdaptiveDifficultyEngine {
             PracticeProgressionState::Fluent => 2,
             PracticeProgressionState::Variation => 3,
             PracticeProgressionState::Transfer => 4,
-            PracticeProgressionState::Mastered => 5,
+            PracticeProgressionState::Mastered
+            | PracticeProgressionState::Retired
+            | PracticeProgressionState::Hibernating => 5,
         }
     }
 
@@ -196,6 +198,7 @@ impl AdaptiveDifficultyEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::skills::signals::{IndependenceLevel, MasteryEvidence};
     use crate::diagnostics::ErrorCategory;
 
     #[test]
@@ -214,13 +217,27 @@ mod tests {
         state.custom_state = serde_json::json!({ "current_difficulty_level": 2 });
 
         // 1st success: not enough to promote (hysteresis requires >= 2)
-        state.record_attempt_outcome(true, 1.0, 20_000, 35_000, Some("standard"), None, 1000);
+        let ev1 = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 20_000,
+            variant_exposure: Some("standard".to_string()),
+            independence: IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev1, 1.0, 35_000, 1000);
         let dec1 = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
         assert_eq!(dec1.level, 2);
         assert!(dec1.reason.contains("maintained_stable_performance"));
 
         // 2nd consecutive fast success: promoted to Level 3
-        state.record_attempt_outcome(true, 1.0, 18_000, 35_000, Some("standard"), None, 1050);
+        let ev2 = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 18_000,
+            variant_exposure: Some("standard".to_string()),
+            independence: IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev2, 1.0, 35_000, 1050);
         let dec2 = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
         assert_eq!(dec2.level, 3);
         assert_eq!(dec2.target_time_ms, 50_000);
@@ -232,15 +249,14 @@ mod tests {
         let mut state = SkillState::new("skill.algebra");
         state.custom_state = serde_json::json!({ "current_difficulty_level": 3 });
 
-        state.record_attempt_outcome(
-            false,
-            0.0,
-            30_000,
-            50_000,
-            Some("standard"),
-            Some(&ErrorCategory::Concept),
-            1000,
-        );
+        let ev_fail = MasteryEvidence {
+            final_correctness: false,
+            latency_evidence: 30_000,
+            variant_exposure: Some("standard".to_string()),
+            diagnostic_errors: vec![ErrorCategory::Concept],
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev_fail, 0.0, 50_000, 1000);
 
         let dec = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
         assert_eq!(dec.level, 2);
@@ -253,7 +269,14 @@ mod tests {
         state.custom_state = serde_json::json!({ "current_difficulty_level": 3 });
 
         // Target is 50s, took 70s (> 1.25 * 50 = 62.5s)
-        state.record_attempt_outcome(true, 1.0, 70_000, 50_000, Some("standard"), None, 1000);
+        let ev_slow = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 70_000,
+            variant_exposure: Some("standard".to_string()),
+            independence: IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev_slow, 1.0, 50_000, 1000);
 
         let dec = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
         assert_eq!(dec.level, 3);
@@ -266,23 +289,36 @@ mod tests {
         state.custom_state = serde_json::json!({ "current_difficulty_level": 1 });
 
         // Demoting at level 1 stays at level 1
-        state.record_attempt_outcome(
-            false,
-            0.0,
-            30_000,
-            25_000,
-            Some("standard"),
-            Some(&ErrorCategory::Concept),
-            1000,
-        );
+        let ev_d1 = MasteryEvidence {
+            final_correctness: false,
+            latency_evidence: 30_000,
+            variant_exposure: Some("standard".to_string()),
+            diagnostic_errors: vec![ErrorCategory::Concept],
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev_d1, 0.0, 25_000, 1000);
         let dec = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
         assert_eq!(dec.level, 1);
 
         // Promoting at level 5 stays at level 5
         state.custom_state = serde_json::json!({ "current_difficulty_level": 5 });
         state.consecutive_successes = 5;
-        state.record_attempt_outcome(true, 1.0, 15_000, 80_000, Some("standard"), None, 1050);
-        state.record_attempt_outcome(true, 1.0, 15_000, 80_000, Some("standard"), None, 1100);
+        let ev_p5a = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 15_000,
+            variant_exposure: Some("standard".to_string()),
+            independence: IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev_p5a, 1.0, 80_000, 1050);
+        let ev_p5b = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 15_000,
+            variant_exposure: Some("standard".to_string()),
+            independence: IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev_p5b, 1.0, 80_000, 1100);
         let dec5 = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
         assert_eq!(dec5.level, 5);
     }

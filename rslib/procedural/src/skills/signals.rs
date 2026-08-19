@@ -7,21 +7,25 @@ use serde::{Deserialize, Serialize};
 use crate::diagnostics::ErrorCategory;
 
 /// Deterministic stage of procedural skill development.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PracticeProgressionState {
     /// Newly introduced skill without sufficient practice history.
-    New,
+    New = 0,
     /// Building initial procedural knowledge and basic calculation steps.
-    Learning,
+    Learning = 1,
     /// High accuracy and consistent execution on standard problem variants.
-    Fluent,
+    Fluent = 2,
     /// Practicing diverse structural and contextual problem variants.
-    Variation,
+    Variation = 3,
     /// Robust performance across non-standard and multi-step variations.
-    Transfer,
+    Transfer = 4,
     /// High-speed, high-accuracy automaticity across all variant templates.
-    Mastered,
+    Mastered = 5,
+    /// Retired from active practice into low-frequency maintenance.
+    Retired = 6,
+    /// Hibernating temporarily due to workload regulation.
+    Hibernating = 7,
 }
 
 impl Default for PracticeProgressionState {
@@ -39,7 +43,19 @@ impl PracticeProgressionState {
             PracticeProgressionState::Variation => "variation",
             PracticeProgressionState::Transfer => "transfer",
             PracticeProgressionState::Mastered => "mastered",
+            PracticeProgressionState::Retired => "retired",
+            PracticeProgressionState::Hibernating => "hibernating",
         }
+    }
+
+    /// Whether this skill is in a mature or maintenance state.
+    pub fn is_mature(&self) -> bool {
+        matches!(
+            self,
+            PracticeProgressionState::Mastered
+                | PracticeProgressionState::Retired
+                | PracticeProgressionState::Hibernating
+        )
     }
 }
 
@@ -52,6 +68,10 @@ pub struct RecentAttemptRecord {
     pub target_latency_ms: u64,
     pub variant: Option<String>,
     pub error_category: Option<ErrorCategory>,
+    #[serde(default)]
+    pub max_hint_level: Option<u32>,
+    #[serde(default)]
+    pub hint_count: Option<u32>,
     pub timestamp: i64,
 }
 
@@ -226,6 +246,68 @@ impl VariantPerformance {
             0.0
         } else {
             self.successful_attempts as f64 / self.total_attempts as f64
+        }
+    }
+}
+
+/// The level of independence a learner demonstrated during a practice attempt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum IndependenceLevel {
+    /// Solved completely independently with no hints, retries, or external assistance.
+    #[default]
+    Independent,
+    /// Required minor assistance, such as a conceptual nudge or error-specific hint.
+    LightSupport,
+    /// Required significant step-by-step guidance or multiple retries to reach the solution.
+    SignificantSupport,
+    /// Could not solve the problem; relied entirely on bottom-out hints or gave up.
+    NonIndependent,
+}
+
+/// A comprehensive compilation of evidence gathered during a practice attempt,
+/// used to evaluate progression and mastery transitions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MasteryEvidence {
+    /// Whether the final answer was correct.
+    pub final_correctness: bool,
+    /// The ratio of correct cognitive decisions made (if any decision points were present).
+    pub decision_quality: Option<f64>,
+    /// The ratio of correct steps executed (if step-level tracking is available).
+    pub step_quality: Option<f64>,
+    /// The level of independence demonstrated.
+    pub independence: IndependenceLevel,
+    /// Maximum hint level reached during this attempt (0=none, 1=cue, 2=scaffold, 3=bottom-out).
+    #[serde(default)]
+    pub max_hint_level: Option<u32>,
+    /// Total number of hints explicitly requested.
+    pub hint_dependence: u32,
+    /// Total number of retry attempts required.
+    pub retry_dependence: u32,
+    /// The specific structural or contextual variant ID exposed.
+    pub variant_exposure: Option<String>,
+    /// Whether the attempt provided valid evidence of far-transfer capabilities.
+    pub transfer_evidence: bool,
+    /// Latency (ms) taken to solve.
+    pub latency_evidence: u64,
+    /// List of diagnostic errors encountered during the attempt.
+    pub diagnostic_errors: Vec<ErrorCategory>,
+}
+
+impl Default for MasteryEvidence {
+    fn default() -> Self {
+        Self {
+            final_correctness: false,
+            decision_quality: None,
+            step_quality: None,
+            independence: IndependenceLevel::NonIndependent,
+            max_hint_level: None,
+            hint_dependence: 0,
+            retry_dependence: 0,
+            variant_exposure: None,
+            transfer_evidence: false,
+            latency_evidence: 0,
+            diagnostic_errors: vec![],
         }
     }
 }

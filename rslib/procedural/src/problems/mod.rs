@@ -7,6 +7,7 @@ pub mod generators;
 pub mod registry;
 pub mod steps;
 pub mod validator;
+pub mod variation;
 
 pub use catalog::*;
 pub use generator::*;
@@ -14,6 +15,7 @@ pub use generators::*;
 pub use registry::*;
 pub use steps::*;
 pub use validator::*;
+pub use variation::*;
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};

@@ -2,18 +2,26 @@
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 pub mod signals;
+pub mod progression;
+pub mod prerequisites;
+pub mod lifecycle;
 
 use std::collections::HashMap;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{Domain, SkillId};
-use crate::diagnostics::ErrorCategory;
 
 pub use signals::{
     ErrorFrequencyCounts, MovingLatencyStats, PracticeProgressionState,
-    RecentAttemptRecord, VariantPerformance,
+    RecentAttemptRecord, VariantPerformance, MasteryEvidence, IndependenceLevel
 };
+pub use progression::ProgressionPolicy;
+pub use prerequisites::{
+    DEFAULT_MAX_PREREQUISITE_DEPTH, PrerequisiteEvaluation, PrerequisiteGraphService,
+    PrerequisitePolicy, PrerequisiteReadiness,
+};
+pub use lifecycle::{MaintenanceReviewOutcome, RetirementEvaluation, RetirementPolicy};
 
 /// Discrete skill node representing a specific concept or operational competency.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -137,17 +145,19 @@ impl SkillState {
     /// Record a practice attempt and update all moving windows, error counters, variant stats, and progression.
     pub fn record_attempt_outcome(
         &mut self,
-        is_correct: bool,
+        evidence: &MasteryEvidence,
         score: f64,
-        latency_ms: u64,
         target_latency_ms: u64,
-        variant: Option<&str>,
-        error_category: Option<&ErrorCategory>,
         timestamp: i64,
     ) {
         self.total_attempts += 1;
         self.last_practiced_at = Some(timestamp);
         self.updated_at = Utc::now().timestamp();
+
+        let is_correct = evidence.final_correctness;
+        let latency_ms = evidence.latency_evidence;
+        let error_category = evidence.diagnostic_errors.first();
+        let variant = evidence.variant_exposure.as_deref();
 
         if is_correct {
             self.successful_attempts += 1;
@@ -160,8 +170,8 @@ impl SkillState {
             self.consecutive_successes = 0;
         }
 
-        // Record error category
-        if let Some(cat) = error_category {
+        // Record error categories
+        for cat in &evidence.diagnostic_errors {
             self.error_counts.record(cat);
         }
 
@@ -176,6 +186,8 @@ impl SkillState {
             target_latency_ms,
             variant: variant.map(|s| s.to_string()),
             error_category: error_category.cloned(),
+            max_hint_level: evidence.max_hint_level,
+            hint_count: Some(evidence.hint_dependence),
             timestamp,
         });
         if self.recent_attempts.len() > self.window_size {
@@ -198,67 +210,29 @@ impl SkillState {
         self.confidence = (self.total_attempts as f64 / 10.0).min(1.0);
 
         // Evaluate state progression
-        self.evaluate_progression();
+        ProgressionPolicy::evaluate(self, evidence);
 
         // Sync custom_state for serialization compatibility
         self.sync_custom_state();
     }
 
-    /// Evaluates deterministic progression between skill development stages.
-    pub fn evaluate_progression(&mut self) {
-        let recent_acc = self.recent_accuracy();
-        let attempts_in_window = self.recent_attempts.len();
-
-        match self.practice_state {
-            PracticeProgressionState::New => {
-                if self.total_attempts >= 1 {
-                    self.practice_state = PracticeProgressionState::Learning;
-                }
-            }
-            PracticeProgressionState::Learning => {
-                // Advance to Fluent if high accuracy in full window and consecutive successes
-                if attempts_in_window >= 3 && recent_acc >= 0.8 && self.consecutive_successes >= 3 {
-                    self.practice_state = PracticeProgressionState::Fluent;
-                }
-            }
-            PracticeProgressionState::Fluent => {
-                // If learner fails multiple times, drop back to Learning
-                if self.consecutive_failures >= 3 || (attempts_in_window >= 4 && recent_acc < 0.4) {
-                    self.practice_state = PracticeProgressionState::Learning;
-                } else if self.variant_stats.len() >= 2 && self.consecutive_successes >= 2 {
-                    // Explored variations successfully
-                    self.practice_state = PracticeProgressionState::Variation;
-                }
-            }
-            PracticeProgressionState::Variation => {
-                if self.consecutive_failures >= 3 || (attempts_in_window >= 4 && recent_acc < 0.4) {
-                    self.practice_state = PracticeProgressionState::Fluent;
-                } else {
-                    // Check if multiple variants have solid practice
-                    let distinct_passed = self
-                        .variant_stats
-                        .values()
-                        .filter(|v| v.successful_attempts >= 2)
-                        .count();
-                    if distinct_passed >= 2 && recent_acc >= 0.8 {
-                        self.practice_state = PracticeProgressionState::Transfer;
-                    }
-                }
-            }
-            PracticeProgressionState::Transfer => {
-                if self.consecutive_failures >= 3 || (attempts_in_window >= 4 && recent_acc < 0.4) {
-                    self.practice_state = PracticeProgressionState::Variation;
-                } else if self.consecutive_successes >= 5 && recent_acc >= 0.9 && self.variant_stats.len() >= 3 {
-                    self.practice_state = PracticeProgressionState::Mastered;
-                }
-            }
-            PracticeProgressionState::Mastered => {
-                if self.consecutive_failures >= 3 || (attempts_in_window >= 4 && recent_acc < 0.5) {
-                    self.practice_state = PracticeProgressionState::Transfer;
-                }
-            }
-        }
+    /// Directly record variant performance exposure.
+    pub fn record_variant_exposure(
+        &mut self,
+        variant_key: impl Into<String>,
+        is_correct: bool,
+        latency_ms: u64,
+        error_category: Option<crate::diagnostics::ErrorCategory>,
+        timestamp: i64,
+    ) {
+        let perf = self
+            .variant_stats
+            .entry(variant_key.into())
+            .or_insert_with(VariantPerformance::default);
+        perf.record(is_correct, latency_ms, error_category, timestamp);
     }
+
+
 
     /// Synchronize rich structured signals into `custom_state` JSON for database persistence.
     pub fn sync_custom_state(&mut self) {
@@ -335,6 +309,7 @@ impl SkillState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::diagnostics::ErrorCategory;
 
     #[test]
     fn test_skill_creation() {
@@ -368,7 +343,14 @@ mod tests {
         assert_eq!(state.practice_state, PracticeProgressionState::New);
 
         // 1st attempt: correct
-        state.record_attempt_outcome(true, 1.0, 20_000, 30_000, Some("forward_two_step"), None, 1000);
+        let ev1 = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 20_000,
+            variant_exposure: Some("forward_two_step".to_string()),
+            independence: IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev1, 1.0, 30_000, 1000);
         assert_eq!(state.total_attempts, 1);
         assert_eq!(state.successful_attempts, 1);
         assert_eq!(state.consecutive_successes, 1);
@@ -377,9 +359,24 @@ mod tests {
         assert_eq!(state.moving_average_latency_ms(), 20_000.0);
 
         // 2nd attempt: correct
-        state.record_attempt_outcome(true, 1.0, 25_000, 30_000, Some("forward_two_step"), None, 1050);
+        let ev2 = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 25_000,
+            variant_exposure: Some("forward_two_step".to_string()),
+            independence: IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev2, 1.0, 30_000, 1050);
+
         // 3rd attempt: correct
-        state.record_attempt_outcome(true, 1.0, 15_000, 30_000, Some("forward_two_step"), None, 1100);
+        let ev3 = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 15_000,
+            variant_exposure: Some("forward_two_step".to_string()),
+            independence: IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev3, 1.0, 30_000, 1100);
         assert_eq!(state.practice_state, PracticeProgressionState::Fluent);
         assert_eq!(state.recent_accuracy(), 1.0);
         assert_eq!(state.moving_average_latency_ms(), 20_000.0);
@@ -387,13 +384,17 @@ mod tests {
         assert_eq!(state.latency_stats.max_latency_ms, Some(25_000));
 
         // 4th attempt: fail with concept error
+        let ev4 = MasteryEvidence {
+            final_correctness: false,
+            latency_evidence: 40_000,
+            variant_exposure: Some("forward_two_step".to_string()),
+            diagnostic_errors: vec![ErrorCategory::Concept],
+            ..Default::default()
+        };
         state.record_attempt_outcome(
-            false,
+            &ev4,
             0.0,
-            40_000,
             30_000,
-            Some("forward_two_step"),
-            Some(&ErrorCategory::Concept),
             1150,
         );
         // Window size is 3, so window contains: 25s (pass), 15s (pass), 40s (fail) -> 2/3 accuracy

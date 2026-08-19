@@ -12,7 +12,8 @@ use crate::problems::steps::{HintLevel, SolutionGraph, StepHint, StepNode, StepT
 use crate::problems::validator::{AnswerEvaluation, ProblemValidator};
 use crate::problems::ProblemInstance;
 use crate::reasoning::generators::{FAMILY_REASONING_SYLLOGISM, TEMPLATE_REASONING_SYLLOGISM_V1};
-use crate::reasoning::models::{CognitiveDecisionPoint, DecisionOption, ReasoningProblemMetadata, SchemaKind, StrategyKind};
+use crate::core::decision::{CognitiveDecisionPoint, DecisionOption};
+use crate::reasoning::models::{ReasoningProblemMetadata, SchemaKind, StrategyKind};
 use crate::reasoning::syllogism::SyllogismProblem;
 
 /// Generator for Categorical Syllogism formal logic problems.
@@ -77,20 +78,20 @@ impl SyllogismGenerator {
                 DecisionOption::new(
                     "opt_euler",
                     "Draw or conceptualize Venn/Euler set containment and disjointness diagrams",
-                    StrategyKind::DirectSyllogisticDeduction,
+                    StrategyKind::DirectSyllogisticDeduction.as_str(),
                     true,
                     "Euler diagrams provide deterministic verification of necessary truth vs contingent overlap.",
                 ),
                 DecisionOption::new(
                     "opt_assume",
                     "Assume 'Some' implies 'All'",
-                    StrategyKind::EliminateInvalid,
+                    StrategyKind::EliminateInvalid.as_str(),
                     false,
                     "Fallacy: 'Some' means at least one, not all.",
                 ),
             ],
             "opt_euler",
-            StrategyKind::DirectSyllogisticDeduction,
+            StrategyKind::DirectSyllogisticDeduction.as_str(),
             "Use set containment (A ⊆ B) and disjointness (A ∩ B = ∅) rules.",
         );
 

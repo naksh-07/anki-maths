@@ -2,8 +2,13 @@
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 pub mod difficulty;
+pub mod interleaving;
 pub mod rating_policy;
 pub mod selector;
+pub mod speed;
+pub mod transfer;
+pub mod unified;
+pub mod workload;
 
 use serde::{Deserialize, Serialize};
 
@@ -13,10 +18,19 @@ use crate::problems::ProblemInstance;
 use crate::skills::SkillState;
 
 pub use difficulty::{AdaptiveDifficultyEngine, DifficultyDecision};
+pub use interleaving::InterleavingPolicy;
 pub use rating_policy::{derive_fsrs_rating, Rating, RatingPolicy, StandardRatingPolicy};
 pub use selector::{
     MultiSchemaSelectionDecision, MultiSchemaSelector, PracticeMode, SelectionDecision,
     TransferEligibility, TransferEligibilityEngine, VariantSelector,
+};
+pub use speed::{DomainSpeedConfig, SpeedEvaluation, SpeedRating, StageSpeedPolicy};
+pub use transfer::{TransferEligibilityEvaluation, TransferEngine, TransferLevel};
+pub use unified::{
+    LearningObjectKind, PriorityTier, UnifiedPracticeEngine, UnifiedSelectionDecision,
+};
+pub use workload::{
+    SessionBudgetTracker, WorkloadSafeguards, WorkloadSnapshot, WorkloadState,
 };
 
 /// Status indicating whether a procedural practice object is ready for practice.

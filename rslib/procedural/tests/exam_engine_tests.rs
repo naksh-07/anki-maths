@@ -7,6 +7,7 @@ use procedural::{
     PyqMasteryBridge, PYQSource, Rating, SchemaId, SchemaPracticeObject, SkillId, SkillState,
     SCHEMA_SUCCESSIVE_PERCENTAGE, SCHEMA_TIME_SPEED_DISTANCE, SCHEMA_TIME_WORK,
 };
+use procedural::skills::signals::MasteryEvidence;
 
 #[test]
 fn test_exam_profiles_serialization_and_canonical_blueprints() {
@@ -93,7 +94,13 @@ fn test_exam_relevance_scorer_and_topic_weighting() {
     state_struggling.mastery = 0.25;
     state_struggling.total_attempts = 5;
     state_struggling.consecutive_failures = 3;
-    state_struggling.record_attempt_outcome(false, 0.0, 50_000, 35_000, None, Some(&ErrorCategory::Concept), 1000);
+    let ev_struggling = MasteryEvidence {
+        final_correctness: false,
+        latency_evidence: 50_000,
+        diagnostic_errors: vec![ErrorCategory::Concept],
+        ..Default::default()
+    };
+    state_struggling.record_attempt_outcome(&ev_struggling, 0.0, 35_000, 1000);
 
     let score_struggling = ExamRelevanceScorer::calculate_score(
         &profile,
@@ -187,6 +194,7 @@ fn test_pyq_mastery_bridge_progression() {
         &state,
         None,
         Rating::Good,
+        1,
     );
 
     // Success on authentic PYQ demands variant confirmation
@@ -215,6 +223,7 @@ fn test_pyq_mastery_bridge_progression() {
         &state,
         Some(&ErrorCategory::Concept),
         Rating::Again,
+        1,
     );
 
     // Failure on authentic PYQ triggers targeted remediation

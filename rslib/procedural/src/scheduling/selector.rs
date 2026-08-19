@@ -664,6 +664,7 @@ impl VariantSelector {
 mod tests {
     use super::*;
     use crate::problems::catalog::MathsCatalog;
+    use crate::skills::signals::{IndependenceLevel, MasteryEvidence};
 
     #[test]
     fn test_multi_schema_selector_remediation_priority() {
@@ -674,15 +675,14 @@ mod tests {
         let mut states = HashMap::new();
         let mut pct_state = SkillState::new(&sch_pct.skill_id);
         // Record a failure on Percentage
-        pct_state.record_attempt_outcome(
-            false,
-            0.0,
-            25000,
-            35000,
-            Some("standard"),
-            Some(&ErrorCategory::Concept),
-            1000,
-        );
+        let evidence = MasteryEvidence {
+            final_correctness: false,
+            latency_evidence: 25000,
+            variant_exposure: Some("standard".to_string()),
+            diagnostic_errors: vec![ErrorCategory::Concept],
+            ..Default::default()
+        };
+        pct_state.record_attempt_outcome(&evidence, 0.0, 35000, 1000);
         states.insert(sch_pct.skill_id.clone(), pct_state);
 
         let decision = MultiSchemaSelector::select_next_schema(
@@ -752,23 +752,36 @@ mod tests {
         assert!(!elig_cold.is_eligible);
 
         // 2. Add 2 fast, correct attempts on standard variants -> eligible!
-        state.record_attempt_outcome(true, 1.0, 15000, 35000, Some("alligation_ratio"), None, 1000);
-        state.record_attempt_outcome(true, 1.0, 18000, 35000, Some("two_component_blend"), None, 2000);
+        let ev1 = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 15000,
+            variant_exposure: Some("alligation_ratio".to_string()),
+            independence: crate::skills::signals::IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev1, 1.0, 35000, 1000);
+        let ev2 = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 18000,
+            variant_exposure: Some("two_component_blend".to_string()),
+            independence: crate::skills::signals::IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev2, 1.0, 35000, 2000);
 
         let elig_ready = TransferEligibilityEngine::evaluate_eligibility(Some(&state));
         assert!(elig_ready.is_eligible, "Should be eligible with 2 consecutive fast successes");
         assert_eq!(elig_ready.consecutive_successes, 2);
 
         // 3. Add a concept error -> immediately ineligible
-        state.record_attempt_outcome(
-            false,
-            0.0,
-            25000,
-            35000,
-            Some("two_component_blend"),
-            Some(&ErrorCategory::Concept),
-            3000,
-        );
+        let ev_fail = MasteryEvidence {
+            final_correctness: false,
+            latency_evidence: 25000,
+            variant_exposure: Some("two_component_blend".to_string()),
+            diagnostic_errors: vec![ErrorCategory::Concept],
+            ..Default::default()
+        };
+        state.record_attempt_outcome(&ev_fail, 0.0, 35000, 3000);
 
         let elig_failed = TransferEligibilityEngine::evaluate_eligibility(Some(&state));
         assert!(!elig_failed.is_eligible, "Concept failure should disqualify transfer mode");
@@ -782,8 +795,22 @@ mod tests {
 
         let mut states = HashMap::new();
         let mut tsd_state = SkillState::new(&sch_tsd.skill_id);
-        tsd_state.record_attempt_outcome(true, 1.0, 15000, 40000, Some("direct_formula"), None, 1000);
-        tsd_state.record_attempt_outcome(true, 1.0, 18000, 40000, Some("average_speed"), None, 2000);
+        let tev1 = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 15000,
+            variant_exposure: Some("direct_formula".to_string()),
+            independence: crate::skills::signals::IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        tsd_state.record_attempt_outcome(&tev1, 1.0, 40000, 1000);
+        let tev2 = MasteryEvidence {
+            final_correctness: true,
+            latency_evidence: 18000,
+            variant_exposure: Some("average_speed".to_string()),
+            independence: crate::skills::signals::IndependenceLevel::Independent,
+            ..Default::default()
+        };
+        tsd_state.record_attempt_outcome(&tev2, 1.0, 40000, 2000);
         states.insert(sch_tsd.skill_id.clone(), tsd_state);
 
         let decision = MultiSchemaSelector::select_next_schema(

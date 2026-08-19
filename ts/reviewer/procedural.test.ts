@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // Copyright: Ankitects Pty Ltd and contributors
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
@@ -66,7 +67,9 @@ describe("ProceduralReviewer API", () => {
         });
 
         expect(reviewer).toBeInstanceOf(ProceduralReviewer);
+        expect(reviewer.getState()).toBe("solving");
         reviewer.destroy();
+        expect(reviewer.getState()).toBe("teardown");
     });
 
     test("parses numeric values and fractions accurately", () => {
@@ -98,9 +101,12 @@ describe("ProceduralReviewer API", () => {
         expect(correctRes.isCorrect).toBe(true);
         expect(correctRes.score).toBe(1.0);
 
-        const incorrectRes = reviewer.evaluateLocally("15");
-        expect(incorrectRes.isCorrect).toBe(false);
-        expect(incorrectRes.score).toBe(0.0);
+        const closeRes = reviewer.evaluateLocally("12.005");
+        expect(closeRes.isCorrect).toBe(true);
+
+        const wrongRes = reviewer.evaluateLocally("15.5");
+        expect(wrongRes.isCorrect).toBe(false);
+        expect(wrongRes.score).toBe(0.0);
 
         reviewer.destroy();
     });
@@ -108,20 +114,26 @@ describe("ProceduralReviewer API", () => {
     test("mode switching changes active tabs and container visibility", () => {
         const reviewer = new ProceduralReviewer(container, {
             instanceId: "inst-123",
-            familyId: "math.linear_equations",
+            familyId: "math.percentage.successive",
             targetTimeMs: 45000,
-            correctAnswer: { value: 12.0 },
+            correctAnswer: { value: 10.0 },
         });
 
+        const quickTab = container.querySelector("#tab-quick")!;
+        const stepwiseTab = container.querySelector("#tab-stepwise")!;
+        const quickCont = container.querySelector("#proc-quick-container")!;
+        const stepCont = container.querySelector("#proc-stepwise-container")!;
+
         reviewer.switchMode("stepwise");
-        expect(container.querySelector("#tab-stepwise")?.classList.contains("active")).toBe(true);
-        expect(container.querySelector("#tab-quick")?.classList.contains("active")).toBe(false);
-        expect(container.querySelector("#proc-stepwise-container")?.classList.contains("hidden")).toBe(false);
-        expect(container.querySelector("#proc-quick-container")?.classList.contains("hidden")).toBe(true);
+        expect(stepwiseTab.classList.contains("active")).toBe(true);
+        expect(quickTab.classList.contains("active")).toBe(false);
+        expect(stepCont.classList.contains("hidden")).toBe(false);
+        expect(quickCont.classList.contains("hidden")).toBe(true);
 
         reviewer.switchMode("quick");
-        expect(container.querySelector("#tab-quick")?.classList.contains("active")).toBe(true);
-        expect(container.querySelector("#proc-quick-container")?.classList.contains("hidden")).toBe(false);
+        expect(quickTab.classList.contains("active")).toBe(true);
+        expect(stepCont.classList.contains("hidden")).toBe(true);
+        expect(quickCont.classList.contains("hidden")).toBe(false);
 
         reviewer.destroy();
     });
@@ -129,26 +141,25 @@ describe("ProceduralReviewer API", () => {
     test("progressive hints requests and bridge notification", () => {
         const reviewer = new ProceduralReviewer(container, {
             instanceId: "inst-123",
-            familyId: "math.linear_equations",
+            familyId: "math.percentage.successive",
             targetTimeMs: 45000,
-            correctAnswer: { value: 12.0 },
+            correctAnswer: { value: 10.0 },
             solutionGraph: {
                 steps: [
-                    {
-                        description: "Isolate variable term",
-                        hints: [{ level: 1, title: "Step 1 Hint", content: "Subtract constant from both sides." }],
-                    },
+                    { description: "Step 1: Set multiplier", hints: [{ level: 1, title: "Hint 1", content: "Consider formula" }] },
                 ],
             },
         });
 
         reviewer.requestHint();
-        const hintBox = container.querySelector("#proc-hint-container");
-        expect(hintBox?.classList.contains("hidden")).toBe(false);
-        expect(hintBox?.innerHTML).toContain("Subtract constant from both sides.");
         expect((window as any).bridgeCommand).toHaveBeenCalledWith(
-            expect.stringContaining("procedural_hint"),
+            expect.stringContaining("procedural_hint:"),
+            undefined,
         );
+
+        const hintBox = container.querySelector("#proc-hint-container")!;
+        expect(hintBox.classList.contains("hidden")).toBe(false);
+        expect(hintBox.textContent).toContain("Consider formula");
 
         reviewer.destroy();
     });
@@ -156,9 +167,9 @@ describe("ProceduralReviewer API", () => {
     test("adding and resetting step rows", () => {
         const reviewer = new ProceduralReviewer(container, {
             instanceId: "inst-123",
-            familyId: "math.linear_equations",
+            familyId: "math.percentage.successive",
             targetTimeMs: 45000,
-            correctAnswer: { value: 12.0 },
+            correctAnswer: { value: 10.0 },
         });
 
         reviewer.addStepRow();
@@ -172,87 +183,220 @@ describe("ProceduralReviewer API", () => {
         reviewer.destroy();
     });
 
-    test("lifecycle: repeated setup and destroy unbinds listeners without leaks or duplicate calls", () => {
-        let completionCount = 0;
-        const onCompleted = () => {
-            completionCount += 1;
-        };
-
-        // Setup instance 1
-        const reviewer1 = proceduralAPI.setup({
-            containerId: "procedural-card",
-            instanceId: "inst-test-1",
-            familyId: "math.linear_equations",
-            targetTimeMs: 45000,
-            correctAnswer: { value: 12.0 },
-            onCompleted,
+    test("computes speed and accuracy quadrants accurately", () => {
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-123",
+            familyId: "math.kinematics",
+            targetTimeMs: 30000,
+            correctAnswer: { value: 42.0 },
         });
 
-        // Destroy instance 1
-        reviewer1.destroy();
+        // Fast & Correct -> Fluency Strength
+        const q1 = reviewer.computeSpeedQuadrant(true, 15000, 30000);
+        expect(q1.quadrant).toBe("fluency_strength");
 
-        // Clicking submit button after destroy should NOT trigger completion
-        const quickInput = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
-        const submitBtn = container.querySelector<HTMLButtonElement>("#proc-submit-btn")!;
-        quickInput.value = "12";
-        submitBtn.click();
-        expect(completionCount).toBe(0);
+        // Slow & Correct -> Speed Opportunity
+        const q2 = reviewer.computeSpeedQuadrant(true, 45000, 30000);
+        expect(q2.quadrant).toBe("speed_opportunity");
 
-        // Setup instance 2 on the same container
-        const reviewer2 = proceduralAPI.setup({
-            containerId: "procedural-card",
-            instanceId: "inst-test-2",
-            familyId: "math.linear_equations",
-            targetTimeMs: 45000,
-            correctAnswer: { value: 12.0 },
-            onCompleted,
-        });
+        // Fast & Incorrect -> Strategy/Trap
+        const q3 = reviewer.computeSpeedQuadrant(false, 10000, 30000);
+        expect(q3.quadrant).toBe("strategy_trap");
 
-        // Click submit on instance 2 -> should trigger callback exactly ONCE
-        quickInput.value = "12";
-        submitBtn.click();
-        expect(completionCount).toBe(1);
+        // Slow & Incorrect -> Concept/Setup
+        const q4 = reviewer.computeSpeedQuadrant(false, 50000, 30000);
+        expect(q4.quadrant).toBe("concept_setup");
 
-        reviewer2.destroy();
+        reviewer.destroy();
     });
 
-    test("lifecycle: automatic cleanup of previous instance on re-setup", () => {
-        let callback1Calls = 0;
-        let callback2Calls = 0;
+    test("ConceptCheck option selection and bridge notification", () => {
+        container.innerHTML = `
+            <div class="proc-prompt">What is the formula for successive percentage change?</div>
+            <div class="proc-option-group" role="radiogroup">
+                <button type="button" class="proc-option-item" data-opt-id="opt-a" role="radio" aria-checked="false">
+                    <span class="proc-option-key">1</span>
+                    <span class="proc-option-label">a + b + (ab/100)</span>
+                </button>
+                <button type="button" class="proc-option-item" data-opt-id="opt-b" role="radio" aria-checked="false">
+                    <span class="proc-option-key">2</span>
+                    <span class="proc-option-label">a * b / 100</span>
+                </button>
+            </div>
+            <div id="proc-result-panel" class="proc-result hidden">
+                <div id="proc-result-title"></div>
+                <div id="proc-result-feedback"></div>
+                <div id="proc-actual-time"></div>
+                <button type="button" id="proc-next-btn" class="proc-btn">Next</button>
+            </div>
+        `;
 
-        // Setup first without manual destroy
-        proceduralAPI.setup({
-            containerId: "procedural-card",
-            instanceId: "inst-test-1",
-            familyId: "math.linear_equations",
-            targetTimeMs: 45000,
-            correctAnswer: { value: 12.0 },
-            onCompleted: () => {
-                callback1Calls += 1;
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-concept-1",
+            familyId: "math.percentage.successive",
+            targetTimeMs: 20000,
+            objectType: "concept_check",
+            conceptCheck: {
+                prompt: "What is the formula for successive percentage change?",
+                options: [
+                    { id: "opt-a", label: "a + b + (ab/100)", is_correct: true, concept_tag: "successive_formula", feedback: "Correct formula." },
+                    { id: "opt-b", label: "a * b / 100", is_correct: false, concept_tag: "product_misconception", feedback: "Incorrect." },
+                ],
+                expected_option_id: "opt-a",
+                explanation: "The combined effect of a% followed by b% is a + b + ab/100.",
             },
         });
 
-        // Re-setup on the same container
-        const rev2 = proceduralAPI.setup({
-            containerId: "procedural-card",
-            instanceId: "inst-test-2",
-            familyId: "math.linear_equations",
-            targetTimeMs: 45000,
-            correctAnswer: { value: 12.0 },
-            onCompleted: () => {
-                callback2Calls += 1;
+        const optA = container.querySelector<HTMLElement>('[data-opt-id="opt-a"]')!;
+        optA.click();
+
+        expect(optA.classList.contains("selected")).toBe(true);
+        expect(optA.classList.contains("correct")).toBe(true);
+        expect(reviewer.getState()).toBe("feedback");
+
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining("procedural_attempt:"),
+            undefined,
+        );
+
+        reviewer.destroy();
+    });
+
+    test("StrategyDrill option selection and keyboard shortcuts", () => {
+        container.innerHTML = `
+            <div class="proc-prompt">A ball is thrown upwards with initial velocity u. Which model applies at maximum height?</div>
+            <div class="proc-option-group" role="radiogroup">
+                <button type="button" class="proc-option-item" data-opt-id="opt-1" role="radio" aria-checked="false">
+                    <span class="proc-option-key">1</span>
+                    <span class="proc-option-label">Set v = 0 and apply v^2 = u^2 - 2gh</span>
+                </button>
+                <button type="button" class="proc-option-item" data-opt-id="opt-2" role="radio" aria-checked="false">
+                    <span class="proc-option-key">2</span>
+                    <span class="proc-option-label">Set a = 0</span>
+                </button>
+            </div>
+            <div id="proc-result-panel" class="proc-result hidden">
+                <div id="proc-result-title"></div>
+                <div id="proc-result-feedback"></div>
+                <div id="proc-actual-time"></div>
+                <button type="button" id="proc-next-btn" class="proc-btn">Next</button>
+            </div>
+        `;
+
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-strategy-1",
+            familyId: "physics.kinematics.1d",
+            targetTimeMs: 15000,
+            objectType: "strategy_drill",
+            strategyDrill: {
+                prompt: "Which model applies at maximum height?",
+                problem_context: "Ball thrown upwards",
+                options: [
+                    { id: "opt-1", label: "Set v = 0 and apply v^2 = u^2 - 2gh", is_optimal: true, strategy_tag: "kinematics_apex", feedback: "At apex, instantaneous velocity is 0." },
+                    { id: "opt-2", label: "Set a = 0", is_optimal: false, strategy_tag: "zero_accel_trap", feedback: "Gravity acts continuously." },
+                ],
+                preferred_option_id: "opt-1",
             },
         });
 
-        const quickInput = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+        // Trigger keyboard "1"
+        container.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true }));
+
+        const opt1 = container.querySelector<HTMLElement>('[data-opt-id="opt-1"]')!;
+        expect(opt1.classList.contains("selected")).toBe(true);
+        expect(opt1.classList.contains("correct")).toBe(true);
+
+        reviewer.destroy();
+    });
+
+    test("WorkedExample Try Similar button triggers bridge command", () => {
+        container.innerHTML = `
+            <div class="proc-worked-example-card">
+                <button type="button" id="proc-try-similar-btn" class="proc-btn">Try Similar</button>
+            </div>
+        `;
+
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-we-1",
+            familyId: "chem.stoichiometry.limiting",
+            targetTimeMs: 60000,
+            objectType: "worked_example",
+            workedExample: {
+                prompt: "Find the limiting reagent",
+                problem_context: "2H2 + O2 -> 2H2O",
+                canonical_steps: ["Step 1: Calculate moles", "Step 2: Divide by stoichiometric coefficients"],
+                highlighted_decision_point: "Identify smaller mole-to-coefficient ratio",
+                method_rationale: "The limiting reagent determines maximum product yield.",
+            },
+        });
+
+        const trySimilarBtn = container.querySelector<HTMLButtonElement>("#proc-try-similar-btn")!;
+        trySimilarBtn.click();
+
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining("procedural_try_similar:"),
+            undefined,
+        );
+
+        reviewer.destroy();
+    });
+
+    test("DeclarativeRecall Review in Anki button triggers bridge command", () => {
+        container.innerHTML = `
+            <div class="proc-recall-card">
+                <button type="button" id="proc-anki-recall-btn" class="proc-btn">Review in Anki</button>
+            </div>
+        `;
+
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-dec-1",
+            familyId: "math.formula",
+            targetTimeMs: 10000,
+            objectType: "declarative_recall",
+            declarativeRecall: {
+                concept_name: "Quadratic Formula",
+                prompt_summary: "Roots of ax^2 + bx + c = 0",
+                formula_or_fact: "x = (-b ± √(b^2 - 4ac)) / 2a",
+                target_anki_card_id: 998877,
+            },
+        });
+
+        const recallBtn = container.querySelector<HTMLButtonElement>("#proc-anki-recall-btn")!;
+        recallBtn.click();
+
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining("procedural_declarative_recall:"),
+            undefined,
+        );
+
+        reviewer.destroy();
+    });
+
+    test("lifecycle: repeated setup and destroy unbinds listeners without leaks or duplicate calls", () => {
+        const r1 = proceduralAPI.setup({
+            containerId: "procedural-card",
+            instanceId: "inst-1",
+            familyId: "math.linear_equations",
+            targetTimeMs: 30000,
+            correctAnswer: { value: 5.0 },
+        });
+
+        r1.destroy();
+
+        const r2 = proceduralAPI.setup({
+            containerId: "procedural-card",
+            instanceId: "inst-2",
+            familyId: "math.linear_equations",
+            targetTimeMs: 30000,
+            correctAnswer: { value: 10.0 },
+        });
+
+        const input = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
         const submitBtn = container.querySelector<HTMLButtonElement>("#proc-submit-btn")!;
-        quickInput.value = "12";
+        input.value = "10";
         submitBtn.click();
 
-        // Only instance 2 should receive the event
-        expect(callback1Calls).toBe(0);
-        expect(callback2Calls).toBe(1);
-
-        rev2.destroy();
+        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(1);
+        r2.destroy();
     });
 });

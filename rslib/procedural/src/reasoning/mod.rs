@@ -25,7 +25,7 @@ pub use generators::{
     TEMPLATE_REASONING_SERIES_V1, TEMPLATE_REASONING_SYLLOGISM_V1,
 };
 pub use models::{
-    CognitiveDecisionPoint, DecisionOption, ReasoningProblemMetadata, SchemaKind, StrategyKind,
+    ReasoningProblemMetadata, SchemaKind, StrategyKind,
 };
 pub use relations::{
     BloodRelationPuzzle, DirectionPuzzle, Heading, KinshipRelation, KinshipStatement,

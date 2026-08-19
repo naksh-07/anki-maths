@@ -201,6 +201,7 @@ impl MathsCatalog {
             "Profit, Loss, and Discount",
             "Calculates CP, SP, profit/loss percentages, marked price markup, and successive discounts.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_PERCENTAGE_SUCCESSIVE)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 40_000,
             "typical_difficulty": 2.0,
@@ -369,6 +370,7 @@ impl MathsCatalog {
             "Time and Work",
             "Calculates single worker rates, combined worker times, worker departure problems, relative efficiencies, and pipes/cisterns.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_RATIO)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 40_000,
             "typical_difficulty": 2.0,
@@ -411,6 +413,7 @@ impl MathsCatalog {
             "Time, Speed and Distance",
             "Solves distance-rate-time relationships, unit conversions (km/h <-> m/s), average speeds, relative speeds of trains, and journey equations.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_RATIO)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 40_000,
             "typical_difficulty": 2.5,
@@ -453,6 +456,7 @@ impl MathsCatalog {
             "Mixtures and Alligation",
             "Solves two-component blends, Rule of Alligation ratios, solvent dilutions, repeated liquid replacements, and commercial alloys.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_RATIO), SkillId::from(SKILL_AVERAGE)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 35_000,
             "typical_difficulty": 2.5,
@@ -495,6 +499,7 @@ impl MathsCatalog {
             "Remainders and Modular Arithmetic",
             "Solves Euclidean division identities, expression remainders (A*B mod M), power unit digit cyclicity, and cyclical calendar modular arithmetic.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_DIVISIBILITY)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 30_000,
             "typical_difficulty": 2.0,
@@ -537,6 +542,7 @@ impl MathsCatalog {
             "Linear Inequalities in One Variable",
             "Solves one-step, two-step, negative-coefficient sign flips, variables on both sides, and compound double inequalities.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_LINEAR_EQUATIONS)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 30_000,
             "typical_difficulty": 2.0,
@@ -579,6 +585,7 @@ impl MathsCatalog {
             "Algebraic Identities and Expansions",
             "Applies difference of squares, sum/product identities, reciprocal squares (x + 1/x = k), reciprocal cubes, and conditional cubic identities.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_LINEAR_EQUATIONS)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 30_000,
             "typical_difficulty": 2.5,
@@ -621,6 +628,7 @@ impl MathsCatalog {
             "Geometry: Triangles and Pythagorean Theorem",
             "Solves right-angled Pythagorean triplets, triangle area and altitude, equilateral/special triangles, angle ratios, and spatial transfer problems.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_LINEAR_EQUATIONS)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 30_000,
             "typical_difficulty": 2.0,
@@ -663,6 +671,10 @@ impl MathsCatalog {
             "Combined Multi-Concept Mathematics",
             "Integrates cross-schema problem structures including Percentage + Ratio, Profit/Loss + Successive Discounts, Ratio + Average, and Time/Work + Efficiency.",
         )
+        .with_prerequisites(vec![
+            SkillId::from(SKILL_PERCENTAGE_SUCCESSIVE),
+            SkillId::from(SKILL_RATIO),
+        ])
         .with_metadata(serde_json::json!({
             "target_time_ms": 40_000,
             "typical_difficulty": 3.0,
@@ -863,6 +875,7 @@ impl MathsCatalog {
             "Work, Energy and Power Mechanics",
             "Applies Kinetic Energy, Gravitational Potential Energy, Work Done by Constant Forces, Work-Energy Theorem, Mechanical Energy Conservation, and Power calculations.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_PHYSICS_KINEMATICS)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 35_000,
             "typical_difficulty": 2.5,
@@ -949,6 +962,7 @@ impl MathsCatalog {
             "Chemical Equilibrium and Solution Concentration",
             "Calculates solution molarity (M=n/V), equilibrium constant expressions (Kc=[C]^c/[A]^a), ICE table extent calculations, quadratic equilibrium solving, and Le Chatelier reaction quotient Qc shifts.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_CHEMISTRY_STOICHIOMETRY)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 40_000,
             "typical_difficulty": 2.5,
@@ -1078,6 +1092,7 @@ impl MathsCatalog {
             "Linear Seating and Constraint Satisfaction",
             "Applies constraint satisfaction strategies (anchor fixed positions, propagate adjacency and relative ordering, branch cases) to solve linear seating puzzles.",
         )
+        .with_prerequisites(vec![SkillId::from(SKILL_REASONING_SERIES)])
         .with_metadata(serde_json::json!({
             "target_time_ms": 35_000,
             "typical_difficulty": 2.5,

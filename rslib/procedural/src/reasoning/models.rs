@@ -3,6 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::decision::CognitiveDecisionPoint;
+
 /// High-level taxonomy of reasoning solving strategies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -91,73 +93,7 @@ impl std::fmt::Display for SchemaKind {
     }
 }
 
-/// A structured option for a cognitive decision point.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DecisionOption {
-    pub id: String,
-    pub label: String,
-    pub strategy: StrategyKind,
-    pub is_valid: bool,
-    pub feedback: String,
-}
 
-impl DecisionOption {
-    pub fn new(
-        id: impl Into<String>,
-        label: impl Into<String>,
-        strategy: StrategyKind,
-        is_valid: bool,
-        feedback: impl Into<String>,
-    ) -> Self {
-        Self {
-            id: id.into(),
-            label: label.into(),
-            strategy,
-            is_valid,
-            feedback: feedback.into(),
-        }
-    }
-}
-
-/// Micro learning object capturing strategic reasoning choice before or during problem solving.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CognitiveDecisionPoint {
-    pub id: String,
-    pub prompt: String,
-    pub options: Vec<DecisionOption>,
-    pub preferred_option_id: String,
-    pub preferred_strategy: StrategyKind,
-    pub explanation: String,
-}
-
-impl CognitiveDecisionPoint {
-    pub fn new(
-        id: impl Into<String>,
-        prompt: impl Into<String>,
-        options: Vec<DecisionOption>,
-        preferred_option_id: impl Into<String>,
-        preferred_strategy: StrategyKind,
-        explanation: impl Into<String>,
-    ) -> Self {
-        Self {
-            id: id.into(),
-            prompt: prompt.into(),
-            options,
-            preferred_option_id: preferred_option_id.into(),
-            preferred_strategy,
-            explanation: explanation.into(),
-        }
-    }
-
-    /// Evaluate a learner's decision choice.
-    pub fn evaluate_choice(&self, chosen_id: &str) -> (bool, Option<StrategyKind>, String) {
-        if let Some(opt) = self.options.iter().find(|o| o.id == chosen_id) {
-            (opt.is_valid, Some(opt.strategy), opt.feedback.clone())
-        } else {
-            (false, None, "Invalid decision option chosen.".to_string())
-        }
-    }
-}
 
 /// Metadata carrier attached to generated reasoning problem instances.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -205,43 +141,3 @@ impl ReasoningProblemMetadata {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_decision_point_evaluation() {
-        let opt1 = DecisionOption::new(
-            "opt_a",
-            "Anchor fixed person C at position 3",
-            StrategyKind::AnchorFixed,
-            true,
-            "Correct: Fixed positions immediately reduce variable domains.",
-        );
-        let opt2 = DecisionOption::new(
-            "opt_b",
-            "Try placing flexible person A randomly",
-            StrategyKind::BranchCases,
-            false,
-            "Sub-optimal: Guessing without anchoring fixed positions increases branching.",
-        );
-
-        let dp = CognitiveDecisionPoint::new(
-            "dp_seating_1",
-            "Which step should you perform first?",
-            vec![opt1, opt2],
-            "opt_a",
-            StrategyKind::AnchorFixed,
-            "Always anchor invariant fixed positions before relative constraints.",
-        );
-
-        let (is_valid, strategy, feedback) = dp.evaluate_choice("opt_a");
-        assert!(is_valid);
-        assert_eq!(strategy, Some(StrategyKind::AnchorFixed));
-        assert!(feedback.contains("Fixed positions"));
-
-        let (is_valid2, strategy2, _) = dp.evaluate_choice("opt_b");
-        assert!(!is_valid2);
-        assert_eq!(strategy2, Some(StrategyKind::BranchCases));
-    }
-}

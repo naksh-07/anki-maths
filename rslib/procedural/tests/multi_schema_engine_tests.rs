@@ -1,8 +1,10 @@
 // Copyright: Ankitects Pty Ltd and contributors
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
+use procedural::scheduling::difficulty::AdaptiveDifficultyEngine;
+use procedural::skills::signals::{IndependenceLevel, MasteryEvidence};
 use procedural::{
-    AdaptiveDifficultyEngine, ErrorCategory, MultiSchemaSelector, PracticeMode, ProceduralService,
+    ErrorCategory, MultiSchemaSelector, PracticeMode, ProceduralService,
     Rating, SkillId, SkillState, FAMILY_AVERAGE, FAMILY_DIVISIBILITY, FAMILY_LINEAR_EQUATIONS,
     FAMILY_PROFIT_LOSS, FAMILY_RATIO, FAMILY_TIME_WORK, SKILL_AVERAGE, SKILL_DIVISIBILITY,
     SKILL_LINEAR_EQUATIONS, SKILL_PERCENTAGE_SUCCESSIVE, SKILL_PROFIT_LOSS, SKILL_RATIO,
@@ -76,12 +78,14 @@ fn test_adaptive_difficulty_hysteresis_and_bounded_transitions() {
     state.custom_state = serde_json::json!({ "current_difficulty_level": 2 });
 
     // Step 1: 1st fast success -> Hysteresis keeps level 2
-    state.record_attempt_outcome(true, 1.0, 15000, 35000, Some("standard"), None, 1000);
+    let ev1 = MasteryEvidence { final_correctness: true, latency_evidence: 15000, variant_exposure: Some("standard".to_string()), independence: IndependenceLevel::Independent, ..Default::default() };
+    state.record_attempt_outcome(&ev1, 1.0, 35000, 1000);
     let dec1 = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
     assert_eq!(dec1.level, 2);
 
     // Step 2: 2nd fast success -> Hysteresis promotes to Level 3
-    state.record_attempt_outcome(true, 1.0, 16000, 35000, Some("standard"), None, 1050);
+    let ev2 = MasteryEvidence { final_correctness: true, latency_evidence: 16000, variant_exposure: Some("standard".to_string()), independence: IndependenceLevel::Independent, ..Default::default() };
+    state.record_attempt_outcome(&ev2, 1.0, 35000, 1050);
     let dec2 = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
     assert_eq!(dec2.level, 3);
     assert_eq!(dec2.target_time_ms, 50000);
@@ -90,21 +94,15 @@ fn test_adaptive_difficulty_hysteresis_and_bounded_transitions() {
     state.custom_state = serde_json::json!({ "current_difficulty_level": 3 });
 
     // Step 3: Success but slow on Level 3 (took 70s on 50s target) -> Fluency hold keeps Level 3
-    state.record_attempt_outcome(true, 1.0, 70000, 50000, Some("standard"), None, 1100);
+    let ev3 = MasteryEvidence { final_correctness: true, latency_evidence: 70000, variant_exposure: Some("standard".to_string()), independence: IndependenceLevel::Independent, ..Default::default() };
+    state.record_attempt_outcome(&ev3, 1.0, 50000, 1100);
     let dec3 = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
     assert_eq!(dec3.level, 3);
     assert!(dec3.reason.contains("fluency_hold"));
 
     // Step 4: Concept breakdown failure on Level 3 -> Fast demotion drops to Level 2
-    state.record_attempt_outcome(
-        false,
-        0.0,
-        30000,
-        50000,
-        Some("standard"),
-        Some(&ErrorCategory::Concept),
-        1150,
-    );
+    let ev4 = MasteryEvidence { final_correctness: false, latency_evidence: 30000, variant_exposure: Some("standard".to_string()), diagnostic_errors: vec![ErrorCategory::Concept], ..Default::default() };
+    state.record_attempt_outcome(&ev4, 0.0, 50000, 1150);
     let dec4 = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
     assert_eq!(dec4.level, 2);
     assert!(dec4.reason.contains("demoted_on_concept_breakdown"));
