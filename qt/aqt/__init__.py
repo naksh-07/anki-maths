@@ -310,7 +310,7 @@ class AnkiApp(QApplication):
 
     KEY = (
         os.environ.get("ANKI_SINGLE_INSTANCE_KEY")
-        or f"anki{checksum(getpass.getuser())}"
+        or f"ankistudylab{checksum(getpass.getuser())}"
     )
     TMOUT = 30000
 
@@ -683,8 +683,8 @@ def _run(argv: list[str] | None = None, exec: bool = True) -> AnkiApp | None:
         os.environ["QT_QPA_PLATFORM"] = "windows:altgr"
 
     # create the app
-    QCoreApplication.setApplicationName("Anki")
-    QGuiApplication.setDesktopFileName("anki")
+    QCoreApplication.setApplicationName("Anki StudyLab")
+    QGuiApplication.setDesktopFileName("ankistudylab")
     app = AnkiApp(argv)
     if app.secondInstance():
         # we've signaled the primary instance, so we should close

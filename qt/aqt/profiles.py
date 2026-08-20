@@ -369,7 +369,7 @@ class ProfileManager:
         if is_win:
             from aqt.winpaths import get_appdata
 
-            return os.path.join(get_appdata(), "Anki2")
+            return os.path.join(get_appdata(), "AnkiStudyLab")
         elif is_mac:
             return os.path.expanduser("~/Library/Application Support/Anki2")
         else:

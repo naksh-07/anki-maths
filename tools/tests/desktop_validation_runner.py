@@ -12,9 +12,10 @@ from typing import Any
 # Add paths
 sys.path.extend(["pylib", "qt", "out/pylib", "out/qt"])
 
+import anki.collection  # noqa: F401, I001
 from anki._backend import RustBackend
-from anki.collection import Collection
 from anki.cards import CardId
+from anki.collection import Collection
 from anki.decks import DeckId
 from anki.scheduler_pb2 import CardAnswer
 from aqt.qt import QT_VERSION_STR

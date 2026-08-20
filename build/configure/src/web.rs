@@ -3,7 +3,6 @@
 
 use anyhow::Result;
 use ninja_gen::action::BuildAction;
-use ninja_gen::copy::CopyFiles;
 use ninja_gen::glob;
 use ninja_gen::hashmap;
 use ninja_gen::input::BuildInput;
