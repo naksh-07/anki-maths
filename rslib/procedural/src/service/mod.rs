@@ -58,6 +58,12 @@ pub struct ProceduralService {
     prerequisite_service: Arc<PrerequisiteGraphService>,
 }
 
+impl std::fmt::Debug for ProceduralService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ProceduralService")
+    }
+}
+
 impl ProceduralService {
     pub fn new(store: ProceduralStore) -> Self {
         let prereq_service = Arc::new(PrerequisiteGraphService::new());

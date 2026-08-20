@@ -118,6 +118,11 @@ impl Collection {
         browser: bool,
         partial_render: bool,
     ) -> Result<RenderCardOutput> {
+        // StudyLab Procedural Engine Interception Hook
+        if nt.name.as_str() == "StudyLab Procedural Anchor" && !browser && !partial_render {
+            return self.render_procedural_anchor(note, card, nt);
+        }
+
         let mut field_map = note.fields_map(&nt.fields);
 
         self.add_special_fields(&mut field_map, note, card, nt, template)?;
@@ -187,6 +192,55 @@ impl Collection {
             .or_insert_with(|| card.id.to_string().into());
 
         Ok(())
+    }
+
+    fn render_procedural_anchor(
+        &mut self,
+        note: &Note,
+        card: &Card,
+        nt: &Notetype,
+    ) -> Result<RenderCardOutput> {
+        let error_html = |msg: &str| -> Result<RenderCardOutput> {
+            let html = format!(
+                "<div class='proc-error' style='padding: 20px; font-family: sans-serif; border: 2px solid #ef4444; border-radius: 8px; background-color: #fee2e2; color: #991b1b;'>\n\
+                    <h3 style='margin-top: 0;'>Procedural Engine Error</h3>\n\
+                    <p>{}</p>\n\
+                </div>",
+                htmlescape::encode_minimal(msg)
+            );
+            Ok(RenderCardOutput {
+                qnodes: vec![RenderedNode::Text { text: html.clone() }],
+                anodes: vec![RenderedNode::Text { text: html }],
+                css: nt.config.css.clone(),
+                latex_svg: nt.config.latex_svg,
+                is_empty: false,
+            })
+        };
+
+        let anchor = match procedural::anchor::ProceduralCardAnchor::extract_from_card_fields(&note.fields()) {
+            Ok(Some(a)) => a,
+            Ok(None) => return error_html("ProceduralPayload field is missing or empty."),
+            Err(e) => return error_html(&format!("Malformed ProceduralPayload: {}", e)),
+        };
+
+        let service = match self.procedural_service() {
+            Ok(s) => s,
+            Err(e) => return error_html(&format!("Failed to open procedural storage: {}", e)),
+        };
+
+        let session = match service.prepare_practice_session(&anchor, Some(card.id.0)) {
+            Ok(s) => s,
+            Err(e) => return error_html(&format!("Failed to prepare practice session: {}", e)),
+        };
+
+        let html = procedural::reviewer::render_reviewer_html(&session);
+        Ok(RenderCardOutput {
+            qnodes: vec![RenderedNode::Text { text: html.clone() }],
+            anodes: vec![RenderedNode::Text { text: html }],
+            css: nt.config.css.clone(),
+            latex_svg: nt.config.latex_svg,
+            is_empty: false,
+        })
     }
 }
 

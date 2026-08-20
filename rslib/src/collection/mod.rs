@@ -138,6 +138,7 @@ pub struct CollectionState {
     /// identical backups.
     pub(crate) last_backup_modified: Option<TimestampMillis>,
     pub(crate) progress: Arc<Mutex<ProgressState>>,
+    pub(crate) procedural_service: Option<Arc<procedural::service::ProceduralService>>,
 }
 
 pub struct Collection {
@@ -167,6 +168,18 @@ impl Collection {
             .set_tr(self.tr.clone())
             .set_shared_progress_state(self.state.progress.clone());
         builder
+    }
+
+    pub fn procedural_service(&mut self) -> Result<Arc<procedural::service::ProceduralService>> {
+        if self.state.procedural_service.is_none() {
+            let proc_path = self.col_path.with_extension("procedural");
+            let service = match procedural::service::ProceduralService::open(proc_path) {
+                Ok(s) => s,
+                Err(e) => crate::invalid_input!(e, "Failed to open procedural storage"),
+            };
+            self.state.procedural_service = Some(Arc::new(service));
+        }
+        Ok(self.state.procedural_service.as_ref().unwrap().clone())
     }
 
     // A count of all changed rows since the collection was opened, which can be

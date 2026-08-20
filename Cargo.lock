@@ -109,6 +109,7 @@ dependencies = [
  "phf 0.11.3",
  "pin-project",
  "prettyplease",
+ "procedural",
  "prost",
  "prost-reflect",
  "pulldown-cmark 0.13.0",
