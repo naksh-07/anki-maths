@@ -128,6 +128,10 @@ define_id!(
     RejectedVariantId,
     "Unique identifier for an audit record of a rejected problem variant."
 );
+define_id!(
+    PracticeItemId,
+    "Unique identifier for a canonical source-backed practice question."
+);
 
 /// Procedural engine error representation.
 #[derive(Debug)]

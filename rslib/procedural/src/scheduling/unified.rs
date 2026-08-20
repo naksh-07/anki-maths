@@ -59,6 +59,8 @@ pub enum LearningObjectKind {
     PyqVariant(ProblemInstance),
     /// Concrete executable remediation intervention (ConceptCheck, StrategyDrill, WorkedExample, DeclarativeRecall, PrerequisiteReview).
     Remediation(RemediationIntervention),
+    /// Source-backed canonical practice item.
+    PracticeItem(crate::content::PracticeItem),
 }
 
 /// Structured decision from the unified selection pipeline.
@@ -212,6 +214,7 @@ impl UnifiedSelectionDecision {
                     serde_json::json!({"circuit_breaker_active": true, "recurrence": cb.recurrence_count}),
                 ),
             },
+            LearningObjectKind::PracticeItem(item) => item.into_problem_instance(),
         };
 
         let session_readiness = match self.readiness.readiness {
@@ -423,29 +426,69 @@ impl UnifiedPracticeEngine {
         };
 
         // ---------------------------------------------------------------------
-        // STAGE 5: Generate Problem Instance or Select PYQ Variant
+        // STAGE 5: Adaptive Content Selection (PracticeItem vs Generated)
         // ---------------------------------------------------------------------
         let mut learning_object = None;
+        let mut selected_variant_name = None;
 
-        // Check if authentic PYQ or variant is available and requested for Exam objective
-        if request.objective == PracticeObjective::Exam {
-            if let Some(pyq_list) = eligible_pyqs.get(&chosen_schema.id) {
-                if let Some(_pyq) = pyq_list.first() {
-                    if let Ok(Some(family)) = store.get_problem_family(&chosen_schema.problem_family_id) {
-                        if let Ok(instance) = registry.generate(
-                            &chosen_schema.problem_family_id,
-                            &family.template_ref,
-                            seed,
-                            final_difficulty,
-                            None,
-                        ) {
-                            learning_object = Some(LearningObjectKind::PyqVariant(instance));
-                        }
+        let level = state.map_or(0, |s| s.variant_progression_level);
+
+        // Retrieve canonical practice items for the schema
+        if let Ok(stored_items) = store.get_practice_items_by_schema(&chosen_schema.id) {
+            // 1. Filter out non-solvable reference-only items
+            let solvable_items: Vec<_> = stored_items.into_iter().filter(|item| {
+                !matches!(item.question_type, crate::content::item::QuestionType::ReferenceOnly { .. })
+            }).collect();
+
+            // 2. Filter unmastered items (exact replay policy)
+            let unmastered_items: Vec<_> = solvable_items.into_iter().filter(|item| {
+                let already_mastered = if let Some(s) = state {
+                    if let Some(perf) = s.variant_stats.get(&item.id.0) {
+                        perf.independent_successes > 0 || perf.successful_attempts >= 1
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+                !already_mastered
+            }).collect();
+
+            // 3. Adaptive Tier Selection:
+            // Level 0: Strictly authentic/curated source questions first.
+            // Level 1+: Prefer derived variants / synthetic schemas, but fall back to unpracticed authentic
+            // items if no derived variants exist (e.g., in SourceOnly chapters, exam mode, or calibration).
+            let mut candidate_items: Vec<_> = match level {
+                0 => unmastered_items.iter().filter(|item| {
+                    matches!(item.origin, crate::content::item::Origin::AuthenticPyq { .. } | crate::content::item::Origin::CuratedSource { .. })
+                }).cloned().collect(),
+                _ => {
+                    let derived: Vec<_> = unmastered_items.iter().filter(|item| {
+                        matches!(item.origin, crate::content::item::Origin::DerivedVariant { .. } | crate::content::item::Origin::SyntheticSchema { .. })
+                    }).cloned().collect();
+                    
+                    if !derived.is_empty() {
+                        derived
+                    } else {
+                        // SourceOnly chapter or authentic question pool remaining
+                        unmastered_items.iter().filter(|item| {
+                            matches!(item.origin, crate::content::item::Origin::AuthenticPyq { .. } | crate::content::item::Origin::CuratedSource { .. })
+                        }).cloned().collect()
                     }
                 }
+            };
+
+            if !candidate_items.is_empty() {
+                use rand::{Rng, SeedableRng};
+                let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+                let idx = rng.random_range(0..candidate_items.len());
+                let chosen_item = &mut candidate_items[idx];
+                selected_variant_name = Some(chosen_item.id.0.clone());
+                learning_object = Some(LearningObjectKind::PracticeItem(chosen_item.clone()));
             }
         }
 
+        // Dynamic Fallback: If no canonical PracticeItem is available for the tier (or all exhausted)
         if learning_object.is_none() {
             let family = store
                 .get_problem_family(&chosen_schema.problem_family_id)
@@ -461,13 +504,20 @@ impl UnifiedPracticeEngine {
                     )
                 });
 
+            // Delegate to VariantSelector or fallback registry generation
+            let decision = crate::scheduling::selector::VariantSelector::select_variant(
+                state,
+                None, // We can let VariantSelector decide allowed variants based on its logic
+                seed,
+            );
+            
             let instance = registry
                 .generate(
                     &chosen_schema.problem_family_id,
                     &family.template_ref,
                     seed,
                     final_difficulty,
-                    None,
+                    Some(decision.variant.as_str()),
                 )
                 .unwrap_or_else(|_| {
                     ProblemInstance::new(
@@ -479,13 +529,13 @@ impl UnifiedPracticeEngine {
                         serde_json::json!({}),
                     )
                 });
-
+            
+            selected_variant_name = Some(decision.variant.as_str().to_string());
             learning_object = Some(LearningObjectKind::ProceduralProblem(instance));
         }
 
         let advisory_warning = readiness.advisory_message.clone();
 
-        // Structural coverage recommendation
         let recommended_variant = state.map(|s| {
             let profile = crate::scheduling::coverage::StructuralCoverageProfile::from_skill_state(s);
             let cat = profile.recommend_next_category(s.practice_state);
@@ -499,7 +549,7 @@ impl UnifiedPracticeEngine {
             learning_object: learning_object.unwrap(),
             difficulty_level: final_difficulty,
             target_time_ms: final_target_time,
-            selected_variant: recommended_variant,
+            selected_variant: selected_variant_name.or(recommended_variant),
             selection_reason: reason,
             priority_score: score,
             priority_tier: tier,

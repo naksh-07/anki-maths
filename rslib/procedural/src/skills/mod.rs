@@ -100,6 +100,9 @@ pub struct SkillState {
     /// Time separation of the most recent retention check in ms.
     #[serde(default)]
     pub last_retention_delay_ms: Option<u64>,
+    /// Evidence-based progression level (0=Authentic, 1=Parameter, 2=Isomorphic, 3=Structural, 4=Contextual, 5=Transfer)
+    #[serde(default)]
+    pub variant_progression_level: u8,
     /// Extensible state for future knowledge tracing algorithms (BKT, DKT, Elo)
     pub custom_state: serde_json::Value,
     pub updated_at: i64,
@@ -129,6 +132,7 @@ impl SkillState {
             historical_independent_count: 0,
             delayed_retention_successes: 0,
             last_retention_delay_ms: None,
+            variant_progression_level: 0,
             custom_state: serde_json::Value::Object(Default::default()),
             updated_at: Utc::now().timestamp(),
         }
@@ -293,6 +297,20 @@ impl SkillState {
         let outcome_val = if is_correct { 1.0 } else { 0.0 };
         self.mastery = (1.0 - weight) * self.mastery + weight * outcome_val;
         self.confidence = (self.total_attempts as f64 / 10.0).min(1.0);
+
+        // Evaluate variant progression level based on evidence
+        if is_correct && evidence.independence == IndependenceLevel::Independent {
+            if self.consecutive_successes >= 1 && self.variant_progression_level < 5 {
+                self.variant_progression_level += 1;
+            }
+        } else if !is_correct {
+            // Demote on failure, especially conceptual
+            if matches!(error_category, Some(crate::diagnostics::ErrorCategory::Concept) | Some(crate::diagnostics::ErrorCategory::Conceptual)) {
+                self.variant_progression_level = 0; // Drop to authentic
+            } else if self.variant_progression_level > 0 {
+                self.variant_progression_level -= 1;
+            }
+        }
 
         // Evaluate state progression
         ProgressionPolicy::evaluate(self, evidence);

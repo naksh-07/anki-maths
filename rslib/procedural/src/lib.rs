@@ -11,6 +11,7 @@
 
 pub mod anchor;
 pub mod chemistry;
+pub mod content;
 pub mod core;
 pub mod diagnostics;
 pub mod exam;

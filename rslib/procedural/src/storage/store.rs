@@ -9,8 +9,8 @@ use rusqlite::{params, Connection, OptionalExtension};
 
 use super::migration::MigrationRunner;
 use crate::core::{
-    AttemptId, Domain, ErrorEventId, ExamProfileId, ProblemFamilyId, ProblemInstanceId, PyqId,
-    RejectedVariantId, Result, SchemaId, SkillId,
+    AttemptId, Domain, ErrorEventId, ExamProfileId, PracticeItemId, ProblemFamilyId,
+    ProblemInstanceId, PyqId, RejectedVariantId, Result, SchemaId, SkillId,
 };
 use crate::exam::{
     ContentProvenance, ExamObjective, ExamProfile, MappingConfidence, MappingStatus, PYQSource,
@@ -19,6 +19,7 @@ use crate::exam::{
 use crate::practice::{ErrorEvent, PracticeAttempt, SchemaPracticeObject};
 use crate::problems::{ProblemFamily, ProblemInstance};
 use crate::skills::{Skill, SkillState};
+use crate::content::{ChapterPracticeProfile, PracticeItem, Origin, QuestionType};
 
 #[derive(Clone)]
 pub struct ProceduralStore {
@@ -1798,7 +1799,277 @@ impl ProceduralStore {
         }
         Ok(list)
     }
+
+    pub fn insert_practice_item(&self, item: &PracticeItem) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let origin_json = serde_json::to_string(&item.origin)?;
+        let q_type_json = serde_json::to_string(&item.question_type)?;
+        let tags_json = serde_json::to_string(&item.structural_tags)?;
+        let decisions_json = serde_json::to_string(&item.decision_points)?;
+        let errors_json = serde_json::to_string(&item.error_categories)?;
+        let prereqs_json = serde_json::to_string(&item.prerequisites)?;
+        let prov_json = serde_json::to_string(&item.provenance)?;
+        let meta_json = serde_json::to_string(&item.metadata)?;
+
+        conn.execute(
+            r#"
+            INSERT INTO practice_items (
+                id, origin, domain, chapter, skill_id, schema_id, problem_family_id,
+                question_type, prompt, difficulty, structural_tags, decision_points,
+                error_categories, prerequisites, provenance, created_at, metadata
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+            ON CONFLICT(id) DO UPDATE SET
+                origin = excluded.origin,
+                domain = excluded.domain,
+                chapter = excluded.chapter,
+                skill_id = excluded.skill_id,
+                schema_id = excluded.schema_id,
+                problem_family_id = excluded.problem_family_id,
+                question_type = excluded.question_type,
+                prompt = excluded.prompt,
+                difficulty = excluded.difficulty,
+                structural_tags = excluded.structural_tags,
+                decision_points = excluded.decision_points,
+                error_categories = excluded.error_categories,
+                prerequisites = excluded.prerequisites,
+                provenance = excluded.provenance,
+                metadata = excluded.metadata;
+            "#,
+            params![
+                item.id.as_str(),
+                origin_json,
+                item.domain.as_str(),
+                item.chapter,
+                item.skill_id.as_str(),
+                item.schema_id.as_str(),
+                item.problem_family_id.as_str(),
+                q_type_json,
+                item.prompt,
+                item.difficulty,
+                tags_json,
+                decisions_json,
+                errors_json,
+                prereqs_json,
+                prov_json,
+                item.created_at,
+                meta_json,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_practice_item(&self, id: &PracticeItemId) -> Result<Option<PracticeItem>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT origin, domain, chapter, skill_id, schema_id, problem_family_id,
+                   question_type, prompt, difficulty, structural_tags, decision_points,
+                   error_categories, prerequisites, provenance, created_at, metadata
+            FROM practice_items WHERE id = ?1
+            "#,
+        )?;
+
+        let item = stmt
+            .query_row(params![id.as_str()], |row| {
+                let origin_str: String = row.get(0)?;
+                let domain_str: String = row.get(1)?;
+                let chapter: String = row.get(2)?;
+                let skill_id_str: String = row.get(3)?;
+                let schema_id_str: String = row.get(4)?;
+                let family_id_str: String = row.get(5)?;
+                let q_type_str: String = row.get(6)?;
+                let prompt: String = row.get(7)?;
+                let difficulty: f64 = row.get(8)?;
+                let tags_str: String = row.get(9)?;
+                let dec_str: String = row.get(10)?;
+                let err_str: String = row.get(11)?;
+                let pre_str: String = row.get(12)?;
+                let prov_str: String = row.get(13)?;
+                let created_at: i64 = row.get(14)?;
+                let meta_str: String = row.get(15)?;
+
+                Ok(PracticeItem {
+                    id: id.clone(),
+                    origin: serde_json::from_str(&origin_str).unwrap(),
+                    domain: domain_str.parse().unwrap_or(Domain::Custom(domain_str)),
+                    chapter,
+                    skill_id: SkillId::new(skill_id_str),
+                    schema_id: SchemaId::new(schema_id_str),
+                    problem_family_id: ProblemFamilyId::new(family_id_str),
+                    question_type: serde_json::from_str(&q_type_str).unwrap(),
+                    prompt,
+                    difficulty,
+                    structural_tags: serde_json::from_str(&tags_str).unwrap_or_default(),
+                    decision_points: serde_json::from_str(&dec_str).unwrap_or_default(),
+                    error_categories: serde_json::from_str(&err_str).unwrap_or_default(),
+                    prerequisites: serde_json::from_str(&pre_str).unwrap_or_default(),
+                    provenance: serde_json::from_str(&prov_str).unwrap_or_default(),
+                    created_at,
+                    metadata: serde_json::from_str(&meta_str).unwrap_or_default(),
+                })
+            })
+            .optional()?;
+        Ok(item)
+    }
+
+    pub fn get_practice_items_by_schema(&self, schema_id: &SchemaId) -> Result<Vec<PracticeItem>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT id, origin, domain, chapter, skill_id, problem_family_id,
+                   question_type, prompt, difficulty, structural_tags, decision_points,
+                   error_categories, prerequisites, provenance, created_at, metadata
+            FROM practice_items WHERE schema_id = ?1
+            "#,
+        )?;
+
+        let rows = stmt.query_map(params![schema_id.as_str()], |row| {
+                let id_str: String = row.get(0)?;
+                let origin_str: String = row.get(1)?;
+                let domain_str: String = row.get(2)?;
+                let chapter: String = row.get(3)?;
+                let skill_id_str: String = row.get(4)?;
+                let family_id_str: String = row.get(5)?;
+                let q_type_str: String = row.get(6)?;
+                let prompt: String = row.get(7)?;
+                let difficulty: f64 = row.get(8)?;
+                let tags_str: String = row.get(9)?;
+                let dec_str: String = row.get(10)?;
+                let err_str: String = row.get(11)?;
+                let pre_str: String = row.get(12)?;
+                let prov_str: String = row.get(13)?;
+                let created_at: i64 = row.get(14)?;
+                let meta_str: String = row.get(15)?;
+
+                Ok(PracticeItem {
+                    id: PracticeItemId::new(id_str),
+                    origin: serde_json::from_str(&origin_str).unwrap(),
+                    domain: domain_str.parse().unwrap_or(Domain::Custom(domain_str)),
+                    chapter,
+                    skill_id: SkillId::new(skill_id_str),
+                    schema_id: schema_id.clone(),
+                    problem_family_id: ProblemFamilyId::new(family_id_str),
+                    question_type: serde_json::from_str(&q_type_str).unwrap(),
+                    prompt,
+                    difficulty,
+                    structural_tags: serde_json::from_str(&tags_str).unwrap_or_default(),
+                    decision_points: serde_json::from_str(&dec_str).unwrap_or_default(),
+                    error_categories: serde_json::from_str(&err_str).unwrap_or_default(),
+                    prerequisites: serde_json::from_str(&pre_str).unwrap_or_default(),
+                    provenance: serde_json::from_str(&prov_str).unwrap_or_default(),
+                    created_at,
+                    metadata: serde_json::from_str(&meta_str).unwrap_or_default(),
+                })
+        })?;
+
+        let mut items = Vec::new();
+        for row in rows {
+            items.push(row?);
+        }
+        Ok(items)
+    }
+
+    pub fn insert_chapter_profile(&self, profile: &ChapterPracticeProfile) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let schemas_json = serde_json::to_string(&profile.supported_schemas)?;
+        let fams_json = serde_json::to_string(&profile.supported_problem_families)?;
+        let caps_json = serde_json::to_string(&profile.generator_capabilities)?;
+        let rec_json = serde_json::to_string(&profile.recognition_signals)?;
+        let dec_json = serde_json::to_string(&profile.decision_points)?;
+        let var_json = serde_json::to_string(&profile.variation_dimensions)?;
+        let pre_json = serde_json::to_string(&profile.prerequisites)?;
+        let err_json = serde_json::to_string(&profile.error_categories)?;
+        let ex_json = serde_json::to_string(&profile.exam_relevance)?;
+        let meta_json = serde_json::to_string(&profile.metadata)?;
+
+        conn.execute(
+            r#"
+            INSERT INTO chapter_practice_profiles (
+                chapter_name, domain, supported_schemas, supported_problem_families,
+                generator_capabilities, recognition_signals, decision_points,
+                variation_dimensions, prerequisites, error_categories, exam_relevance,
+                created_at, metadata
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+            ON CONFLICT(chapter_name) DO UPDATE SET
+                domain = excluded.domain,
+                supported_schemas = excluded.supported_schemas,
+                supported_problem_families = excluded.supported_problem_families,
+                generator_capabilities = excluded.generator_capabilities,
+                recognition_signals = excluded.recognition_signals,
+                decision_points = excluded.decision_points,
+                variation_dimensions = excluded.variation_dimensions,
+                prerequisites = excluded.prerequisites,
+                error_categories = excluded.error_categories,
+                exam_relevance = excluded.exam_relevance,
+                metadata = excluded.metadata;
+            "#,
+            params![
+                profile.chapter_name,
+                profile.domain.as_str(),
+                schemas_json,
+                fams_json,
+                caps_json,
+                rec_json,
+                dec_json,
+                var_json,
+                pre_json,
+                err_json,
+                ex_json,
+                profile.created_at,
+                meta_json,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_chapter_profile(&self, chapter_name: &str) -> Result<Option<ChapterPracticeProfile>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT domain, supported_schemas, supported_problem_families,
+                   generator_capabilities, recognition_signals, decision_points,
+                   variation_dimensions, prerequisites, error_categories, exam_relevance,
+                   created_at, metadata
+            FROM chapter_practice_profiles WHERE chapter_name = ?1
+            "#,
+        )?;
+
+        let prof = stmt
+            .query_row(params![chapter_name], |row| {
+                let domain_str: String = row.get(0)?;
+                let schemas_str: String = row.get(1)?;
+                let fams_str: String = row.get(2)?;
+                let caps_str: String = row.get(3)?;
+                let rec_str: String = row.get(4)?;
+                let dec_str: String = row.get(5)?;
+                let var_str: String = row.get(6)?;
+                let pre_str: String = row.get(7)?;
+                let err_str: String = row.get(8)?;
+                let ex_str: String = row.get(9)?;
+                let created_at: i64 = row.get(10)?;
+                let meta_str: String = row.get(11)?;
+
+                Ok(ChapterPracticeProfile {
+                    chapter_name: chapter_name.to_string(),
+                    domain: domain_str.parse().unwrap_or(Domain::Custom(domain_str)),
+                    supported_schemas: serde_json::from_str(&schemas_str).unwrap_or_default(),
+                    supported_problem_families: serde_json::from_str(&fams_str).unwrap_or_default(),
+                    generator_capabilities: serde_json::from_str(&caps_str).unwrap_or_default(),
+                    recognition_signals: serde_json::from_str(&rec_str).unwrap_or_default(),
+                    decision_points: serde_json::from_str(&dec_str).unwrap_or_default(),
+                    variation_dimensions: serde_json::from_str(&var_str).unwrap_or_default(),
+                    prerequisites: serde_json::from_str(&pre_str).unwrap_or_default(),
+                    error_categories: serde_json::from_str(&err_str).unwrap_or_default(),
+                    exam_relevance: serde_json::from_str(&ex_str).unwrap_or_default(),
+                    created_at,
+                    metadata: serde_json::from_str(&meta_str).unwrap_or_default(),
+                })
+            })
+            .optional()?;
+        Ok(prof)
+    }
 }
+
 
 #[cfg(test)]
 mod tests {

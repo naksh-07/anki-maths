@@ -118,6 +118,16 @@ impl ProceduralService {
         Ok(())
     }
 
+    /// Ingests study material JSON (like LCM-HCF_ProblemPatterns.json) into the Practice Content Layer.
+    pub fn ingest_practice_content(&self, json_content: &str) -> Result<()> {
+        crate::content::ingestion::PracticeContentIngester::ingest_study_material_json(&self.store, json_content)
+    }
+
+    /// Ingests practice questions JSON (like LCM-HCF_PracticeQuestions.json) into the Practice Content Layer.
+    pub fn ingest_practice_questions(&self, json_content: &str) -> Result<()> {
+        crate::content::ingestion::PracticeContentIngester::ingest_practice_questions_json(&self.store, json_content)
+    }
+
     /// Access the prerequisite graph service.
     pub fn prerequisite_service(&self) -> &PrerequisiteGraphService {
         &self.prerequisite_service

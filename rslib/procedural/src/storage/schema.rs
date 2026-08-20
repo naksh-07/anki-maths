@@ -199,4 +199,49 @@ CREATE INDEX IF NOT EXISTS idx_rejected_variants_pyq ON rejected_variants(source
 CREATE INDEX IF NOT EXISTS idx_rejected_variants_family ON rejected_variants(family_id);
 "#,
     },
+    Migration {
+        version: 4,
+        description: "Practice Content Layer & Chapter Capability Model",
+        sql: r#"
+CREATE TABLE IF NOT EXISTS practice_items (
+    id TEXT PRIMARY KEY,
+    origin TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    chapter TEXT NOT NULL,
+    skill_id TEXT NOT NULL,
+    schema_id TEXT NOT NULL,
+    problem_family_id TEXT NOT NULL,
+    question_type TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    difficulty REAL NOT NULL,
+    structural_tags TEXT NOT NULL,
+    decision_points TEXT NOT NULL,
+    error_categories TEXT NOT NULL,
+    prerequisites TEXT NOT NULL,
+    provenance TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    metadata TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS chapter_practice_profiles (
+    chapter_name TEXT PRIMARY KEY,
+    domain TEXT NOT NULL,
+    supported_schemas TEXT NOT NULL,
+    supported_problem_families TEXT NOT NULL,
+    generator_capabilities TEXT NOT NULL,
+    recognition_signals TEXT NOT NULL,
+    decision_points TEXT NOT NULL,
+    variation_dimensions TEXT NOT NULL,
+    prerequisites TEXT NOT NULL,
+    error_categories TEXT NOT NULL,
+    exam_relevance TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    metadata TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_practice_items_schema ON practice_items(schema_id);
+CREATE INDEX IF NOT EXISTS idx_practice_items_family ON practice_items(problem_family_id);
+CREATE INDEX IF NOT EXISTS idx_practice_items_chapter ON practice_items(chapter);
+"#,
+    },
 ];
