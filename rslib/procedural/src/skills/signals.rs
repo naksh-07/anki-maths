@@ -59,6 +59,43 @@ impl PracticeProgressionState {
     }
 }
 
+/// Category of problem variation distinguishing surface parameter shifts from genuine structural changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum VariantCategory {
+    /// Pure parameter changes with identical algebraic/topological structure.
+    #[default]
+    Parameter = 0,
+    /// Same structural steps with different surface context/wording.
+    Isomorphic = 1,
+    /// Modified solution graph topology, variable inversion, or additional step.
+    Structural = 2,
+    /// Alternate physical, conceptual, or domain representation.
+    Contextual = 3,
+    /// Coupled multi-schema integration requiring composite decision points.
+    MultiConcept = 4,
+    /// Far/novel transfer requiring deep schema abstraction.
+    Transfer = 5,
+}
+
+impl VariantCategory {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            VariantCategory::Parameter => "parameter",
+            VariantCategory::Isomorphic => "isomorphic",
+            VariantCategory::Structural => "structural",
+            VariantCategory::Contextual => "contextual",
+            VariantCategory::MultiConcept => "multi_concept",
+            VariantCategory::Transfer => "transfer",
+        }
+    }
+
+    /// Whether this variant provides structural or transfer evidence (i.e. beyond shallow template familiarity).
+    pub fn is_structural_or_transfer(&self) -> bool {
+        *self >= VariantCategory::Structural
+    }
+}
+
 /// Snapshot of a single recent practice attempt used in sliding performance windows.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RecentAttemptRecord {
@@ -67,11 +104,19 @@ pub struct RecentAttemptRecord {
     pub latency_ms: u64,
     pub target_latency_ms: u64,
     pub variant: Option<String>,
+    #[serde(default)]
+    pub variant_category: Option<VariantCategory>,
     pub error_category: Option<ErrorCategory>,
     #[serde(default)]
     pub max_hint_level: Option<u32>,
     #[serde(default)]
     pub hint_count: Option<u32>,
+    #[serde(default)]
+    pub independence: Option<IndependenceLevel>,
+    #[serde(default)]
+    pub solution_graph_fingerprint: Option<String>,
+    #[serde(default)]
+    pub cognitive_decision_correct: Option<bool>,
     pub timestamp: i64,
 }
 
@@ -215,6 +260,10 @@ pub struct VariantPerformance {
     pub average_latency_ms: f64,
     pub last_practiced_at: Option<i64>,
     pub last_error_category: Option<ErrorCategory>,
+    #[serde(default)]
+    pub category: VariantCategory,
+    #[serde(default)]
+    pub independent_successes: u32,
 }
 
 impl VariantPerformance {
@@ -286,10 +335,25 @@ pub struct MasteryEvidence {
     pub retry_dependence: u32,
     /// The specific structural or contextual variant ID exposed.
     pub variant_exposure: Option<String>,
+    /// Category of problem variation.
+    #[serde(default)]
+    pub variant_category: VariantCategory,
+    /// Distinct topological fingerprint of the solution graph (if available).
+    #[serde(default)]
+    pub solution_graph_fingerprint: Option<String>,
+    /// Whether a cognitive decision point was present and correctly decided.
+    #[serde(default)]
+    pub cognitive_decision_correct: Option<bool>,
     /// Whether the attempt provided valid evidence of far-transfer capabilities.
     pub transfer_evidence: bool,
     /// Latency (ms) taken to solve.
     pub latency_evidence: u64,
+    /// Time elapsed since the previous practice attempt on this skill in ms (for delayed retention).
+    #[serde(default)]
+    pub time_since_last_ms: Option<u64>,
+    /// Whether domain-specific procedural competence was verified (e.g. regime/model/schema choice).
+    #[serde(default)]
+    pub domain_competence_verified: Option<bool>,
     /// List of diagnostic errors encountered during the attempt.
     pub diagnostic_errors: Vec<ErrorCategory>,
 }
@@ -300,13 +364,18 @@ impl Default for MasteryEvidence {
             final_correctness: false,
             decision_quality: None,
             step_quality: None,
-            independence: IndependenceLevel::NonIndependent,
+            independence: IndependenceLevel::Independent,
             max_hint_level: None,
             hint_dependence: 0,
             retry_dependence: 0,
             variant_exposure: None,
+            variant_category: VariantCategory::Parameter,
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: None,
             transfer_evidence: false,
             latency_evidence: 0,
+            time_since_last_ms: None,
+            domain_competence_verified: None,
             diagnostic_errors: vec![],
         }
     }

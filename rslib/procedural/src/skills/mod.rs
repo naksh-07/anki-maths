@@ -14,7 +14,7 @@ use crate::core::{Domain, SkillId};
 
 pub use signals::{
     ErrorFrequencyCounts, MovingLatencyStats, PracticeProgressionState,
-    RecentAttemptRecord, VariantPerformance, MasteryEvidence, IndependenceLevel
+    RecentAttemptRecord, VariantPerformance, MasteryEvidence, IndependenceLevel, VariantCategory
 };
 pub use progression::ProgressionPolicy;
 pub use prerequisites::{
@@ -85,6 +85,21 @@ pub struct SkillState {
     pub latency_stats: MovingLatencyStats,
     pub error_counts: ErrorFrequencyCounts,
     pub variant_stats: HashMap<String, VariantPerformance>,
+    /// Map of distinct structural/transfer forms successfully solved independently to pass count.
+    #[serde(default)]
+    pub structural_forms_seen: HashMap<String, u32>,
+    /// Lifetime count of attempts where hints were requested.
+    #[serde(default)]
+    pub historical_hint_count: u32,
+    /// Lifetime count of completely unassisted successful attempts.
+    #[serde(default)]
+    pub historical_independent_count: u32,
+    /// Count of successful independent solves after meaningful delay separation (e.g. >= 12h).
+    #[serde(default)]
+    pub delayed_retention_successes: u32,
+    /// Time separation of the most recent retention check in ms.
+    #[serde(default)]
+    pub last_retention_delay_ms: Option<u64>,
     /// Extensible state for future knowledge tracing algorithms (BKT, DKT, Elo)
     pub custom_state: serde_json::Value,
     pub updated_at: i64,
@@ -109,6 +124,11 @@ impl SkillState {
             latency_stats: MovingLatencyStats::default(),
             error_counts: ErrorFrequencyCounts::default(),
             variant_stats: HashMap::new(),
+            structural_forms_seen: HashMap::new(),
+            historical_hint_count: 0,
+            historical_independent_count: 0,
+            delayed_retention_successes: 0,
+            last_retention_delay_ms: None,
             custom_state: serde_json::Value::Object(Default::default()),
             updated_at: Utc::now().timestamp(),
         }
@@ -142,6 +162,31 @@ impl SkillState {
         self.latency_stats.moving_average_ms
     }
 
+    /// Number of distinct structural or transfer problem forms successfully passed independently.
+    pub fn distinct_structural_forms_passed(&self) -> usize {
+        self.structural_forms_seen.len()
+    }
+
+    /// Ratio of lifetime independent successful attempts vs total attempts (longitudinal independence).
+    pub fn longitudinal_independence_ratio(&self) -> f64 {
+        if self.total_attempts == 0 {
+            1.0
+        } else {
+            self.historical_independent_count as f64 / self.total_attempts as f64
+        }
+    }
+
+    /// Calculates a structural diversity score (0.0 to 1.0) based on distinct structural forms passed.
+    pub fn structural_diversity_score(&self) -> f64 {
+        (self.structural_forms_seen.len() as f64 / 3.0).min(1.0)
+    }
+
+    /// Whether the learner has demonstrated evidence of retained competence across time separation.
+    pub fn has_delayed_retention_evidence(&self, min_delay_ms: u64) -> bool {
+        self.delayed_retention_successes >= 1 
+            || self.last_retention_delay_ms.map_or(false, |d| d >= min_delay_ms)
+    }
+
     /// Record a practice attempt and update all moving windows, error counters, variant stats, and progression.
     pub fn record_attempt_outcome(
         &mut self,
@@ -150,6 +195,7 @@ impl SkillState {
         target_latency_ms: u64,
         timestamp: i64,
     ) {
+        let prev_practiced_at = self.last_practiced_at;
         self.total_attempts += 1;
         self.last_practiced_at = Some(timestamp);
         self.updated_at = Utc::now().timestamp();
@@ -159,15 +205,46 @@ impl SkillState {
         let error_category = evidence.diagnostic_errors.first();
         let variant = evidence.variant_exposure.as_deref();
 
+        // Calculate time separation since previous attempt
+        let time_since_last_ms = evidence.time_since_last_ms.or_else(|| {
+            prev_practiced_at.map(|prev| (timestamp - prev).max(0) as u64 * 1000)
+        });
+
         if is_correct {
             self.successful_attempts += 1;
             self.consecutive_successes += 1;
             self.consecutive_failures = 0;
             self.last_success_at = Some(timestamp);
+
+            if evidence.independence == IndependenceLevel::Independent {
+                self.historical_independent_count += 1;
+
+                // Check delayed retention: >= 12 hours (43_200_000 ms) delay
+                if let Some(delay) = time_since_last_ms {
+                    if delay >= 43_200_000 {
+                        self.delayed_retention_successes += 1;
+                    }
+                    self.last_retention_delay_ms = Some(delay);
+                }
+
+                // Record structural form exposure if structural, contextual, multi-concept, or transfer
+                if evidence.variant_category.is_structural_or_transfer() {
+                    let form_key = evidence
+                        .solution_graph_fingerprint
+                        .clone()
+                        .or_else(|| evidence.variant_exposure.clone())
+                        .unwrap_or_else(|| format!("{:?}", evidence.variant_category));
+                    *self.structural_forms_seen.entry(form_key).or_insert(0) += 1;
+                }
+            }
         } else {
             self.failed_attempts += 1;
             self.consecutive_failures += 1;
             self.consecutive_successes = 0;
+        }
+
+        if evidence.hint_dependence > 0 || evidence.max_hint_level.map_or(false, |l| l > 0) {
+            self.historical_hint_count += 1;
         }
 
         // Record error categories
@@ -185,9 +262,13 @@ impl SkillState {
             latency_ms,
             target_latency_ms,
             variant: variant.map(|s| s.to_string()),
+            variant_category: Some(evidence.variant_category),
             error_category: error_category.cloned(),
             max_hint_level: evidence.max_hint_level,
             hint_count: Some(evidence.hint_dependence),
+            independence: Some(evidence.independence),
+            solution_graph_fingerprint: evidence.solution_graph_fingerprint.clone(),
+            cognitive_decision_correct: evidence.cognitive_decision_correct,
             timestamp,
         });
         if self.recent_attempts.len() > self.window_size {
@@ -200,6 +281,10 @@ impl SkillState {
                 .variant_stats
                 .entry(var_key.to_string())
                 .or_insert_with(VariantPerformance::default);
+            perf.category = evidence.variant_category;
+            if is_correct && evidence.independence == IndependenceLevel::Independent {
+                perf.independent_successes += 1;
+            }
             perf.record(is_correct, latency_ms, error_category.cloned(), timestamp);
         }
 
@@ -232,8 +317,6 @@ impl SkillState {
         perf.record(is_correct, latency_ms, error_category, timestamp);
     }
 
-
-
     /// Synchronize rich structured signals into `custom_state` JSON for database persistence.
     pub fn sync_custom_state(&mut self) {
         let mut obj = match self.custom_state.as_object() {
@@ -255,6 +338,11 @@ impl SkillState {
         obj.insert("latency_stats".to_string(), serde_json::json!(self.latency_stats));
         obj.insert("error_counts".to_string(), serde_json::json!(self.error_counts));
         obj.insert("variant_stats".to_string(), serde_json::json!(self.variant_stats));
+        obj.insert("structural_forms_seen".to_string(), serde_json::json!(self.structural_forms_seen));
+        obj.insert("historical_hint_count".to_string(), serde_json::json!(self.historical_hint_count));
+        obj.insert("historical_independent_count".to_string(), serde_json::json!(self.historical_independent_count));
+        obj.insert("delayed_retention_successes".to_string(), serde_json::json!(self.delayed_retention_successes));
+        obj.insert("last_retention_delay_ms".to_string(), serde_json::json!(self.last_retention_delay_ms));
 
         self.custom_state = serde_json::Value::Object(obj);
     }
@@ -301,6 +389,23 @@ impl SkillState {
                 if let Ok(vars) = serde_json::from_value::<HashMap<String, VariantPerformance>>(val.clone()) {
                     self.variant_stats = vars;
                 }
+            }
+            if let Some(val) = obj.get("structural_forms_seen") {
+                if let Ok(forms) = serde_json::from_value::<HashMap<String, u32>>(val.clone()) {
+                    self.structural_forms_seen = forms;
+                }
+            }
+            if let Some(val) = obj.get("historical_hint_count").and_then(|v| v.as_u64()) {
+                self.historical_hint_count = val as u32;
+            }
+            if let Some(val) = obj.get("historical_independent_count").and_then(|v| v.as_u64()) {
+                self.historical_independent_count = val as u32;
+            }
+            if let Some(val) = obj.get("delayed_retention_successes").and_then(|v| v.as_u64()) {
+                self.delayed_retention_successes = val as u32;
+            }
+            if let Some(val) = obj.get("last_retention_delay_ms").and_then(|v| v.as_u64()) {
+                self.last_retention_delay_ms = Some(val);
             }
         }
     }

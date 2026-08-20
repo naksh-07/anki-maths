@@ -1,6 +1,7 @@
 // Copyright: Ankitects Pty Ltd and contributors
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
@@ -25,8 +26,22 @@ pub struct ProceduralStore {
 }
 
 impl ProceduralStore {
+    fn apply_pragmas(conn: &Connection) -> Result<()> {
+        conn.execute_batch(
+            r#"
+            PRAGMA busy_timeout = 5000;
+            PRAGMA foreign_keys = ON;
+            PRAGMA synchronous = NORMAL;
+            PRAGMA temp_store = MEMORY;
+            "#,
+        )?;
+        let _ = conn.query_row("PRAGMA journal_mode = WAL;", [], |_| Ok(()));
+        Ok(())
+    }
+
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let mut conn = Connection::open(path)?;
+        Self::apply_pragmas(&conn)?;
         MigrationRunner::run(&mut conn)?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -35,6 +50,7 @@ impl ProceduralStore {
 
     pub fn open_in_memory() -> Result<Self> {
         let mut conn = Connection::open_in_memory()?;
+        Self::apply_pragmas(&conn)?;
         MigrationRunner::run(&mut conn)?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -622,6 +638,96 @@ impl ProceduralStore {
         Ok(())
     }
 
+    /// Atomically records a practice attempt, associated error events, and updated skill state.
+    /// Uses a single SQLite transaction so any failure causes a complete rollback.
+    pub fn record_attempt_atomic(
+        &self,
+        attempt: &PracticeAttempt,
+        errors: &[ErrorEvent],
+        state: &SkillState,
+    ) -> Result<()> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        let user_ans_json = serde_json::to_string(&attempt.user_answer)?;
+        let metadata_json = serde_json::to_string(&attempt.metadata)?;
+
+        tx.execute(
+            r#"
+            INSERT INTO practice_attempts (
+                id, instance_id, schema_id, skill_id, card_id,
+                user_answer, is_correct, score, time_taken_ms, attempted_at, metadata
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
+            "#,
+            params![
+                attempt.id.as_str(),
+                attempt.instance_id.as_str(),
+                attempt.schema_id.as_str(),
+                attempt.skill_id.as_str(),
+                attempt.card_id,
+                user_ans_json,
+                if attempt.is_correct { 1 } else { 0 },
+                attempt.score,
+                attempt.time_taken_ms as i64,
+                attempt.attempted_at,
+                metadata_json,
+            ],
+        )?;
+
+        for error in errors {
+            let details_json = serde_json::to_string(&error.details)?;
+            tx.execute(
+                r#"
+                INSERT INTO error_events (id, attempt_id, error_category, details, occurred_at)
+                VALUES (?1, ?2, ?3, ?4, ?5);
+                "#,
+                params![
+                    error.id.as_str(),
+                    error.attempt_id.as_str(),
+                    error.error_category,
+                    details_json,
+                    error.occurred_at,
+                ],
+            )?;
+        }
+
+        let mut state_clone = state.clone();
+        state_clone.sync_custom_state();
+        let custom_state_json = serde_json::to_string(&state_clone.custom_state)?;
+
+        tx.execute(
+            r#"
+            INSERT INTO skill_states (
+                skill_id, mastery, confidence, total_attempts,
+                successful_attempts, last_practiced_at, custom_state, updated_at
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            ON CONFLICT(skill_id) DO UPDATE SET
+                mastery = excluded.mastery,
+                confidence = excluded.confidence,
+                total_attempts = excluded.total_attempts,
+                successful_attempts = excluded.successful_attempts,
+                last_practiced_at = excluded.last_practiced_at,
+                custom_state = excluded.custom_state,
+                updated_at = excluded.updated_at;
+            "#,
+            params![
+                state.skill_id.as_str(),
+                state.mastery,
+                state.confidence,
+                state.total_attempts,
+                state.successful_attempts,
+                state.last_practiced_at,
+                custom_state_json,
+                state.updated_at,
+            ],
+        )?;
+
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn get_practice_attempts_by_schema(
         &self,
         schema_id: &SchemaId,
@@ -1203,6 +1309,182 @@ impl ProceduralStore {
             list.push(item?);
         }
         Ok(list)
+    }
+
+    /// Retrieve all registered schemas as a HashMap keyed by SchemaId in a single query.
+    pub fn list_all_schemas_map(&self) -> Result<HashMap<SchemaId, SchemaPracticeObject>> {
+        let schemas = self.list_all_schemas()?;
+        let mut map = HashMap::with_capacity(schemas.len());
+        for s in schemas {
+            map.insert(s.id.clone(), s);
+        }
+        Ok(map)
+    }
+
+    /// Retrieve all registered skill states as a HashMap keyed by SkillId in a single query.
+    pub fn list_all_skill_states_map(&self) -> Result<HashMap<SkillId, SkillState>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT skill_id, mastery, confidence, total_attempts,
+                   successful_attempts, last_practiced_at, custom_state, updated_at
+            FROM skill_states
+            "#,
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            let id_str: String = row.get(0)?;
+            let mastery: f64 = row.get(1)?;
+            let confidence: f64 = row.get(2)?;
+            let total_attempts: u32 = row.get(3)?;
+            let successful_attempts: u32 = row.get(4)?;
+            let last_practiced_at: Option<i64> = row.get(5)?;
+            let custom_str: String = row.get(6)?;
+            let updated_at: i64 = row.get(7)?;
+
+            let custom_state: serde_json::Value =
+                serde_json::from_str(&custom_str).unwrap_or_default();
+
+            let mut state = SkillState::new(SkillId::new(id_str.clone()));
+            state.mastery = mastery;
+            state.confidence = confidence;
+            state.total_attempts = total_attempts;
+            state.successful_attempts = successful_attempts;
+            state.last_practiced_at = last_practiced_at;
+            state.custom_state = custom_state;
+            state.updated_at = updated_at;
+            state.restore_from_custom_state();
+
+            Ok((SkillId::new(id_str), state))
+        })?;
+
+        let mut map = HashMap::new();
+        for r in rows {
+            let (id, s) = r?;
+            map.insert(id, s);
+        }
+        Ok(map)
+    }
+
+    /// Retrieve all eligible PYQs grouped by SchemaId in a single batch query.
+    pub fn list_all_eligible_pyqs_map(&self) -> Result<HashMap<SchemaId, Vec<(PYQSource, PyqMapping)>>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT s.id, s.exam, s.year, s.paper, s.shift, s.session, s.domain,
+                   s.original_question, s.original_options, s.original_answer,
+                   s.source_reference, s.provenance, s.source_version, s.import_timestamp,
+                   s.metadata,
+                   m.domain, m.skill_id, m.schema_id, m.problem_family_id,
+                   m.variant_structure, m.difficulty_level, m.target_latency_ms,
+                   m.diagnostic_metadata, m.status, m.confidence, m.reviewer_notes,
+                   m.updated_at
+            FROM pyq_sources s
+            JOIN pyq_mappings m ON s.id = m.pyq_id
+            WHERE (m.status = 'verified' OR (m.status = 'mapped' AND m.confidence IN ('deterministic', 'high_confidence')))
+            ORDER BY s.year DESC
+            "#,
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            let id_str: String = row.get(0)?;
+            let exam: String = row.get(1)?;
+            let year: u32 = row.get(2)?;
+            let paper: Option<String> = row.get(3)?;
+            let shift: Option<String> = row.get(4)?;
+            let session: Option<String> = row.get(5)?;
+            let domain_str: String = row.get(6)?;
+            let question: String = row.get(7)?;
+            let options_str: Option<String> = row.get(8)?;
+            let answer_str: String = row.get(9)?;
+            let source_ref: String = row.get(10)?;
+            let prov_str: String = row.get(11)?;
+            let source_version: u32 = row.get(12)?;
+            let import_ts: i64 = row.get(13)?;
+            let metadata_str: String = row.get(14)?;
+
+            let m_domain_str: String = row.get(15)?;
+            let m_skill_str: String = row.get(16)?;
+            let m_schema_str: String = row.get(17)?;
+            let m_family_str: String = row.get(18)?;
+            let m_variant: Option<String> = row.get(19)?;
+            let m_diff: u32 = row.get(20)?;
+            let m_latency: u64 = row.get(21)?;
+            let m_diag_str: String = row.get(22)?;
+            let m_status_str: String = row.get(23)?;
+            let m_conf_str: String = row.get(24)?;
+            let m_notes: Option<String> = row.get(25)?;
+            let m_updated_at: i64 = row.get(26)?;
+
+            let domain: Domain = domain_str.parse().unwrap_or(Domain::Custom(domain_str));
+            let original_options: Option<Vec<String>> = options_str
+                .and_then(|s| serde_json::from_str(&s).ok());
+            let original_answer: serde_json::Value =
+                serde_json::from_str(&answer_str).unwrap_or_default();
+            let provenance: ContentProvenance =
+                serde_json::from_str(&prov_str).unwrap_or_default();
+            let metadata: serde_json::Value =
+                serde_json::from_str(&metadata_str).unwrap_or_default();
+
+            let pyq = PYQSource {
+                id: PyqId::new(id_str.clone()),
+                exam,
+                year,
+                paper,
+                shift,
+                session,
+                domain,
+                original_question: question,
+                original_options,
+                original_answer,
+                source_reference: source_ref,
+                provenance,
+                source_version,
+                import_timestamp: import_ts,
+                metadata,
+            };
+
+            let m_domain: Domain = m_domain_str.parse().unwrap_or(Domain::Custom(m_domain_str));
+            let m_status: MappingStatus = match m_status_str.as_str() {
+                "verified" => MappingStatus::Verified,
+                "rejected" => MappingStatus::Rejected,
+                "unreviewed" => MappingStatus::Unreviewed,
+                _ => MappingStatus::Mapped,
+            };
+            let m_confidence: MappingConfidence = match m_conf_str.as_str() {
+                "deterministic" => MappingConfidence::Deterministic,
+                "needs_review" => MappingConfidence::NeedsReview,
+                _ => MappingConfidence::HighConfidence,
+            };
+            let diagnostic_metadata: serde_json::Value =
+                serde_json::from_str(&m_diag_str).unwrap_or_default();
+
+            let schema_id = SchemaId::new(m_schema_str.clone());
+            let mapping = PyqMapping {
+                pyq_id: PyqId::new(id_str),
+                domain: m_domain,
+                skill_id: SkillId::new(m_skill_str),
+                schema_id: schema_id.clone(),
+                problem_family_id: ProblemFamilyId::new(m_family_str),
+                variant_structure: m_variant,
+                difficulty_level: m_diff,
+                target_latency_ms: m_latency,
+                diagnostic_metadata,
+                status: m_status,
+                confidence: m_confidence,
+                reviewer_notes: m_notes,
+                updated_at: m_updated_at,
+            };
+
+            Ok((schema_id, pyq, mapping))
+        })?;
+
+        let mut map: HashMap<SchemaId, Vec<(PYQSource, PyqMapping)>> = HashMap::new();
+        for item in rows {
+            let (sch_id, pyq, mapping) = item?;
+            map.entry(sch_id).or_default().push((pyq, mapping));
+        }
+        Ok(map)
     }
 
     // =========================================================================

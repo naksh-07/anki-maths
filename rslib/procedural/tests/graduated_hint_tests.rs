@@ -60,9 +60,13 @@ fn test_occasional_level1_hint_does_not_block_progression() {
             latency_ms: 25_000,
             target_latency_ms: 30_000,
             variant: Some("standard".into()),
+            variant_category: Some(procedural::VariantCategory::Parameter),
             error_category: None,
             max_hint_level: Some(1), // Level 1 retrieval cue
             hint_count: Some(1),
+            independence: Some(procedural::IndependenceLevel::LightSupport),
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: Some(true),
             timestamp: 100,
         });
     }
@@ -76,7 +80,12 @@ fn test_occasional_level1_hint_does_not_block_progression() {
         hint_dependence: 1,
         retry_dependence: 0,
         variant_exposure: Some("standard".into()),
+        variant_category: procedural::VariantCategory::Parameter,
+        solution_graph_fingerprint: None,
+        cognitive_decision_correct: Some(true),
+        time_since_last_ms: None,
         transfer_evidence: false,
+        domain_competence_verified: Some(true),
         latency_evidence: 25_000,
         diagnostic_errors: vec![],
     };
@@ -101,9 +110,13 @@ fn test_chronic_level3_hints_prevent_false_mastery() {
             latency_ms: 25_000,
             target_latency_ms: 30_000,
             variant: Some("transfer_v1".into()),
+            variant_category: Some(procedural::VariantCategory::Transfer),
             error_category: None,
             max_hint_level: Some(3),
             hint_count: Some(3),
+            independence: Some(procedural::IndependenceLevel::SignificantSupport),
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: Some(true),
             timestamp: 100,
         });
     }
@@ -117,7 +130,12 @@ fn test_chronic_level3_hints_prevent_false_mastery() {
         hint_dependence: 3,
         retry_dependence: 0,
         variant_exposure: Some("transfer_v1".into()),
+        variant_category: procedural::VariantCategory::Transfer,
+        solution_graph_fingerprint: None,
+        cognitive_decision_correct: Some(true),
+        time_since_last_ms: None,
         transfer_evidence: true,
+        domain_competence_verified: Some(true),
         latency_evidence: 25_000,
         diagnostic_errors: vec![],
     };

@@ -196,6 +196,21 @@ impl UnifiedSelectionDecision {
                         "explanation": r.explanation
                     }),
                 ),
+                RemediationIntervention::CircuitBreaker(cb) => ProblemInstance::new(
+                    crate::core::ProblemInstanceId::new(format!("inst-cb-{}", cb.id)),
+                    self.schema.problem_family_id.clone(),
+                    0,
+                    serde_json::json!({
+                        "object_type": "circuit_breaker",
+                        "circuit_breaker": cb,
+                        "remediation_message": "⏸️ Circuit Breaker Cooldown: Multiple repeated failures detected. Let's take a pause on this specific template."
+                    }),
+                    format!(
+                        "Learning Cooldown: {}\nAction: {}",
+                        cb.advisory_message, cb.suggested_action
+                    ),
+                    serde_json::json!({"circuit_breaker_active": true, "recurrence": cb.recurrence_count}),
+                ),
             },
         };
 
@@ -470,6 +485,13 @@ impl UnifiedPracticeEngine {
 
         let advisory_warning = readiness.advisory_message.clone();
 
+        // Structural coverage recommendation
+        let recommended_variant = state.map(|s| {
+            let profile = crate::scheduling::coverage::StructuralCoverageProfile::from_skill_state(s);
+            let cat = profile.recommend_next_category(s.practice_state);
+            cat.as_str().to_string()
+        });
+
         Some(UnifiedSelectionDecision {
             schema: chosen_schema.clone(),
             skill_id: chosen_schema.skill_id.clone(),
@@ -477,13 +499,98 @@ impl UnifiedPracticeEngine {
             learning_object: learning_object.unwrap(),
             difficulty_level: final_difficulty,
             target_time_ms: final_target_time,
-            selected_variant: None,
+            selected_variant: recommended_variant,
             selection_reason: reason,
             priority_score: score,
             priority_tier: tier,
             readiness,
             advisory_warning,
         })
+    }
+
+    /// Unified practice selection coordinating under an active multi-domain macro session plan.
+    pub fn select_next_with_macro_plan(
+        request: &PracticeRequest,
+        macro_plan: &crate::scheduling::macro_allocator::MacroSessionPlan,
+        budget_tracker: &crate::scheduling::workload::SessionBudgetTracker,
+        candidate_schemas: &[SchemaPracticeObject],
+        schema_domains: &HashMap<SchemaId, Domain>,
+        skill_states: &HashMap<SkillId, SkillState>,
+        prerequisite_service: &PrerequisiteGraphService,
+        remediation_queue: Option<&mut RemediationQueue>,
+        exam_profile: Option<&ExamProfile>,
+        eligible_pyqs: &HashMap<SchemaId, Vec<PYQSource>>,
+        last_schema_id: Option<&SchemaId>,
+        registry: &ProblemRegistry,
+        store: &ProceduralStore,
+        seed: u64,
+    ) -> Option<UnifiedSelectionDecision> {
+        // If user scope is focused (Tier 1), user intent is 100% authoritative and overrides macro block
+        if request.scope.is_focused() {
+            return Self::select_next(
+                request,
+                candidate_schemas,
+                schema_domains,
+                skill_states,
+                prerequisite_service,
+                remediation_queue,
+                exam_profile,
+                eligible_pyqs,
+                last_schema_id,
+                registry,
+                store,
+                seed,
+            );
+        }
+
+        // Determine current active domain from macro plan and elapsed session time
+        let current_domain = macro_plan
+            .active_domain_at_elapsed(budget_tracker.elapsed_ms)
+            .unwrap_or(Domain::Mathematics);
+
+        // Check if current domain budget is exhausted; if so, switch to next available non-exhausted domain
+        let target_domain = if macro_plan.is_domain_exhausted(&current_domain, budget_tracker.domain_elapsed_ms.get(&current_domain).copied().unwrap_or(0)) {
+            macro_plan
+                .active_domains
+                .iter()
+                .find(|d| !macro_plan.is_domain_exhausted(d, budget_tracker.domain_elapsed_ms.get(d).copied().unwrap_or(0)))
+                .cloned()
+                .unwrap_or(current_domain)
+        } else {
+            current_domain
+        };
+
+        // Filter candidate schemas to the target domain
+        let domain_filtered_candidates: Vec<SchemaPracticeObject> = candidate_schemas
+            .iter()
+            .filter(|s| {
+                schema_domains
+                    .get(&s.id)
+                    .map_or(true, |d| d == &target_domain)
+            })
+            .cloned()
+            .collect();
+
+        let pool = if domain_filtered_candidates.is_empty() {
+            candidate_schemas
+        } else {
+            &domain_filtered_candidates
+        };
+
+        Self::select_next(
+            request,
+            pool,
+            schema_domains,
+            skill_states,
+            prerequisite_service,
+            remediation_queue,
+            exam_profile,
+            eligible_pyqs,
+            last_schema_id,
+            registry,
+            store,
+            seed,
+        )
     }
 
     /// Compute candidate priority score, tier, and explainable rationale.

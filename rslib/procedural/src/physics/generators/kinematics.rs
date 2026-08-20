@@ -127,8 +127,8 @@ impl Kinematics1DGenerator {
 
     /// Level 1: Uniform Motion (Zero acceleration): s = v * t
     fn generate_level_1(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let speed: f64 = rng.random_range(12..=30) as f64; // m/s
-        let time: f64 = rng.random_range(5..=25) as f64; // s
+        let speed: f64 = rng.random_range(2..=120) as f64; // m/s
+        let time: f64 = rng.random_range(2..=120) as f64; // s
         let displacement = speed * time; // m
 
         let prompt = format!(
@@ -232,13 +232,11 @@ impl Kinematics1DGenerator {
 
     /// Level 2: Constant Acceleration with km/h to m/s Unit Conversion: v = u + at
     fn generate_level_2(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        // Clean km/h values: 36 km/h = 10 m/s, 54 km/h = 15 m/s, 72 km/h = 20 m/s, 90 km/h = 25 m/s, 108 km/h = 30 m/s
-        let u_kmh_options = [36.0, 54.0, 72.0, 90.0, 108.0];
-        let u_kmh = u_kmh_options[rng.random_range(0..u_kmh_options.len())];
-        let u_mps = u_kmh * (5.0 / 18.0); // m/s
+        let u_mps: f64 = rng.random_range(2..=60) as f64;
+        let u_kmh = u_mps * 3.6;
 
-        let a: f64 = rng.random_range(2..=5) as f64; // m/s^2
-        let t: f64 = rng.random_range(4..=10) as f64; // s
+        let a: f64 = rng.random_range(1..=15) as f64; // m/s^2
+        let t: f64 = rng.random_range(2..=30) as f64; // s
         let v_mps = u_mps + a * t; // m/s
 
         let prompt = format!(
@@ -345,9 +343,9 @@ impl Kinematics1DGenerator {
 
     /// Level 3: Kinematic Equation Selection & Displacement: s = ut + 1/2 a t^2
     fn generate_level_3(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let u: f64 = rng.random_range(4..=15) as f64; // m/s
-        let a: f64 = (rng.random_range(1..=4) * 2) as f64; // even number for clean 1/2 a
-        let t: f64 = rng.random_range(3..=8) as f64; // s
+        let u: f64 = rng.random_range(2..=50) as f64; // m/s
+        let a: f64 = (rng.random_range(1..=10) * 2) as f64; // even number for clean 1/2 a
+        let t: f64 = rng.random_range(2..=25) as f64; // s
         let displacement = u * t + 0.5 * a * t * t; // m
 
         let prompt = format!(
@@ -448,8 +446,8 @@ impl Kinematics1DGenerator {
 
     /// Level 4: Reverse Variable / Stopping Distance under Deceleration: v^2 = u^2 + 2as (v = 0)
     fn generate_level_4(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let u: f64 = rng.random_range(15..=35) as f64; // m/s
-        let a_mag: f64 = rng.random_range(2..=5) as f64; // magnitude of deceleration m/s^2
+        let u: f64 = rng.random_range(5..=60) as f64; // m/s
+        let a_mag: f64 = rng.random_range(1..=15) as f64; // magnitude of deceleration m/s^2
         // s = u^2 / (2 * a_mag)
         // Let's choose u such that u^2 is cleanly divisible by 2 * a_mag
         let stopping_dist = (u * u) / (2.0 * a_mag);
@@ -558,7 +556,7 @@ impl Kinematics1DGenerator {
     /// Level 5: Vertical Projectile / Free Fall Transfer under Gravity (a = -g)
     fn generate_level_5(rng: &mut StdRng, seed: u64) -> ProblemInstance {
         let g = 9.8; // m/s^2
-        let u: f64 = (rng.random_range(3..=10) * 7) as f64; // e.g. 21, 28, 35, 42 m/s
+        let u: f64 = rng.random_range(5..=100) as f64;
         let max_height = (u * u) / (2.0 * g); // H = u^2 / (2g)
         let time_to_apex = u / g; // t = u / g
 

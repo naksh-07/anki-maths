@@ -399,4 +399,67 @@ describe("ProceduralReviewer API", () => {
         expect((window as any).bridgeCommand).toHaveBeenCalledTimes(1);
         r2.destroy();
     });
+
+    test("security: hint rendering does not execute script tags or unescaped HTML attributes", () => {
+        const maliciousHint = "<script>window.pwned = true;</script><img src='invalid' onerror='window.pwned=true'/><strong>Danger</strong>";
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-sec-1",
+            familyId: "math.algebra",
+            targetTimeMs: 30000,
+            solutionGraph: {
+                steps: [
+                    {
+                        step_id: "step_1",
+                        description: maliciousHint,
+                        hints: [
+                            {
+                                level: 1,
+                                title: "<svg onload='window.pwned=true'>Alert",
+                                content: maliciousHint,
+                            },
+                        ],
+                    },
+                ],
+            },
+        });
+
+        const hintBtn = container.querySelector<HTMLButtonElement>("#proc-hint-btn")!;
+        hintBtn.click();
+
+        const hintBox = container.querySelector<HTMLElement>("#proc-hint-container")!;
+        expect(hintBox.classList.contains("hidden")).toBe(false);
+
+        // Verify that raw script and img elements were NOT injected into the DOM as active tags
+        expect(hintBox.querySelector("script")).toBeNull();
+        expect(hintBox.querySelector("img")).toBeNull();
+        expect(hintBox.querySelector("svg")).toBeNull();
+        expect((window as any).pwned).toBeUndefined();
+
+        // Verify text content is preserved accurately
+        expect(hintBox.textContent).toContain(maliciousHint);
+
+        reviewer.destroy();
+    });
+
+    test("lifecycle: duplicate clicks on submit do not trigger multiple bridge commands", () => {
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-dup-1",
+            familyId: "math.algebra",
+            targetTimeMs: 30000,
+            correctAnswer: { value: 42.0 },
+        });
+
+        const input = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+        const submitBtn = container.querySelector<HTMLButtonElement>("#proc-submit-btn")!;
+        input.value = "42";
+
+        // Click multiple times rapidly
+        submitBtn.click();
+        submitBtn.click();
+        submitBtn.click();
+
+        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(1);
+        reviewer.destroy();
+    });
 });
+

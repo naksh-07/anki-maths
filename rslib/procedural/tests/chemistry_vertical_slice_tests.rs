@@ -114,9 +114,9 @@ fn test_chemistry_catalog_and_schema_resolution() {
     assert_eq!(eq_schema.id.as_str(), SCHEMA_CHEMISTRY_EQUILIBRIUM);
     assert_eq!(eq_schema.skill_id.as_str(), SKILL_CHEMISTRY_EQUILIBRIUM);
 
-    // 3. Verify total schema count = 22 (14 Maths + 2 Physics + 2 Chemistry + 4 Reasoning)
+    // 3. Verify total schema count = 30 (14 Maths + 2 Physics + 6 Chemistry + 8 Reasoning)
     let all_schemas = service.store().list_all_schemas().unwrap();
-    assert_eq!(all_schemas.len(), 22);
+    assert_eq!(all_schemas.len(), 30);
 }
 
 #[test]

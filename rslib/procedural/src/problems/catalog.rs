@@ -42,12 +42,20 @@ pub const SKILL_PHYSICS_WORK_ENERGY: &str = "physics.work_energy.mechanics";
 // Chemistry Skills
 pub const SKILL_CHEMISTRY_STOICHIOMETRY: &str = "chemistry.stoichiometry.moles";
 pub const SKILL_CHEMISTRY_EQUILIBRIUM: &str = "chemistry.equilibrium.concentration";
+pub const SKILL_CHEMISTRY_BUFFERS_TITRATION: &str = "chemistry.ionic_equilibrium.buffers_titration";
+pub const SKILL_CHEMISTRY_ELECTROCHEMISTRY: &str = "chemistry.electrochemistry.nernst_faraday";
+pub const SKILL_CHEMISTRY_KINETICS: &str = "chemistry.kinetics.rate_laws";
+pub const SKILL_CHEMISTRY_REACTION_NETWORKS: &str = "chemistry.reaction_networks.multistage_synthesis";
 
 // Reasoning Skills
 pub const SKILL_REASONING_SERIES: &str = "reasoning.series.pattern_recognition";
 pub const SKILL_REASONING_SYLLOGISM: &str = "reasoning.syllogism.formal_inference";
 pub const SKILL_REASONING_SEATING: &str = "reasoning.seating.constraint_satisfaction";
 pub const SKILL_REASONING_RELATIONS: &str = "reasoning.relations.graph_inference";
+pub const SKILL_REASONING_FLOOR_GRID: &str = "reasoning.floor_grid.spatial_csp";
+pub const SKILL_REASONING_LOGIC_DAG: &str = "reasoning.logic_dag.multi_step_inference";
+pub const SKILL_REASONING_DATA_SUFFICIENCY: &str = "reasoning.data_sufficiency.constraint_sufficiency";
+pub const SKILL_REASONING_CODED_EXPRESSIONS: &str = "reasoning.coded_expressions.symbolic_operators";
 
 // Standard Families
 pub const FAMILY_PERCENTAGE_SUCCESSIVE: &str = "family.math.percentage.successive";
@@ -58,6 +66,14 @@ pub const FAMILY_CHEMISTRY_STOICHIOMETRY: &str = "family.chemistry.stoichiometry
 pub const TEMPLATE_CHEMISTRY_STOICHIOMETRY_V1: &str = "chemistry.stoichiometry.moles.v1";
 pub const FAMILY_CHEMISTRY_EQUILIBRIUM: &str = "family.chemistry.equilibrium.concentration";
 pub const TEMPLATE_CHEMISTRY_EQUILIBRIUM_V1: &str = "chemistry.equilibrium.concentration.v1";
+pub const FAMILY_CHEMISTRY_BUFFERS_TITRATION: &str = crate::chemistry::generators::FAMILY_CHEMISTRY_BUFFERS_TITRATION;
+pub const TEMPLATE_CHEMISTRY_BUFFERS_TITRATION_V1: &str = crate::chemistry::generators::TEMPLATE_CHEMISTRY_BUFFERS_TITRATION_V1;
+pub const FAMILY_CHEMISTRY_ELECTROCHEMISTRY: &str = crate::chemistry::generators::FAMILY_CHEMISTRY_ELECTROCHEMISTRY;
+pub const TEMPLATE_CHEMISTRY_ELECTROCHEMISTRY_V1: &str = crate::chemistry::generators::TEMPLATE_CHEMISTRY_ELECTROCHEMISTRY_V1;
+pub const FAMILY_CHEMISTRY_KINETICS: &str = crate::chemistry::generators::FAMILY_CHEMISTRY_KINETICS;
+pub const TEMPLATE_CHEMISTRY_KINETICS_V1: &str = crate::chemistry::generators::TEMPLATE_CHEMISTRY_KINETICS_V1;
+pub const FAMILY_CHEMISTRY_REACTION_NETWORKS: &str = crate::chemistry::generators::FAMILY_CHEMISTRY_REACTION_NETWORKS;
+pub const TEMPLATE_CHEMISTRY_REACTION_NETWORKS_V1: &str = crate::chemistry::generators::TEMPLATE_CHEMISTRY_REACTION_NETWORKS_V1;
 
 // Reasoning Families
 pub const FAMILY_REASONING_SERIES: &str = crate::reasoning::generators::FAMILY_REASONING_SERIES;
@@ -68,6 +84,14 @@ pub const FAMILY_REASONING_SEATING: &str = crate::reasoning::generators::FAMILY_
 pub const TEMPLATE_REASONING_SEATING_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_SEATING_V1;
 pub const FAMILY_REASONING_RELATIONS: &str = crate::reasoning::generators::FAMILY_REASONING_RELATIONS;
 pub const TEMPLATE_REASONING_RELATIONS_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_RELATIONS_V1;
+pub const FAMILY_REASONING_FLOOR_GRID: &str = crate::reasoning::generators::FAMILY_REASONING_FLOOR_GRID;
+pub const TEMPLATE_REASONING_FLOOR_GRID_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_FLOOR_GRID_V1;
+pub const FAMILY_REASONING_LOGIC_DAG: &str = crate::reasoning::generators::FAMILY_REASONING_LOGIC_DAG;
+pub const TEMPLATE_REASONING_LOGIC_DAG_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_LOGIC_DAG_V1;
+pub const FAMILY_REASONING_DATA_SUFFICIENCY: &str = crate::reasoning::generators::FAMILY_REASONING_DATA_SUFFICIENCY;
+pub const TEMPLATE_REASONING_DATA_SUFFICIENCY_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_DATA_SUFFICIENCY_V1;
+pub const FAMILY_REASONING_CODED_EXPRESSIONS: &str = crate::reasoning::generators::FAMILY_REASONING_CODED_EXPRESSIONS;
+pub const TEMPLATE_REASONING_CODED_EXPRESSIONS_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_CODED_EXPRESSIONS_V1;
 
 // Standard Schemas
 pub const SCHEMA_SUCCESSIVE_PERCENTAGE: &str = "successive_percentage";
@@ -93,15 +117,23 @@ pub const SCHEMA_PHYSICS_WORK_ENERGY: &str = "physics_work_energy_mechanics";
 // Chemistry Schemas
 pub const SCHEMA_CHEMISTRY_STOICHIOMETRY: &str = "chemistry_stoichiometry_moles";
 pub const SCHEMA_CHEMISTRY_EQUILIBRIUM: &str = "chemistry_equilibrium_concentration";
+pub const SCHEMA_CHEMISTRY_BUFFERS_TITRATION: &str = "chemistry_buffers_titration_ionic";
+pub const SCHEMA_CHEMISTRY_ELECTROCHEMISTRY: &str = "chemistry_electrochemistry_nernst_faraday";
+pub const SCHEMA_CHEMISTRY_KINETICS: &str = "chemistry_kinetics_integrated_rates";
+pub const SCHEMA_CHEMISTRY_REACTION_NETWORKS: &str = "chemistry_reaction_networks_multistage";
 
 // Reasoning Schemas
 pub const SCHEMA_REASONING_SERIES: &str = "reasoning_series_patterns";
 pub const SCHEMA_REASONING_SYLLOGISM: &str = "reasoning_syllogism_categorical";
 pub const SCHEMA_REASONING_SEATING: &str = "reasoning_seating_linear";
 pub const SCHEMA_REASONING_RELATIONS: &str = "reasoning_relations_graph";
+pub const SCHEMA_REASONING_FLOOR_GRID: &str = "reasoning_floor_grid_spatial_csp";
+pub const SCHEMA_REASONING_LOGIC_DAG: &str = "reasoning_logic_dag_multi_step_inference";
+pub const SCHEMA_REASONING_DATA_SUFFICIENCY: &str = "reasoning_data_sufficiency_determinacy";
+pub const SCHEMA_REASONING_CODED_EXPRESSIONS: &str = "reasoning_coded_expressions_symbolic_operators";
 
-pub const PROCEDURAL_CATALOG_VERSION: &str = "2.3.0";
-pub const MATHS_CATALOG_VERSION: &str = "2.3.0";
+pub const PROCEDURAL_CATALOG_VERSION: &str = "3.0.0";
+pub const MATHS_CATALOG_VERSION: &str = "3.0.0";
 
 /// Canonical Mathematics catalog definitions and bootstrap initializer.
 pub struct MathsCatalog;
@@ -821,6 +853,46 @@ impl MathsCatalog {
         store.insert_problem_family(&Self::relations_family())?;
         store.insert_schema(&Self::relations_schema())?;
 
+        // 23. Chemistry: Ionic Equilibrium (Buffers & Titration)
+        store.insert_skill(&Self::buffers_titration_skill())?;
+        store.insert_problem_family(&Self::buffers_titration_family())?;
+        store.insert_schema(&Self::buffers_titration_schema())?;
+
+        // 24. Chemistry: Electrochemistry (Nernst & Faraday)
+        store.insert_skill(&Self::electrochemistry_skill())?;
+        store.insert_problem_family(&Self::electrochemistry_family())?;
+        store.insert_schema(&Self::electrochemistry_schema())?;
+
+        // 25. Chemistry: Chemical Kinetics (Integrated Rates)
+        store.insert_skill(&Self::kinetics_skill())?;
+        store.insert_problem_family(&Self::kinetics_family())?;
+        store.insert_schema(&Self::kinetics_schema())?;
+
+        // 26. Chemistry: Stoichiometry (Reaction Networks)
+        store.insert_skill(&Self::reaction_networks_skill())?;
+        store.insert_problem_family(&Self::reaction_networks_family())?;
+        store.insert_schema(&Self::reaction_networks_schema())?;
+
+        // 27. Reasoning: Analytical CSP (Floor / Grid)
+        store.insert_skill(&Self::floor_grid_skill())?;
+        store.insert_problem_family(&Self::floor_grid_family())?;
+        store.insert_schema(&Self::floor_grid_schema())?;
+
+        // 28. Reasoning: Deductive Logic (Multi-Premise DAG)
+        store.insert_skill(&Self::logic_dag_skill())?;
+        store.insert_problem_family(&Self::logic_dag_family())?;
+        store.insert_schema(&Self::logic_dag_schema())?;
+
+        // 29. Reasoning: Meta-Cognitive (Data Sufficiency)
+        store.insert_skill(&Self::data_sufficiency_skill())?;
+        store.insert_problem_family(&Self::data_sufficiency_family())?;
+        store.insert_schema(&Self::data_sufficiency_schema())?;
+
+        // 30. Reasoning: Graph/Relational (Coded Expressions)
+        store.insert_skill(&Self::coded_expressions_skill())?;
+        store.insert_problem_family(&Self::coded_expressions_family())?;
+        store.insert_schema(&Self::coded_expressions_schema())?;
+
         Ok(())
     }
 
@@ -1167,6 +1239,358 @@ impl MathsCatalog {
         .with_config(serde_json::json!({
             "target_time_ms": 30_000,
             "difficulty": 2.5,
+            "domain": "reasoning",
+        }))
+    }
+
+    // 23. Chemistry: Ionic Equilibrium (Buffers & Titration)
+    pub fn buffers_titration_skill() -> Skill {
+        Skill::new(
+            SKILL_CHEMISTRY_BUFFERS_TITRATION,
+            Domain::Chemistry,
+            "Ionic Equilibrium, Buffers and Titrations",
+            "Calculates pH of weak acid/base solutions, buffer solutions via Henderson-Hasselbalch, buffer capacity shifts, and titration curves (equivalence point hydrolysis, half-equivalence, excess reagent).",
+        )
+        .with_prerequisites(vec![SkillId::from(SKILL_CHEMISTRY_EQUILIBRIUM)])
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 40_000,
+            "typical_difficulty": 3.0,
+            "domain_category": "chemistry.ionic_equilibrium",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn buffers_titration_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_CHEMISTRY_BUFFERS_TITRATION,
+            SKILL_CHEMISTRY_BUFFERS_TITRATION,
+            Domain::Chemistry,
+            "Buffers & Titration Problem Family",
+            TEMPLATE_CHEMISTRY_BUFFERS_TITRATION_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn buffers_titration_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_CHEMISTRY_BUFFERS_TITRATION,
+            SKILL_CHEMISTRY_BUFFERS_TITRATION,
+            FAMILY_CHEMISTRY_BUFFERS_TITRATION,
+            "Buffers & Titration Practice",
+            "Practice solving aqueous ionic equilibrium, buffer Henderson-Hasselbalch calculations, and titration endpoints.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 40_000,
+            "difficulty": 3.0,
+            "domain": "chemistry",
+        }))
+    }
+
+    // 24. Chemistry: Electrochemistry (Nernst & Faraday)
+    pub fn electrochemistry_skill() -> Skill {
+        Skill::new(
+            SKILL_CHEMISTRY_ELECTROCHEMISTRY,
+            Domain::Chemistry,
+            "Electrochemistry, Nernst Equation and Faraday Electrolysis",
+            "Calculates galvanic standard cell potentials (E°_cell = E°_cathode - E°_anode), non-standard Nernst cell potentials (E = E° - (RT/nF) ln Q), and quantitative Faraday electrolysis (m = M*I*t / z*F).",
+        )
+        .with_prerequisites(vec![SkillId::from(SKILL_CHEMISTRY_STOICHIOMETRY)])
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 40_000,
+            "typical_difficulty": 3.0,
+            "domain_category": "chemistry.electrochemistry",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn electrochemistry_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_CHEMISTRY_ELECTROCHEMISTRY,
+            SKILL_CHEMISTRY_ELECTROCHEMISTRY,
+            Domain::Chemistry,
+            "Electrochemistry Problem Family",
+            TEMPLATE_CHEMISTRY_ELECTROCHEMISTRY_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn electrochemistry_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_CHEMISTRY_ELECTROCHEMISTRY,
+            SKILL_CHEMISTRY_ELECTROCHEMISTRY,
+            FAMILY_CHEMISTRY_ELECTROCHEMISTRY,
+            "Electrochemistry Practice",
+            "Practice solving electrochemical cell voltages, Nernst non-standard potentials, and quantitative Faraday electrolysis.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 40_000,
+            "difficulty": 3.0,
+            "domain": "chemistry",
+        }))
+    }
+
+    // 25. Chemistry: Chemical Kinetics (Integrated Rates)
+    pub fn kinetics_skill() -> Skill {
+        Skill::new(
+            SKILL_CHEMISTRY_KINETICS,
+            Domain::Chemistry,
+            "Chemical Kinetics, Integrated Rate Laws and Arrhenius Equation",
+            "Applies 0th, 1st, and 2nd order integrated rate laws, calculates half-life (t_1/2), deduces reaction orders via initial rates method, and calculates activation energy (Ea) via Arrhenius equation.",
+        )
+        .with_prerequisites(vec![SkillId::from(SKILL_CHEMISTRY_STOICHIOMETRY)])
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 35_000,
+            "typical_difficulty": 3.0,
+            "domain_category": "chemistry.kinetics",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn kinetics_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_CHEMISTRY_KINETICS,
+            SKILL_CHEMISTRY_KINETICS,
+            Domain::Chemistry,
+            "Chemical Kinetics Problem Family",
+            TEMPLATE_CHEMISTRY_KINETICS_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn kinetics_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_CHEMISTRY_KINETICS,
+            SKILL_CHEMISTRY_KINETICS,
+            FAMILY_CHEMISTRY_KINETICS,
+            "Chemical Kinetics Practice",
+            "Practice solving zero/first/second-order integrated rate laws, initial rate tables, and Arrhenius activation energy.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 35_000,
+            "difficulty": 3.0,
+            "domain": "chemistry",
+        }))
+    }
+
+    // 26. Chemistry: Stoichiometry (Reaction Networks)
+    pub fn reaction_networks_skill() -> Skill {
+        Skill::new(
+            SKILL_CHEMISTRY_REACTION_NETWORKS,
+            Domain::Chemistry,
+            "Reaction Networks and Multi-Stage Synthesis",
+            "Solves multi-stage sequential synthesis pathways, tracks intermediate molar flux, calculates net percentage yield across multiple stages (eta_net = eta1 * eta2), and performs mixture stoichiometric decomposition.",
+        )
+        .with_prerequisites(vec![SkillId::from(SKILL_CHEMISTRY_STOICHIOMETRY)])
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 45_000,
+            "typical_difficulty": 3.5,
+            "domain_category": "chemistry.reaction_networks",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn reaction_networks_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_CHEMISTRY_REACTION_NETWORKS,
+            SKILL_CHEMISTRY_REACTION_NETWORKS,
+            Domain::Chemistry,
+            "Reaction Networks Problem Family",
+            TEMPLATE_CHEMISTRY_REACTION_NETWORKS_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn reaction_networks_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_CHEMISTRY_REACTION_NETWORKS,
+            SKILL_CHEMISTRY_REACTION_NETWORKS,
+            FAMILY_CHEMISTRY_REACTION_NETWORKS,
+            "Reaction Networks Practice",
+            "Practice solving multi-step sequential chemical syntheses, intermediate species flux balance, and mixture stoichiometry.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 45_000,
+            "difficulty": 3.5,
+            "domain": "chemistry",
+        }))
+    }
+
+    // 27. Reasoning: Analytical CSP (Floor / Grid)
+    pub fn floor_grid_skill() -> Skill {
+        Skill::new(
+            SKILL_REASONING_FLOOR_GRID,
+            Domain::Reasoning,
+            "Floor and Grid Spatial Constraint Satisfaction",
+            "Applies discrete constraint satisfaction to solve multi-entity vertical floor assignments and 2D grid matrix puzzles with relative distance, betweenness, and parity bounds.",
+        )
+        .with_prerequisites(vec![SkillId::from(SKILL_REASONING_SEATING)])
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 45_000,
+            "typical_difficulty": 3.0,
+            "domain_category": "reasoning.floor_grid",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn floor_grid_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_REASONING_FLOOR_GRID,
+            SKILL_REASONING_FLOOR_GRID,
+            Domain::Reasoning,
+            "Floor & Grid CSP Problem Family",
+            TEMPLATE_REASONING_FLOOR_GRID_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn floor_grid_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_REASONING_FLOOR_GRID,
+            SKILL_REASONING_FLOOR_GRID,
+            FAMILY_REASONING_FLOOR_GRID,
+            "Floor & Grid Spatial CSP Practice",
+            "Practice multi-constraint vertical floor placement and 2D matrix spatial layout deduction.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 45_000,
+            "difficulty": 3.0,
+            "domain": "reasoning",
+        }))
+    }
+
+    // 28. Reasoning: Deductive Logic (Multi-Premise DAG)
+    pub fn logic_dag_skill() -> Skill {
+        Skill::new(
+            SKILL_REASONING_LOGIC_DAG,
+            Domain::Reasoning,
+            "Multi-Premise Deductive Logic DAG",
+            "Evaluates multi-step propositional inference chains (Modus Ponens, Modus Tollens, Disjunctive Syllogism, Hypothetical Syllogism) to derive logically necessary conclusions or detect contradictions.",
+        )
+        .with_prerequisites(vec![SkillId::from(SKILL_REASONING_SYLLOGISM)])
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 40_000,
+            "typical_difficulty": 3.0,
+            "domain_category": "reasoning.logic_dag",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn logic_dag_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_REASONING_LOGIC_DAG,
+            SKILL_REASONING_LOGIC_DAG,
+            Domain::Reasoning,
+            "Logic DAG Problem Family",
+            TEMPLATE_REASONING_LOGIC_DAG_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn logic_dag_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_REASONING_LOGIC_DAG,
+            SKILL_REASONING_LOGIC_DAG,
+            FAMILY_REASONING_LOGIC_DAG,
+            "Multi-Premise Deductive Logic Practice",
+            "Practice multi-stage proposition chaining and deductive inference rule derivation.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 40_000,
+            "difficulty": 3.0,
+            "domain": "reasoning",
+        }))
+    }
+
+    // 29. Reasoning: Meta-Cognitive (Data Sufficiency)
+    pub fn data_sufficiency_skill() -> Skill {
+        Skill::new(
+            SKILL_REASONING_DATA_SUFFICIENCY,
+            Domain::Reasoning,
+            "Data Sufficiency and System Determinacy",
+            "Evaluates whether given statements individually or combined provide mathematically sufficient information to uniquely determine the value of a target quantity.",
+        )
+        .with_prerequisites(vec![SkillId::from(SKILL_LINEAR_EQUATIONS)])
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 35_000,
+            "typical_difficulty": 3.0,
+            "domain_category": "reasoning.data_sufficiency",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn data_sufficiency_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_REASONING_DATA_SUFFICIENCY,
+            SKILL_REASONING_DATA_SUFFICIENCY,
+            Domain::Reasoning,
+            "Data Sufficiency Problem Family",
+            TEMPLATE_REASONING_DATA_SUFFICIENCY_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn data_sufficiency_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_REASONING_DATA_SUFFICIENCY,
+            SKILL_REASONING_DATA_SUFFICIENCY,
+            FAMILY_REASONING_DATA_SUFFICIENCY,
+            "Data Sufficiency Practice",
+            "Practice meta-cognitive evaluation of statement sufficiency, algebraic determinacy, and counterexample elimination.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 35_000,
+            "difficulty": 3.0,
+            "domain": "reasoning",
+        }))
+    }
+
+    // 30. Reasoning: Graph/Relational (Coded Expressions)
+    pub fn coded_expressions_skill() -> Skill {
+        Skill::new(
+            SKILL_REASONING_CODED_EXPRESSIONS,
+            Domain::Reasoning,
+            "Coded Symbolic Expressions and Relational Graphs",
+            "Decodes symbolic relational and directional operator expressions, constructs directed entity graph paths, and deduces composite relationships and 2D displacement vectors.",
+        )
+        .with_prerequisites(vec![SkillId::from(SKILL_REASONING_RELATIONS)])
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 40_000,
+            "typical_difficulty": 3.0,
+            "domain_category": "reasoning.coded_expressions",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn coded_expressions_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_REASONING_CODED_EXPRESSIONS,
+            SKILL_REASONING_CODED_EXPRESSIONS,
+            Domain::Reasoning,
+            "Coded Expressions Problem Family",
+            TEMPLATE_REASONING_CODED_EXPRESSIONS_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn coded_expressions_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_REASONING_CODED_EXPRESSIONS,
+            SKILL_REASONING_CODED_EXPRESSIONS,
+            FAMILY_REASONING_CODED_EXPRESSIONS,
+            "Coded Expressions Practice",
+            "Practice decoding symbolic relational operator chains and directional vector expressions.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 40_000,
+            "difficulty": 3.0,
             "domain": "reasoning",
         }))
     }

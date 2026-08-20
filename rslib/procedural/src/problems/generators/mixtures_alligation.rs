@@ -76,18 +76,21 @@ impl MixturesAlligationGenerator {
 
     /// Level 1: Two component blend -> find mean cost/concentration
     fn generate_level_1(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let q1 = rng.random_range(2..=8) * 5; // e.g. 20 kg
-        let q2 = rng.random_range(2..=8) * 5; // e.g. 30 kg
-        let p1 = rng.random_range(30..=60);   // $/kg
-        let p2 = p1 + rng.random_range(15..=35); // $/kg
+        let items = ["tea", "coffee", "sugar", "rice", "flour", "pulses", "grains"];
+        let item = items[rng.random_range(0..items.len())];
+
+        let q1 = rng.random_range(2..=20) * 5; // e.g. 10 to 100 kg
+        let q2 = rng.random_range(2..=20) * 5; // e.g. 10 to 100 kg
+        let p1 = rng.random_range(20..=80);   // $/kg
+        let p2 = p1 + rng.random_range(10..=45); // $/kg
         let total_weight = q1 + q2;
         let total_cost = q1 * p1 + q2 * p2;
         let mean_price = total_cost as f64 / total_weight as f64;
         let rounded_mean = (mean_price * 10.0).round() / 10.0;
 
         let prompt = format!(
-            "A tea merchant mixes **{} kg** of tea priced at **${}/kg** with **{} kg** of tea priced at **${}/kg**.\n\nFind the average price per kilogram of the resulting mixture in dollars.",
-            q1, p1, q2, p2
+            "A merchant mixes **{} kg** of {} priced at **${}/kg** with **{} kg** of {} priced at **${}/kg**.\n\nFind the average price per kilogram of the resulting mixture in dollars.",
+            q1, item, p1, q2, item, p2
         );
 
         let solution = format!(
@@ -102,6 +105,7 @@ impl MixturesAlligationGenerator {
 
         let parameters = serde_json::json!({
             "variant": "two_component_blend",
+            "item": item,
             "q1": q1,
             "q2": q2,
             "p1": p1,
@@ -167,10 +171,13 @@ impl MixturesAlligationGenerator {
 
     /// Level 2: Rule of Alligation -> Find ratio to mix two prices to achieve target mean price
     fn generate_level_2(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let p_cheap = rng.random_range(20..=50); // Cheaper price
-        let p_dear = p_cheap + rng.random_range(15..=30); // Dearer price
+        let items = ["pulses", "tea", "coffee", "sugar", "rice", "wheat", "salt"];
+        let item = items[rng.random_range(0..items.len())];
+
+        let p_cheap = rng.random_range(10..=100); // Cheaper price
+        let p_dear = p_cheap + rng.random_range(10..=80); // Dearer price
         // Target mean price strictly between cheap and dear
-        let offset = rng.random_range(4..=(p_dear - p_cheap - 4));
+        let offset = rng.random_range(2..=(p_dear - p_cheap - 1));
         let p_mean = p_cheap + offset;
 
         let diff_cheap = p_mean - p_cheap; // Part of dearer variety
@@ -185,8 +192,8 @@ impl MixturesAlligationGenerator {
         let ratio_dear = diff_cheap / g;
 
         let prompt = format!(
-            "In what ratio must a grocer mix two varieties of pulses costing **${}/kg** and **${}/kg** so that the mixture costs **${}/kg**?",
-            p_cheap, p_dear, p_mean
+            "In what ratio must a grocer mix two varieties of {} costing **${}/kg** and **${}/kg** so that the mixture costs **${}/kg**?",
+            item, p_cheap, p_dear, p_mean
         );
 
         let solution = format!(
@@ -202,6 +209,7 @@ impl MixturesAlligationGenerator {
 
         let parameters = serde_json::json!({
             "variant": "alligation_ratio",
+            "item": item,
             "p_cheap": p_cheap,
             "p_dear": p_dear,
             "p_mean": p_mean,
@@ -273,38 +281,41 @@ impl MixturesAlligationGenerator {
 
     /// Level 3: Dilution / Pure substance addition to adjust concentration
     fn generate_level_3(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        // e.g. 60 liters of mixture with 20% alcohol. How much pure alcohol to add to make it 40%?
-        let initial_volume = rng.random_range(3..=10) * 10; // e.g. 40, 50, 60 liters
-        let c1 = rng.random_range(10..=30); // Initial % alcohol (e.g. 20%)
-        let target_c = c1 + rng.random_range(10..=20); // Target % alcohol (e.g. 40%)
+        let liquids = [("alcohol", "pure alcohol"), ("acid", "pure acid"), ("antifreeze", "pure antifreeze"), ("juice", "pure juice extract")];
+        let (solute, pure_solute) = liquids[rng.random_range(0..liquids.len())];
 
-        // Alcohol initially = (c1 / 100) * initial_volume
-        // Non-alcohol (constant) = ((100 - c1) / 100) * initial_volume
-        // In final mixture, non-alcohol is (100 - target_c)%
-        // Final Volume = Non-alcohol / ((100 - target_c)/100)
-        let non_alcohol = ((100 - c1) as f64 / 100.0) * initial_volume as f64;
-        let final_volume = non_alcohol / ((100 - target_c) as f64 / 100.0);
-        let added_alcohol = final_volume - initial_volume as f64;
-        let rounded_added = (added_alcohol * 10.0).round() / 10.0;
+        let initial_volume = rng.random_range(10..=150) * 2; // 20 to 300 liters
+        let c1 = rng.random_range(5..=45); // Initial %
+        let target_c = c1 + rng.random_range(5..=45); // Target %
+
+        // Solute initially = (c1 / 100) * initial_volume
+        // Non-solute (constant) = ((100 - c1) / 100) * initial_volume
+        // In final mixture, non-solute is (100 - target_c)%
+        // Final Volume = Non-solute / ((100 - target_c)/100)
+        let non_solute = ((100 - c1) as f64 / 100.0) * initial_volume as f64;
+        let final_volume = non_solute / ((100 - target_c) as f64 / 100.0);
+        let added_solute = final_volume - initial_volume as f64;
+        let rounded_added = (added_solute * 10.0).round() / 10.0;
 
         let prompt = format!(
-            "A **{} liter** solution contains **{}%** alcohol by volume.\n\nHow many liters of pure alcohol must be added to increase the concentration to **{}%**?",
-            initial_volume, c1, target_c
+            "A **{} liter** solution contains **{}%** {} by volume.\n\nHow many liters of {} must be added to increase the concentration to **{}%**?",
+            initial_volume, c1, solute, pure_solute, target_c
         );
 
         let solution = format!(
             "**Step 1:** Identify the quantity that remains constant (the water/solvent component):\n\
-             \\[ \\text{{Water Volume}} = (100\\% - {}%) \\times {} = {}% \\times {} = {:.1} \\text{{ liters}} \\]\n\n\
-             **Step 2:** In the final solution with {}% alcohol, water represents \\(100\\% - {}% = {}%\\):\n\
+             \\[ \\text{{Solvent Volume}} = (100\\% - {}%) \\times {} = {}% \\times {} = {:.1} \\text{{ liters}} \\]\n\n\
+             **Step 2:** In the final solution with {}% {}, solvent represents \\(100\\% - {}% = {}%\\):\n\
              \\[ \\text{{Total Final Volume}} = \\frac{{{:.1}}}{{{}\\%}} = \\frac{{{:.1}}}{{{:.2}}} = {:.1} \\text{{ liters}} \\]\n\n\
-             **Step 3:** Calculate added pure alcohol:\n\
-             \\[ \\text{{Added Alcohol}} = {:.1} - {} = **{:.1}** \\text{{ liters}} \\]",
-            c1, initial_volume, 100 - c1, initial_volume, non_alcohol, target_c, target_c, 100 - target_c,
-            non_alcohol, 100 - target_c, non_alcohol, (100 - target_c) as f64 / 100.0, final_volume, final_volume, initial_volume, rounded_added
+             **Step 3:** Calculate added pure {}:\n\
+             \\[ \\text{{Added Volume}} = {:.1} - {} = **{:.1}** \\text{{ liters}} \\]",
+            c1, initial_volume, 100 - c1, initial_volume, non_solute, target_c, solute, target_c, 100 - target_c,
+            non_solute, 100 - target_c, non_solute, (100 - target_c) as f64 / 100.0, final_volume, solute, final_volume, initial_volume, rounded_added
         );
 
         let parameters = serde_json::json!({
             "variant": "dilution_addition",
+            "solute": solute,
             "initial_volume": initial_volume,
             "initial_concentration": c1,
             "target_concentration": target_c,
@@ -321,22 +332,22 @@ impl MixturesAlligationGenerator {
         let step1 = StepNode::new(
             "constant_component",
             StepType::IntermediateResult,
-            "Find volume of constant non-alcohol component",
-            format!("{} * (100 - {})% = {:.1}", initial_volume, c1, non_alcohol),
-            format!("{:.1}", non_alcohol),
+            format!("Find volume of constant non-{} component", solute).as_str(),
+            format!("{} * (100 - {})% = {:.1}", initial_volume, c1, non_solute),
+            format!("{:.1}", non_solute),
         )
-        .with_expected_value(non_alcohol)
+        .with_expected_value(non_solute)
         .with_hints(vec![
             StepHint::principle("When adding pure solute, the amount of solvent (water) remains invariant."),
-            StepHint::operation(format!("Calculate {} * ({} / 100).", initial_volume, 100 - c1)),
-            StepHint::intermediate_relation(format!("Water volume = {:.1} liters", non_alcohol)),
+            StepHint::operation(format!("Calculate {} * ({} / 100).", initial_volume, 100 - c1).as_str()),
+            StepHint::intermediate_relation(format!("Solvent volume = {:.1} liters", non_solute).as_str()),
         ]);
 
         let step2 = StepNode::new(
             "solve_added",
             StepType::FinalAnswer,
-            "Calculate added pure alcohol",
-            format!("{:.1} / ({}%) - {} = {:.1}", non_alcohol, 100 - target_c, initial_volume, rounded_added),
+            format!("Calculate added pure {}", solute).as_str(),
+            format!("{:.1} / ({}%) - {} = {:.1}", non_solute, 100 - target_c, initial_volume, rounded_added),
             format!("{:.1}", rounded_added),
         )
         .with_expected_value(rounded_added)
@@ -344,8 +355,8 @@ impl MixturesAlligationGenerator {
         .as_final()
         .with_hints(vec![
             StepHint::principle("Final Volume = Invariant Solvent / Final Solvent Fraction, then subtract initial volume."),
-            StepHint::operation(format!("Compute {:.1} / {:.2} - {}.", non_alcohol, (100 - target_c) as f64 / 100.0, initial_volume)),
-            StepHint::intermediate_relation(format!("Added alcohol = {:.1} liters", rounded_added)),
+            StepHint::operation(format!("Compute {:.1} / {:.2} - {}.", non_solute, (100 - target_c) as f64 / 100.0, initial_volume).as_str()),
+            StepHint::intermediate_relation(format!("Added volume = {:.1} liters", rounded_added).as_str()),
         ]);
 
         let graph = SolutionGraph::new(vec![step1, step2], "solve_added");
@@ -369,9 +380,9 @@ impl MixturesAlligationGenerator {
 
     /// Level 4: Repeated replacement formula Q = Q0 * (1 - x/V)^n
     fn generate_level_4(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let total_vol = rng.random_range(40..=100); // e.g. 50 liters pure liquid
-        let replaced_x = rng.random_range(5..=15);   // e.g. 10 liters replaced with water
-        let n_ops = 2; // Repeated 2 times
+        let total_vol = rng.random_range(40..=200); 
+        let replaced_x = rng.random_range(5..=30);
+        let n_ops = rng.random_range(2..=4); 
 
         let fraction_remaining = 1.0 - (replaced_x as f64 / total_vol as f64);
         let final_pure = total_vol as f64 * fraction_remaining.powi(n_ops);
@@ -379,20 +390,20 @@ impl MixturesAlligationGenerator {
 
         let prompt = format!(
             "A container initially holds **{} liters of pure milk**.\n\
-             **{} liters** of milk is drawn out and replaced with water. This process is repeated one more time (total 2 replacements).\n\n\
+             **{} liters** of milk is drawn out and replaced with water. This process is repeated {} more time(s) (total {} replacements).\n\n\
              How many liters of pure milk remain in the container?",
-            total_vol, replaced_x
+            total_vol, replaced_x, n_ops - 1, n_ops
         );
 
         let solution = format!(
             "**Step 1:** Apply the standard repeated replacement formula:\n\
              \\[ \\text{{Remaining Pure Liquid}} = V \\times \\left(1 - \\frac{{x}}{{V}}\\right)^n \\]\n\n\
-             **Step 2:** Substitute \\(V = {}\\), \\(x = {}\\), \\(n = 2\\):\n\
+             **Step 2:** Substitute \\(V = {}\\), \\(x = {}\\), \\(n = {}\\):\n\
              \\[ 1 - \\frac{{{}}}{{{}}} = 1 - {:.3} = {:.3} \\]\n\n\
              **Step 3:** Compute final milk quantity:\n\
-             \\[ \\text{{Remaining Milk}} = {} \\times ({:.3})^2 = **{:.2}** \\text{{ liters}} \\]",
-            total_vol, replaced_x, replaced_x, total_vol, replaced_x as f64 / total_vol as f64, fraction_remaining,
-            total_vol, fraction_remaining, rounded_final
+             \\[ \\text{{Remaining Milk}} = {} \\times ({:.3})^{{{}}} = **{:.2}** \\text{{ liters}} \\]",
+            total_vol, replaced_x, n_ops, replaced_x, total_vol, replaced_x as f64 / total_vol as f64, fraction_remaining,
+            total_vol, fraction_remaining, n_ops, rounded_final
         );
 
         let parameters = serde_json::json!({
@@ -460,31 +471,70 @@ impl MixturesAlligationGenerator {
     }
 
     /// Level 5: Transfer commercial / alloy composition problem
-    fn generate_level_5(_rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        // Alloy A has copper:tin in ratio r1:r2 (e.g. 3:2 -> 60% copper)
-        // Alloy B has copper:tin in ratio r3:r4 (e.g. 4:1 -> 80% copper)
-        // In what ratio should Alloy A and B be melted to produce a new alloy with 75% copper?
-        let copper_pct_a = 60; // 3:2
-        let copper_pct_b = 80; // 4:1
-        let target_copper_pct = 75;
+    fn generate_level_5(rng: &mut StdRng, seed: u64) -> ProblemInstance {
+        let ratios = [
+            ("1 : 4", 20),
+            ("1 : 3", 25),
+            ("3 : 7", 30),
+            ("1 : 2", 33), // Approx but not exact, skip 33 for target calculations
+            ("2 : 3", 40),
+            ("1 : 1", 50),
+            ("3 : 2", 60),
+            ("7 : 3", 70),
+            ("3 : 1", 75),
+            ("4 : 1", 80),
+            ("9 : 1", 90),
+        ];
 
-        let _diff_a = copper_pct_b - target_copper_pct; // 80 - 75 = 5
-        let _diff_b = target_copper_pct - copper_pct_a; // 75 - 60 = 15
-        // Ratio A : B = 5 : 15 = 1 : 3
+        let idx_a = rng.random_range(0..ratios.len() - 3);
+        let idx_b = rng.random_range((idx_a + 2)..ratios.len());
+        
+        let (ratio_a_str, copper_pct_a) = ratios[idx_a];
+        let (ratio_b_str, copper_pct_b) = ratios[idx_b];
+        
+        // Pick target
+        let min_target = copper_pct_a + 5;
+        let max_target = copper_pct_b - 5;
+        let target_steps = (max_target - min_target) / 5;
+        let step = rng.random_range(0..=target_steps);
+        let target_copper_pct = min_target + step * 5;
+
+        let metals = ["copper and tin", "gold and silver", "zinc and copper", "nickel and iron", "lead and tin"];
+        let target_metals = ["copper", "gold", "zinc", "nickel", "lead"];
+        let m_idx = rng.random_range(0..metals.len());
+        let metal_pair = metals[m_idx];
+        let target_metal = target_metals[m_idx];
+
+        let diff_a = (copper_pct_b as i32 - target_copper_pct as i32).abs() as u32;
+        let diff_b = (target_copper_pct as i32 - copper_pct_a as i32).abs() as u32;
+
+        fn gcd(a: u32, b: u32) -> u32 {
+            if b == 0 { a } else { gcd(b, a % b) }
+        }
+        let g = gcd(diff_a, diff_b);
+        let ratio_a = diff_a / g;
+        let ratio_b = diff_b / g;
 
         let prompt = format!(
-            "Alloy \\(A\\) contains copper and tin in the ratio **3 : 2** (60% copper).\n\
-             Alloy \\(B\\) contains copper and tin in the ratio **4 : 1** (80% copper).\n\n\
-             In what ratio must Alloy \\(A\\) and Alloy \\(B\\) be melted together to produce a new alloy containing **75% copper**?",
+            "Alloy \\(A\\) contains {} in the ratio **{}** ({}% {}).\n\
+             Alloy \\(B\\) contains {} in the ratio **{}** ({}% {}).\n\n\
+             In what ratio must Alloy \\(A\\) and Alloy \\(B\\) be melted together to produce a new alloy containing **{}% {}**?",
+             metal_pair, ratio_a_str, copper_pct_a, target_metal,
+             metal_pair, ratio_b_str, copper_pct_b, target_metal,
+             target_copper_pct, target_metal
         );
 
         let solution = format!(
-            "**Step 1:** Express the copper concentration in both alloys:\n\
-             \\[ \\text{{Alloy }} A = \\frac{{3}}{{3+2}} = 60\\%, \\quad \\text{{Alloy }} B = \\frac{{4}}{{4+1}} = 80\\% \\]\n\n\
-             **Step 2:** Apply Alligation to the target concentration of 75% copper:\n\
-             \\[ \\frac{{\\text{{Weight of }} A}}{{\\text{{Weight of }} B}} = \\frac{{80\\% - 75\\%}}{{75\\% - 60\\%}} = \\frac{{5\\%}}{{15\\%}} \\]\n\n\
+            "**Step 1:** Express the {} concentration in both alloys:\n\
+             \\[ \\text{{Alloy }} A = {}\\%, \\quad \\text{{Alloy }} B = {}\\% \\]\n\n\
+             **Step 2:** Apply Alligation to the target concentration of {}% {}:\n\
+             \\[ \\frac{{\\text{{Weight of }} A}}{{\\text{{Weight of }} B}} = \\frac{{{} - {}}}{{{} - {}}} = \\frac{{{}}}{{{}}} \\]\n\n\
              **Step 3:** Simplify the ratio:\n\
-             \\[ \\frac{{5}}{{15}} = **1:3** \\]"
+             \\[ \\frac{{{}}}{{{}}} = **{}:{}** \\]",
+            target_metal, copper_pct_a, copper_pct_b, 
+            target_copper_pct, target_metal, 
+            copper_pct_b, target_copper_pct, target_copper_pct, copper_pct_a, diff_a, diff_b,
+            diff_a, diff_b, ratio_a, ratio_b
         );
 
         let parameters = serde_json::json!({
@@ -492,14 +542,14 @@ impl MixturesAlligationGenerator {
             "pct_a": copper_pct_a,
             "pct_b": copper_pct_b,
             "target_pct": target_copper_pct,
-            "ratio_a": 1,
-            "ratio_b": 3,
+            "ratio_a": ratio_a,
+            "ratio_b": ratio_b,
         });
 
         let correct_answer = serde_json::json!({
-            "value": 1.0 / 3.0,
-            "formatted": "1:3",
-            "ratio": [1, 3],
+            "value": ratio_a as f64 / ratio_b as f64,
+            "formatted": format!("{}:{}", ratio_a, ratio_b),
+            "ratio": [ratio_a, ratio_b],
             "solution": solution,
         });
 
@@ -507,30 +557,30 @@ impl MixturesAlligationGenerator {
             "alligation_calc",
             StepType::Transformation,
             "Apply alligation to alloy concentrations",
-            "(80 - 75) : (75 - 60) = 5 : 15",
-            "5:15",
+            format!("({} - {}) : ({} - {}) = {} : {}", copper_pct_b, target_copper_pct, target_copper_pct, copper_pct_a, diff_a, diff_b),
+            format!("{}:{}", diff_a, diff_b),
         )
-        .with_alternates(vec!["1:3".to_string(), "5/15".to_string()])
+        .with_alternates(vec![format!("{}:{}", ratio_a, ratio_b), format!("{}/{}", diff_a, diff_b)])
         .with_hints(vec![
-            StepHint::principle("Apply Rule of Alligation using the percentage of the common metal (copper)."),
-            StepHint::operation("Compute (80% - 75%) : (75% - 60%)."),
-            StepHint::intermediate_relation("Ratio = 5 : 15"),
+            StepHint::principle(format!("Apply Rule of Alligation using the percentage of the common metal ({}).", target_metal).as_str()),
+            StepHint::operation(format!("Compute ({}% - {}%) : ({}% - {}%).", copper_pct_b, target_copper_pct, target_copper_pct, copper_pct_a).as_str()),
+            StepHint::intermediate_relation(format!("Ratio = {} : {}", diff_a, diff_b).as_str()),
         ]);
 
         let step2 = StepNode::new(
             "simplify_alloy_ratio",
             StepType::FinalAnswer,
             "Simplify alloy mixing ratio",
-            "5/5 : 15/5 = 1 : 3",
-            "1:3",
+            format!("{}/{} : {}/{} = {} : {}", diff_a, g, diff_b, g, ratio_a, ratio_b),
+            format!("{}:{}", ratio_a, ratio_b),
         )
-        .with_alternates(vec!["1:3".to_string(), "1/3".to_string()])
+        .with_alternates(vec![format!("{}:{}", ratio_a, ratio_b), format!("{}/{}", ratio_a, ratio_b)])
         .with_dependencies(vec!["alligation_calc".to_string()])
         .as_final()
         .with_hints(vec![
-            StepHint::principle("Reduce the ratio 5:15 to lowest terms."),
-            StepHint::operation("Divide both terms by 5."),
-            StepHint::intermediate_relation("Ratio = 1:3"),
+            StepHint::principle(format!("Reduce the ratio {}:{} to lowest terms.", diff_a, diff_b).as_str()),
+            StepHint::operation(format!("Divide both terms by {}.", g).as_str()),
+            StepHint::intermediate_relation(format!("Ratio = {}:{}", ratio_a, ratio_b).as_str()),
         ]);
 
         let graph = SolutionGraph::new(vec![step1, step2], "simplify_alloy_ratio");

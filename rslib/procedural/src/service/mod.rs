@@ -295,12 +295,7 @@ impl ProceduralService {
         variant: Option<&str>,
         target_latency_ms: u64,
     ) -> Result<()> {
-        self.store.insert_practice_attempt(&attempt)?;
-        for error in errors {
-            self.store.insert_error_event(&error)?;
-        }
-
-        // Update skill state with rich learning signals
+        // Load skill state with rich learning signals
         let mut state = self
             .store
             .get_skill_state(&attempt.skill_id)?
@@ -316,9 +311,34 @@ impl ProceduralService {
             diagnostic_errors.push(cat);
         }
 
+        let hints_used = attempt
+            .metadata
+            .get("hints_used")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+
+        let attempt_count = attempt
+            .metadata
+            .get("attempt_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(1) as u32;
+
+        let independence = if hints_used == 0 && attempt_count <= 1 {
+            crate::skills::IndependenceLevel::Independent
+        } else if hints_used <= 1 && attempt_count <= 1 {
+            crate::skills::IndependenceLevel::LightSupport
+        } else if hints_used <= 2 || attempt_count <= 2 {
+            crate::skills::IndependenceLevel::SignificantSupport
+        } else {
+            crate::skills::IndependenceLevel::NonIndependent
+        };
+
         let evidence = crate::skills::signals::MasteryEvidence {
             final_correctness: attempt.is_correct,
             latency_evidence: attempt.time_taken_ms,
+            independence,
+            hint_dependence: hints_used,
+            retry_dependence: attempt_count.saturating_sub(1),
             variant_exposure: variant.map(|s| s.to_string()),
             diagnostic_errors,
             ..Default::default()
@@ -331,7 +351,8 @@ impl ProceduralService {
             attempt.attempted_at,
         );
 
-        self.store.upsert_skill_state(&state)?;
+        // Atomically commit attempt, error events, and skill state in a single SQLite transaction
+        self.store.record_attempt_atomic(&attempt, &errors, &state)?;
         Ok(())
     }
 
@@ -1304,25 +1325,30 @@ impl ProceduralService {
             (SCHEMA_REASONING_RELATIONS, Domain::Reasoning),
         ];
 
+        let all_schemas_map = self.store.list_all_schemas_map()?;
+        let all_skill_states = self.store.list_all_skill_states_map()?;
+        let all_eligible_pyqs = self.store.list_all_eligible_pyqs_map()?;
+
         for (sid, dom) in all_canonical_schemas {
             let schema_id = SchemaId::from(sid);
-            if let Some(schema) = self.store.get_schema(&schema_id)? {
+            if let Some(schema) = all_schemas_map.get(&schema_id) {
                 schema_domains.insert(schema.id.clone(), dom);
-                candidate_schemas.push(schema);
+                candidate_schemas.push(schema.clone());
             }
         }
 
-        // Load skill states and eligible PYQs for candidate schemas
+        // Load skill states and eligible PYQs for candidate schemas from batch maps
         let mut skill_states = HashMap::new();
         let mut eligible_pyqs = HashMap::new();
 
         for s in &candidate_schemas {
-            if let Some(state) = self.store.get_skill_state(&s.skill_id)? {
-                skill_states.insert(s.skill_id.clone(), state);
+            if let Some(state) = all_skill_states.get(&s.skill_id) {
+                skill_states.insert(s.skill_id.clone(), state.clone());
             }
-            let pyq_list = self.store.list_eligible_pyqs_for_schema(&s.id)?;
-            if !pyq_list.is_empty() {
-                eligible_pyqs.insert(s.id.clone(), pyq_list);
+            if let Some(pyq_list) = all_eligible_pyqs.get(&s.id) {
+                if !pyq_list.is_empty() {
+                    eligible_pyqs.insert(s.id.clone(), pyq_list.clone());
+                }
             }
         }
 

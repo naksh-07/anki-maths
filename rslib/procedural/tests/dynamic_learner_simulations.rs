@@ -40,7 +40,12 @@ fn test_simulation_learner_a_new_slow_correct() {
         hint_dependence: 0,
         retry_dependence: 0,
         variant_exposure: Some("standard".into()),
+        variant_category: procedural::VariantCategory::Parameter,
+        solution_graph_fingerprint: None,
+        cognitive_decision_correct: Some(true),
+        time_since_last_ms: None,
         transfer_evidence: false,
+        domain_competence_verified: Some(true),
         latency_evidence: 75_000,
         diagnostic_errors: vec![],
     };
@@ -57,6 +62,7 @@ fn test_simulation_learner_b_fluent_fast_correct() {
     let mut state = SkillState::new(skill_id);
     state.practice_state = PracticeProgressionState::Fluent;
     state.total_attempts = 5;
+    state.historical_independent_count = 5;
 
     // Learner B takes 25s (well under 45s target)
     let speed_eval = StageSpeedPolicy::evaluate(
@@ -82,7 +88,12 @@ fn test_simulation_learner_b_fluent_fast_correct() {
         hint_dependence: 0,
         retry_dependence: 0,
         variant_exposure: Some("v_gravity".into()),
+        variant_category: procedural::VariantCategory::Structural,
+        solution_graph_fingerprint: None,
+        cognitive_decision_correct: Some(true),
+        time_since_last_ms: None,
         transfer_evidence: false,
+        domain_competence_verified: Some(true),
         latency_evidence: 26_000,
         diagnostic_errors: vec![],
     };
@@ -116,7 +127,12 @@ fn test_simulation_learner_c_heavy_hints() {
         hint_dependence: 3,
         retry_dependence: 0,
         variant_exposure: Some("seating_circular".into()),
+        variant_category: procedural::VariantCategory::Transfer,
+        solution_graph_fingerprint: None,
+        cognitive_decision_correct: Some(true),
+        time_since_last_ms: None,
         transfer_evidence: true,
+        domain_competence_verified: Some(true),
         latency_evidence: 30_000,
         diagnostic_errors: vec![],
     };
@@ -142,9 +158,13 @@ fn test_simulation_learner_d_strong_standard_weak_transfer() {
             latency_ms: 20_000,
             target_latency_ms: 45_000,
             variant: Some("standard_moles".into()),
+            variant_category: Some(procedural::VariantCategory::Parameter),
             error_category: None,
             max_hint_level: None,
             hint_count: None,
+            independence: Some(procedural::IndependenceLevel::Independent),
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: Some(true),
             timestamp: 100,
         });
     }
@@ -186,9 +206,13 @@ fn test_simulation_learner_e_long_break_mastered_retirement_and_reactivation() {
             latency_ms: 15_000,
             target_latency_ms: 30_000,
             variant: Some("v1".into()),
+            variant_category: Some(procedural::VariantCategory::Structural),
             error_category: None,
             max_hint_level: None,
             hint_count: None,
+            independence: Some(procedural::IndependenceLevel::Independent),
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: Some(true),
             timestamp: 100,
         });
     }

@@ -74,60 +74,65 @@ impl TimeSpeedDistanceGenerator {
         }
     }
 
-    /// Level 1: Direct D = S * T with clean integers
+    /// Level 1: Direct D = S * T with clean integers and randomized missing variable
     fn generate_level_1(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let speed = rng.random_range(40..=90); // km/h
-        let time = rng.random_range(2..=6);   // hours
-        let distance = speed * time;          // km
+        let mode = rng.random_range(0..3);
+        let speed = rng.random_range(20..=120); 
+        let time = rng.random_range(2..=10);
+        let distance = speed * time;
 
-        let prompt = format!(
-            "A car travels at a constant speed of **{} km/h** for **{} hours**.\n\nFind the total distance covered in kilometers.",
-            speed, time
-        );
-
-        let solution = format!(
-            "**Step 1:** Apply the fundamental distance formula:\n\
-             \\[ \\text{{Distance}} = \\text{{Speed}} \\times \\text{{Time}} \\]\n\n\
-             **Step 2:** Substitute known values:\n\
-             \\[ \\text{{Distance}} = {} \\times {} = **{}** \\text{{ km}} \\]",
-            speed, time, distance
-        );
+        let prompt;
+        let solution;
+        let expected_val: f64;
+        let unit: &str;
+        
+        if mode == 0 {
+            prompt = format!("A car travels at a constant speed of **{} km/h** for **{} hours**.\n\nFind the total distance covered in kilometers.", speed, time);
+            solution = format!("**Step 1:** \\text{{Distance}} = \\text{{Speed}} \\times \\text{{Time}}\n\\[ \\text{{Distance}} = {} \\times {} = **{}** \\text{{ km}} \\]", speed, time, distance);
+            expected_val = distance as f64;
+            unit = "km";
+        } else if mode == 1 {
+            prompt = format!("A car covers a distance of **{} km** traveling at a constant speed of **{} km/h**.\n\nHow many hours does the journey take?", distance, speed);
+            solution = format!("**Step 1:** \\text{{Time}} = \\frac{{\\text{{Distance}}}}{{\\text{{Speed}}}}\n\\[ \\text{{Time}} = \\frac{{{}}}{{{}}} = **{}** \\text{{ hours}} \\]", distance, speed, time);
+            expected_val = time as f64;
+            unit = "hours";
+        } else {
+            prompt = format!("A car covers a distance of **{} km** in **{} hours** at a constant speed.\n\nWhat is the speed of the car in km/h?", distance, time);
+            solution = format!("**Step 1:** \\text{{Speed}} = \\frac{{\\text{{Distance}}}}{{\\text{{Time}}}}\n\\[ \\text{{Speed}} = \\frac{{{}}}{{{}}} = **{}** \\text{{ km/h}} \\]", distance, time, speed);
+            expected_val = speed as f64;
+            unit = "km/h";
+        }
 
         let parameters = serde_json::json!({
             "variant": "direct_formula",
+            "mode": mode,
             "speed": speed,
             "time": time,
             "distance": distance,
         });
 
         let correct_answer = serde_json::json!({
-            "value": distance as f64,
-            "formatted": format!("{}", distance),
-            "unit": "km",
+            "value": expected_val,
+            "formatted": format!("{}", expected_val),
+            "unit": unit,
             "solution": solution,
         });
 
         let step1 = StepNode::new(
-            "calc_distance",
+            "calc_target",
             StepType::FinalAnswer,
-            "Calculate distance",
-            format!("Multiply speed {} km/h by time {} h", speed, time),
-            format!("{} * {} = {}", speed, time, distance),
+            "Calculate missing value",
+            "Apply D = S * T or its variations",
+            format!("Result = {}", expected_val),
         )
-        .with_expected_value(distance as f64)
-        .with_alternates(vec![
-            format!("{}", distance),
-            format!("{} * {}", speed, time),
-            format!("d = {}", distance),
-        ])
+        .with_expected_value(expected_val)
+        .with_alternates(vec![format!("{}", expected_val)])
         .as_final()
         .with_hints(vec![
-            StepHint::principle("Distance is the product of speed and travel time: D = S * T."),
-            StepHint::operation(format!("Multiply {} by {}.", speed, time)),
-            StepHint::intermediate_relation(format!("{} * {} = {}", speed, time, distance)),
+            StepHint::principle("Use the relationship: Distance = Speed * Time."),
         ]);
 
-        let graph = SolutionGraph::new(vec![step1], "calc_distance");
+        let graph = SolutionGraph::new(vec![step1], "calc_target");
 
         ProblemInstance::new(
             format!("inst-tsd-l1-{}", seed),
@@ -148,81 +153,66 @@ impl TimeSpeedDistanceGenerator {
 
     /// Level 2: Unit conversion (km/h <-> m/s) and sub-minute calculation
     fn generate_level_2(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        // Multiples of 18 km/h for integer m/s (18 km/h = 5 m/s)
-        let speed_kmh_multiplier = rng.random_range(2..=6);
-        let speed_kmh = speed_kmh_multiplier * 18; // e.g. 36, 54, 72, 90 km/h
-        let speed_ms = speed_kmh_multiplier * 5;   // 10, 15, 20, 25 m/s
-        let time_sec = rng.random_range(15..=45);  // seconds
-        let distance_m = speed_ms * time_sec;
+        let mode = rng.random_range(0..2);
+        
+        let prompt;
+        let solution;
+        let expected_val: f64;
+        let unit: &str;
+        
+        if mode == 0 {
+            // km/h to m/s
+            let speed_kmh_multiplier = rng.random_range(2..=12);
+            let speed_kmh = speed_kmh_multiplier * 18; 
+            let speed_ms = speed_kmh_multiplier * 5;   
+            let time_sec = rng.random_range(10..=60);  
+            let distance_m = speed_ms * time_sec;
 
-        let prompt = format!(
-            "A train travels at **{} km/h**.\n\nHow many meters does it cover in **{} seconds**?",
-            speed_kmh, time_sec
-        );
-
-        let solution = format!(
-            "**Step 1:** Convert speed from km/h to m/s by multiplying by \\( \\frac{{5}}{{18}} \\):\n\
-             \\[ \\text{{Speed (m/s)}} = {} \\times \\frac{{5}}{{18}} = {} \\text{{ m/s}} \\]\n\n\
-             **Step 2:** Calculate distance covered in {} seconds:\n\
-             \\[ \\text{{Distance}} = {} \\times {} = **{}** \\text{{ meters}} \\]",
-            speed_kmh, speed_ms, time_sec, speed_ms, time_sec, distance_m
-        );
+            prompt = format!("A train travels at **{} km/h**.\n\nHow many meters does it cover in **{} seconds**?", speed_kmh, time_sec);
+            solution = format!("**Step 1:** Convert speed to m/s:\n\\[ {} \\times \\frac{{5}}{{18}} = {} \\text{{ m/s}} \\]\n\n**Step 2:** Distance = Speed \\times Time\n\\[ {} \\times {} = **{}** \\text{{ meters}} \\]", speed_kmh, speed_ms, speed_ms, time_sec, distance_m);
+            expected_val = distance_m as f64;
+            unit = "meters";
+        } else {
+            // m/s to km/h
+            let speed_ms_multiplier = rng.random_range(2..=8);
+            let speed_ms = speed_ms_multiplier * 5;
+            let speed_kmh = speed_ms_multiplier * 18;
+            let time_hours = rng.random_range(2..=8);
+            let distance_km = speed_kmh * time_hours;
+            
+            prompt = format!("A bird flies at a speed of **{} m/s**.\n\nHow many kilometers does it cover in **{} hours**?", speed_ms, time_hours);
+            solution = format!("**Step 1:** Convert speed to km/h:\n\\[ {} \\times \\frac{{18}}{{5}} = {} \\text{{ km/h}} \\]\n\n**Step 2:** Distance = Speed \\times Time\n\\[ {} \\times {} = **{}** \\text{{ kilometers}} \\]", speed_ms, speed_kmh, speed_kmh, time_hours, distance_km);
+            expected_val = distance_km as f64;
+            unit = "km";
+        }
 
         let parameters = serde_json::json!({
             "variant": "unit_conversion",
-            "speed_kmh": speed_kmh,
-            "speed_ms": speed_ms,
-            "time_sec": time_sec,
-            "distance_m": distance_m,
+            "mode": mode,
         });
 
         let correct_answer = serde_json::json!({
-            "value": distance_m as f64,
-            "formatted": format!("{}", distance_m),
-            "unit": "meters",
+            "value": expected_val,
+            "formatted": format!("{}", expected_val),
+            "unit": unit,
             "solution": solution,
         });
 
         let step1 = StepNode::new(
-            "convert_units",
-            StepType::UnitConversion,
-            "Convert speed to m/s",
-            format!("Multiply {} km/h by 5/18", speed_kmh),
-            format!("{} * 5/18 = {}", speed_kmh, speed_ms),
-        )
-        .with_expected_value(speed_ms as f64)
-        .with_alternates(vec![
-            format!("{}", speed_ms),
-            format!("{} * (5/18)", speed_kmh),
-            format!("s = {} m/s", speed_ms),
-        ])
-        .with_hints(vec![
-            StepHint::principle("To convert speed from km/h to m/s, multiply by 5/18 (since 1000m / 3600s = 5/18)."),
-            StepHint::operation(format!("Calculate {} * 5 / 18.", speed_kmh)),
-            StepHint::intermediate_relation(format!("{} * 5 / 18 = {} m/s", speed_kmh, speed_ms)),
-        ]);
-
-        let step2 = StepNode::new(
             "calc_distance",
             StepType::FinalAnswer,
-            "Calculate distance in meters",
-            format!("Multiply speed {} m/s by time {} s", speed_ms, time_sec),
-            format!("{} * {} = {}", speed_ms, time_sec, distance_m),
+            "Calculate distance",
+            "Convert units and multiply by time",
+            format!("Result = {}", expected_val),
         )
-        .with_expected_value(distance_m as f64)
-        .with_dependencies(vec!["convert_units".to_string()])
-        .with_alternates(vec![
-            format!("{}", distance_m),
-            format!("d = {}", distance_m),
-        ])
+        .with_expected_value(expected_val)
+        .with_alternates(vec![format!("{}", expected_val)])
         .as_final()
         .with_hints(vec![
-            StepHint::principle("Distance in meters = Speed in m/s * Time in seconds."),
-            StepHint::operation(format!("Multiply {} m/s by {} seconds.", speed_ms, time_sec)),
-            StepHint::intermediate_relation(format!("{} * {} = {} m", speed_ms, time_sec, distance_m)),
+            StepHint::principle("Remember the conversion factors: 18 km/h = 5 m/s."),
         ]);
 
-        let graph = SolutionGraph::new(vec![step1, step2], "calc_distance");
+        let graph = SolutionGraph::new(vec![step1], "calc_distance");
 
         ProblemInstance::new(
             format!("inst-tsd-l2-{}", seed),
@@ -243,84 +233,53 @@ impl TimeSpeedDistanceGenerator {
 
     /// Level 3: Average speed (Harmonic mean for equal distances)
     fn generate_level_3(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let speed_pairs = [
-            (20, 30, 24),
-            (30, 60, 40),
-            (40, 60, 48),
-            (60, 90, 72),
-            (30, 70, 42),
-            (40, 10, 16),
-        ];
-        let (s1, s2, avg_speed) = speed_pairs[rng.random_range(0..speed_pairs.len())];
+        let s1 = rng.random_range(20..=120) as f64;
+        let s2 = rng.random_range(20..=120) as f64;
+        let avg_speed = (2.0 * s1 * s2) / (s1 + s2);
+        let avg_speed_rounded = (avg_speed * 10.0).round() / 10.0;
 
         let prompt = format!(
-            "A motorist drives from Town A to Town B at **{} km/h** and returns along the exact same route at **{} km/h**.\n\nCalculate the average speed for the entire round trip in km/h.",
+            "A motorist drives from Town A to Town B at **{} km/h** and returns along the exact same route at **{} km/h**.\n\nCalculate the average speed for the entire round trip in km/h (round to 1 decimal place).",
             s1, s2
         );
 
         let solution = format!(
             "**Step 1:** Because distance in both directions is equal, average speed is given by the harmonic formula:\n\
              \\[ \\text{{Average Speed}} = \\frac{{2 \\cdot S_1 \\cdot S_2}}{{S_1 + S_2}} \\]\n\n\
-             **Step 2:** Compute numerator and denominator:\n\
-             \\[ 2 \\cdot {} \\cdot {} = {} \\]\n\
-             \\[ {} + {} = {} \\]\n\n\
-             **Step 3:** Divide to obtain average speed:\n\
-             \\[ \\text{{Average Speed}} = \\frac{{{}}}{{{}}} = **{}** \\text{{ km/h}} \\]",
-            s1, s2, 2 * s1 * s2, s1, s2, s1 + s2, 2 * s1 * s2, s1 + s2, avg_speed
+             **Step 2:** Compute:\n\
+             \\[ \\text{{Average Speed}} = \\frac{{2 \\cdot {} \\cdot {}}}{{{} + {}}} = **{}** \\text{{ km/h}} \\]",
+            s1, s2, s1, s2, avg_speed_rounded
         );
 
         let parameters = serde_json::json!({
             "variant": "average_speed",
             "speed1": s1,
             "speed2": s2,
-            "average_speed": avg_speed,
+            "average_speed": avg_speed_rounded,
         });
 
         let correct_answer = serde_json::json!({
-            "value": avg_speed as f64,
-            "formatted": format!("{}", avg_speed),
+            "value": avg_speed_rounded,
+            "formatted": format!("{}", avg_speed_rounded),
             "unit": "km/h",
             "solution": solution,
         });
 
         let step1 = StepNode::new(
-            "formula_setup",
-            StepType::FormulaSelection,
-            "Setup harmonic average speed formula",
-            "Average Speed = 2*S1*S2 / (S1 + S2)",
-            format!("(2 * {} * {}) / ({} + {})", s1, s2, s1, s2),
-        )
-        .with_alternates(vec![
-            format!("2*{s1}*{s2}/({s1}+{s2})"),
-            format!("{}/{}", 2 * s1 * s2, s1 + s2),
-        ])
-        .with_hints(vec![
-            StepHint::principle("For equal distances, the average speed is the harmonic mean: (2 * S1 * S2) / (S1 + S2). Avoid the simple arithmetic mean (S1+S2)/2!"),
-            StepHint::operation(format!("Set up 2 * {} * {} divided by ({} + {}).", s1, s2, s1, s2)),
-            StepHint::intermediate_relation(format!("2 * {} * {} / ({} + {}) = {} / {}", s1, s2, s1, s2, 2 * s1 * s2, s1 + s2)),
-        ]);
-
-        let step2 = StepNode::new(
             "calc_avg_speed",
             StepType::FinalAnswer,
-            "Compute final average speed",
-            format!("Divide {} by {}", 2 * s1 * s2, s1 + s2),
-            format!("{}", avg_speed),
+            "Compute average speed",
+            "Apply harmonic mean formula",
+            format!("{}", avg_speed_rounded),
         )
-        .with_expected_value(avg_speed as f64)
-        .with_dependencies(vec!["formula_setup".to_string()])
-        .with_alternates(vec![
-            format!("{}", avg_speed),
-            format!("{} km/h", avg_speed),
-        ])
+        .with_expected_value(avg_speed_rounded)
+        .with_alternates(vec![format!("{}", avg_speed_rounded)])
         .as_final()
         .with_hints(vec![
-            StepHint::principle("Compute the quotient of numerator and denominator."),
-            StepHint::operation(format!("Divide {} by {}.", 2 * s1 * s2, s1 + s2)),
-            StepHint::intermediate_relation(format!("{} / {} = {} km/h", 2 * s1 * s2, s1 + s2, avg_speed)),
+            StepHint::principle("For equal distances, the average speed is the harmonic mean: (2 * S1 * S2) / (S1 + S2). Avoid the simple arithmetic mean (S1+S2)/2!"),
         ]);
 
-        let graph = SolutionGraph::new(vec![step1, step2], "calc_avg_speed");
+        let graph = SolutionGraph::new(vec![step1], "calc_avg_speed");
 
         ProblemInstance::new(
             format!("inst-tsd-l3-{}", seed),
@@ -341,33 +300,43 @@ impl TimeSpeedDistanceGenerator {
 
     /// Level 4: Relative speed & Trains crossing
     fn generate_level_4(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let s1_kmh = rng.random_range(40..=80);
-        let s2_kmh = 90 - s1_kmh + rng.random_range(0..=2) * 18;
-        let rel_speed_kmh = s1_kmh + s2_kmh;
+        let same_direction = rng.random_bool(0.5);
+        let s1_kmh = rng.random_range(60..=120);
+        let mut s2_kmh = rng.random_range(20..=50);
+        if same_direction {
+            // make sure they have a clean difference in m/s
+            s2_kmh = s1_kmh - rng.random_range(1..=3) * 18;
+        } else {
+            // make sure they have a clean sum in m/s
+            s2_kmh = 180 - s1_kmh + rng.random_range(0..=2) * 18;
+        }
+        
+        let rel_speed_kmh = if same_direction { s1_kmh - s2_kmh } else { s1_kmh + s2_kmh };
         let rel_speed_ms = rel_speed_kmh * 5 / 18;
 
-        let len1_m = rng.random_range(120..=200);
-        let len2_m = rng.random_range(100..=180);
+        let len1_m = rng.random_range(100..=250);
+        let len2_m = rng.random_range(100..=250);
         let total_dist_m = len1_m + len2_m;
+        
         let rem = total_dist_m % rel_speed_ms;
         let final_len2 = if rem != 0 { len2_m + (rel_speed_ms - rem) } else { len2_m };
         let final_total_dist = len1_m + final_len2;
         let crossing_time_sec = final_total_dist / rel_speed_ms;
 
+        let dir_str = if same_direction { "in the same direction" } else { "towards each other in opposite directions" };
         let prompt = format!(
-            "Two trains of lengths **{} meters** and **{} meters** are traveling towards each other on parallel tracks at **{} km/h** and **{} km/h** respectively.\n\nIn how many seconds will they completely cross each other from the moment they meet?",
-            len1_m, final_len2, s1_kmh, s2_kmh
+            "Two trains of lengths **{} meters** and **{} meters** are traveling {} on parallel tracks at **{} km/h** and **{} km/h** respectively.\n\nIn how many seconds will they completely cross each other?",
+            len1_m, final_len2, dir_str, s1_kmh, s2_kmh
         );
 
         let solution = format!(
             "**Step 1:** Total distance to cover = Sum of train lengths:\n\
              \\[ \\text{{Total Distance}} = {} + {} = {} \\text{{ m}} \\]\n\n\
-             **Step 2:** When moving in opposite directions, relative speed is the sum of speeds:\n\
-             \\[ \\text{{Relative Speed (km/h)}} = {} + {} = {} \\text{{ km/h}} \\]\n\
-             \\[ \\text{{Relative Speed (m/s)}} = {} \\times \\frac{{5}}{{18}} = {} \\text{{ m/s}} \\]\n\n\
+             **Step 2:** Relative speed in m/s:\n\
+             \\[ \\text{{Relative Speed}} = {} \\times \\frac{{5}}{{18}} = {} \\text{{ m/s}} \\]\n\n\
              **Step 3:** Time to cross completely:\n\
-             \\[ \\text{{Time}} = \\frac{{\\text{{Total Distance}}}}{{\\text{{Relative Speed}}}} = \\frac{{{}}}{{{}}} = **{}** \\text{{ seconds}} \\]",
-            len1_m, final_len2, final_total_dist, s1_kmh, s2_kmh, rel_speed_kmh, rel_speed_kmh, rel_speed_ms, final_total_dist, rel_speed_ms, crossing_time_sec
+             \\[ \\text{{Time}} = \\frac{{{}}}{{{}}} = **{}** \\text{{ seconds}} \\]",
+            len1_m, final_len2, final_total_dist, rel_speed_kmh, rel_speed_ms, final_total_dist, rel_speed_ms, crossing_time_sec
         );
 
         let parameters = serde_json::json!({
@@ -376,6 +345,7 @@ impl TimeSpeedDistanceGenerator {
             "len2": final_len2,
             "speed1_kmh": s1_kmh,
             "speed2_kmh": s2_kmh,
+            "same_direction": same_direction,
             "rel_speed_ms": rel_speed_ms,
             "crossing_time_sec": crossing_time_sec,
         });
@@ -388,50 +358,20 @@ impl TimeSpeedDistanceGenerator {
         });
 
         let step1 = StepNode::new(
-            "total_distance",
-            StepType::IntermediateResult,
-            "Find total length",
-            format!("{} + {} = {}", len1_m, final_len2, final_total_dist),
-            format!("{} + {} = {}", len1_m, final_len2, final_total_dist),
-        )
-        .with_expected_value(final_total_dist as f64)
-        .with_hints(vec![
-            StepHint::principle("The total distance required for two trains to cross is the sum of their individual lengths."),
-            StepHint::operation(format!("Add {} + {}.", len1_m, final_len2)),
-            StepHint::intermediate_relation(format!("Total distance = {} m", final_total_dist)),
-        ]);
-
-        let step2 = StepNode::new(
-            "rel_speed",
-            StepType::UnitConversion,
-            "Find relative speed in m/s",
-            format!("({} + {}) * 5/18 = {} m/s", s1_kmh, s2_kmh, rel_speed_ms),
-            format!("{} * 5/18 = {}", rel_speed_kmh, rel_speed_ms),
-        )
-        .with_expected_value(rel_speed_ms as f64)
-        .with_hints(vec![
-            StepHint::principle("For opposite directions, add speeds: S_rel = S1 + S2, then multiply by 5/18 to convert to m/s."),
-            StepHint::operation(format!("Add {} + {} = {} km/h, then multiply by 5/18.", s1_kmh, s2_kmh, rel_speed_kmh)),
-            StepHint::intermediate_relation(format!("Relative speed = {} m/s", rel_speed_ms)),
-        ]);
-
-        let step3 = StepNode::new(
             "calc_time",
             StepType::FinalAnswer,
             "Calculate crossing time",
-            format!("Divide total distance {} by relative speed {}", final_total_dist, rel_speed_ms),
-            format!("{} / {} = {}", final_total_dist, rel_speed_ms, crossing_time_sec),
+            "Divide total distance by relative speed",
+            format!("{}", crossing_time_sec),
         )
         .with_expected_value(crossing_time_sec as f64)
-        .with_dependencies(vec!["total_distance".to_string(), "rel_speed".to_string()])
+        .with_alternates(vec![format!("{}", crossing_time_sec)])
         .as_final()
         .with_hints(vec![
-            StepHint::principle("Time = Total Distance / Relative Speed."),
-            StepHint::operation(format!("Divide {} by {}.", final_total_dist, rel_speed_ms)),
-            StepHint::intermediate_relation(format!("Time = {} seconds", crossing_time_sec)),
+            StepHint::principle(if same_direction { "For same direction, subtract speeds." } else { "For opposite directions, add speeds." }),
         ]);
 
-        let graph = SolutionGraph::new(vec![step1, step2, step3], "calc_time");
+        let graph = SolutionGraph::new(vec![step1], "calc_time");
 
         ProblemInstance::new(
             format!("inst-tsd-l4-{}", seed),

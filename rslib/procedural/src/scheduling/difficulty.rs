@@ -168,8 +168,10 @@ impl AdaptiveDifficultyEngine {
         }
 
         // 5. HYSTERESIS-BOUNDED PROMOTION
-        // Require repeated evidence: >= 2 consecutive successes AND recent accuracy >= 0.8 AND not slow
-        let was_fast_or_on_target = last_latency <= (last_target as f64 * 1.1) as u64;
+        // Require repeated evidence: >= 2 consecutive successes AND recent accuracy >= 0.8 AND not excessively slow
+        let is_learning = state.practice_state == PracticeProgressionState::Learning || state.practice_state == PracticeProgressionState::New;
+        let speed_tolerance = if is_learning { 1.50 } else { 1.15 };
+        let was_fast_or_on_target = last_latency <= (last_target as f64 * speed_tolerance) as u64;
         let ready_for_promotion = state.consecutive_successes >= 2
             && recent_acc >= 0.8
             && was_fast_or_on_target

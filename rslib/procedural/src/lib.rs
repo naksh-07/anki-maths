@@ -69,7 +69,7 @@ pub use practice::{
     PracticeScope, RemediationPrecedence, SchemaPracticeObject, SessionBudget, TimeConstraint,
 };
 pub use remediation::{
-    ConceptCheckEvaluation, ConceptCheckObject, ConceptCheckOption, DeclarativeRecallBridge,
+    CircuitBreakerObject, ConceptCheckEvaluation, ConceptCheckObject, ConceptCheckOption, DeclarativeRecallBridge,
     PrerequisiteReviewObject, RemediationAction, RemediationActionKind, RemediationAuditLog,
     RemediationAuditRecord, RemediationContext, RemediationIntervention, RemediationOutcomeStatus,
     RemediationPolicy, RemediationQueue, RemediationSelector, RemediationUrgency,
@@ -88,19 +88,24 @@ pub use problems::{
 };
 pub use reviewer::render_reviewer_html;
 pub use scheduling::{
-    derive_fsrs_rating, AdaptiveDifficultyEngine, DifficultyDecision, DomainSpeedConfig,
-    InterleavingPolicy, LearningObjectKind, MultiSchemaSelectionDecision, MultiSchemaSelector,
-    PracticeMode, PracticeSessionObject, PriorityTier, Rating, RatingPolicy, SelectionDecision,
+    derive_fsrs_rating, AdaptiveDifficultyEngine, BacklogSeverity, BacklogTriageEngine,
+    BacklogTriagePlan, DifficultyDecision, DomainBlock, DomainBudget, DomainSpeedConfig,
+    InterleavingPolicy, LearningObjectKind, MacroBudgetPlanner, MacroPlanningContext,
+    MacroSessionPlan, MultiSchemaSelectionDecision, MultiSchemaSelector, PracticeMode,
+    PracticeSessionObject, PriorityTier, Rating, RatingPolicy, SelectionDecision,
     SessionBudgetTracker, SessionReadiness, SpeedEvaluation, SpeedRating, StandardRatingPolicy,
-    StageSpeedPolicy, TransferEligibility, TransferEligibilityEngine, TransferEligibilityEvaluation,
-    TransferEngine, TransferLevel, UnifiedPracticeEngine, UnifiedSelectionDecision, VariantSelector,
-    WorkloadSafeguards, WorkloadSnapshot, WorkloadState,
+    StageSpeedPolicy, StructuralCoverageEvaluator, StructuralCoverageProfile,
+    TransferEligibility, TransferEligibilityEngine, TransferEligibilityEvaluation,
+    TransferEngine, TransferLevel, TriagedBacklogItem, UnifiedPracticeEngine,
+    UnifiedSelectionDecision, VariantSelector, WorkloadSafeguards, WorkloadSnapshot, WorkloadState,
+    DEFAULT_ANTI_STARVATION_FLOOR, MAX_REMEDIATION_SESSION_FRACTION,
 };
 pub use service::ProceduralService;
 pub use skills::{
-    DEFAULT_MAX_PREREQUISITE_DEPTH, ErrorFrequencyCounts, MaintenanceReviewOutcome,
-    MovingLatencyStats, PracticeProgressionState, PrerequisiteEvaluation,
-    PrerequisiteGraphService, PrerequisitePolicy, PrerequisiteReadiness, RecentAttemptRecord,
-    RetirementEvaluation, RetirementPolicy, Skill, SkillState, VariantPerformance,
+    DEFAULT_MAX_PREREQUISITE_DEPTH, ErrorFrequencyCounts, IndependenceLevel,
+    MaintenanceReviewOutcome, MasteryEvidence, MovingLatencyStats, PracticeProgressionState,
+    PrerequisiteEvaluation, PrerequisiteGraphService, PrerequisitePolicy, PrerequisiteReadiness,
+    ProgressionPolicy, RecentAttemptRecord, RetirementEvaluation, RetirementPolicy, Skill,
+    SkillState, VariantCategory, VariantPerformance,
 };
 pub use storage::{MigrationRunner, ProceduralStore};

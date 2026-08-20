@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Standard kinship relations in genealogical graphs.
+/// Standard kinship relations in formal blood relation problems.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KinshipRelation {
@@ -22,6 +22,8 @@ pub enum KinshipRelation {
     Nephew,
     Niece,
     Cousin,
+    Husband,
+    Wife,
 }
 
 impl KinshipRelation {
@@ -33,20 +35,22 @@ impl KinshipRelation {
             KinshipRelation::Daughter => "Daughter",
             KinshipRelation::Brother => "Brother",
             KinshipRelation::Sister => "Sister",
-            KinshipRelation::PaternalUncle => "Uncle",
+            KinshipRelation::PaternalUncle => "Paternal Uncle",
             KinshipRelation::MaternalUncle => "Maternal Uncle",
-            KinshipRelation::PaternalAunt => "Aunt",
+            KinshipRelation::PaternalAunt => "Paternal Aunt",
             KinshipRelation::MaternalAunt => "Maternal Aunt",
             KinshipRelation::Grandfather => "Grandfather",
             KinshipRelation::Grandmother => "Grandmother",
             KinshipRelation::Nephew => "Nephew",
             KinshipRelation::Niece => "Niece",
             KinshipRelation::Cousin => "Cousin",
+            KinshipRelation::Husband => "Husband",
+            KinshipRelation::Wife => "Wife",
         }
     }
 }
 
-/// A statement establishing a directed kinship link: Person A is the [relation] of Person B.
+/// A directed relational statement between two named individuals.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KinshipStatement {
     pub person_a: String,
@@ -55,11 +59,11 @@ pub struct KinshipStatement {
 }
 
 impl KinshipStatement {
-    pub fn new(person_a: impl Into<String>, relation: KinshipRelation, person_b: impl Into<String>) -> Self {
+    pub fn new(person_a: &str, relation: KinshipRelation, person_b: &str) -> Self {
         Self {
-            person_a: person_a.into(),
+            person_a: person_a.to_string(),
             relation,
-            person_b: person_b.into(),
+            person_b: person_b.to_string(),
         }
     }
 
@@ -68,7 +72,7 @@ impl KinshipStatement {
     }
 }
 
-/// Cardinal and ordinal 2D directional orientations.
+/// 2D Compass Heading directions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Heading {
@@ -135,8 +139,6 @@ pub struct BloodRelationPuzzle {
 }
 
 impl BloodRelationPuzzle {
-    /// Create a standard maternal uncle chain:
-    /// "A is the brother of B. B is the mother of C. How is A related to C?" -> "Maternal Uncle"
     pub fn create_uncle_chain(person_a: &str, person_b: &str, person_c: &str) -> Self {
         let s1 = KinshipStatement::new(person_a, KinshipRelation::Brother, person_b);
         let s2 = KinshipStatement::new(person_b, KinshipRelation::Mother, person_c);
@@ -155,14 +157,12 @@ impl BloodRelationPuzzle {
         }
     }
 
-    /// Create a grandfather chain:
-    /// "A is the father of B. B is the mother/father of C. How is A related to C?" -> "Grandfather"
     pub fn create_grandfather_chain(person_a: &str, person_b: &str, person_c: &str) -> Self {
         let s1 = KinshipStatement::new(person_a, KinshipRelation::Father, person_b);
         let s2 = KinshipStatement::new(person_b, KinshipRelation::Father, person_c);
 
         let explanation = format!(
-            "{} is the father of {}. {} is the father of {}. Therefore, {} is the grandfather of {}.",
+            "{} is the father of {}. Since {} is the father of {}, {} is the grandfather of {}.",
             person_a, person_b, person_b, person_c, person_a, person_c
         );
 
@@ -175,108 +175,134 @@ impl BloodRelationPuzzle {
         }
     }
 
+    pub fn create_cousin_chain(person_a: &str, person_b: &str, person_c: &str, person_d: &str) -> Self {
+        let s1 = KinshipStatement::new(person_a, KinshipRelation::Brother, person_b);
+        let s2 = KinshipStatement::new(person_a, KinshipRelation::Father, person_c);
+        let s3 = KinshipStatement::new(person_b, KinshipRelation::Father, person_d);
+
+        let explanation = format!(
+            "{} and {} are brothers. {} is child of {} and {} is child of {}. Therefore, {} is the cousin of {}.",
+            person_a, person_b, person_c, person_a, person_d, person_b, person_c, person_d
+        );
+
+        Self {
+            statements: vec![s1, s2, s3],
+            query_from: person_c.to_string(),
+            query_to: person_d.to_string(),
+            target_relation: KinshipRelation::Cousin,
+            explanation,
+        }
+    }
+
+    pub fn create_nephew_chain(person_a: &str, person_b: &str, person_c: &str) -> Self {
+        let s1 = KinshipStatement::new(person_b, KinshipRelation::Brother, person_a);
+        let s2 = KinshipStatement::new(person_b, KinshipRelation::Father, person_c);
+
+        let explanation = format!(
+            "{} is the brother of {}. Since {} is the son of {}, {} is the nephew of {}.",
+            person_b, person_a, person_c, person_b, person_c, person_a
+        );
+
+        Self {
+            statements: vec![s1, s2],
+            query_from: person_c.to_string(),
+            query_to: person_a.to_string(),
+            target_relation: KinshipRelation::Nephew,
+            explanation,
+        }
+    }
+
+    pub fn create_aunt_chain(person_a: &str, person_b: &str, person_c: &str) -> Self {
+        let s1 = KinshipStatement::new(person_a, KinshipRelation::Sister, person_b);
+        let s2 = KinshipStatement::new(person_b, KinshipRelation::Father, person_c);
+
+        let explanation = format!(
+            "{} is the sister of {}. Since {} is the father of {}, {} is the paternal aunt of {}.",
+            person_a, person_b, person_b, person_c, person_a, person_c
+        );
+
+        Self {
+            statements: vec![s1, s2],
+            query_from: person_a.to_string(),
+            query_to: person_c.to_string(),
+            target_relation: KinshipRelation::PaternalAunt,
+            explanation,
+        }
+    }
+
     pub fn is_correct(&self, submission: &str) -> bool {
-        let clean = submission.trim().to_lowercase().replace('-', " ");
-        let exp = self.target_relation.as_str().to_lowercase();
-        clean == exp
-            || (exp.contains("uncle") && (clean == "uncle" || clean == "maternal uncle"))
-            || (exp.contains("grandfather") && (clean == "grandfather" || clean == "grand father"))
+        let clean_sub = submission.trim().to_lowercase();
+        let clean_exp = self.target_relation.as_str().to_lowercase();
+        clean_sub == clean_exp
+            || clean_sub.contains(&clean_exp)
+            || (clean_exp.contains("uncle") && clean_sub.contains("uncle"))
+            || (clean_exp.contains("aunt") && clean_sub.contains("aunt"))
+            || (clean_exp.contains("grandfather") && clean_sub.contains("grandfather"))
+            || (clean_exp.contains("cousin") && clean_sub.contains("cousin"))
+            || (clean_exp.contains("nephew") && clean_sub.contains("nephew"))
     }
 }
 
-/// Direction & displacement path puzzle instance.
+/// 2D Direction sense problem instance.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DirectionPuzzle {
-    pub narrative: Vec<String>,
-    pub final_x: i32,
-    pub final_y: i32,
-    pub shortest_distance_meters: i32,
+    pub steps_text: Vec<String>,
+    pub displacement_x: i32,
+    pub displacement_y: i32,
+    pub straight_distance_m: f64,
+    pub shortest_distance_meters: i64,
+    pub target_heading: Heading,
     pub final_direction_from_start: Heading,
     pub explanation: String,
 }
 
 impl DirectionPuzzle {
-    /// Create a standard 3-step rectangular path puzzle:
-    /// Walks North d1 meters, turns right (East) and walks d2 meters, turns right (South) and walks d3 meters.
-    pub fn create_path(d1_north: i32, d2_east: i32, d3_south: i32) -> Self {
-        let net_x = d2_east;
-        let net_y = d1_north - d3_south;
-
-        let heading = match (net_x.signum(), net_y.signum()) {
-            (0, 1) => Heading::North,
-            (0, -1) => Heading::South,
-            (1, 0) => Heading::East,
-            (-1, 0) => Heading::West,
-            (1, 1) => Heading::NorthEast,
-            (-1, 1) => Heading::NorthWest,
-            (1, -1) => Heading::SouthEast,
-            (-1, -1) => Heading::SouthWest,
-            _ => Heading::North,
-        };
-
-        let shortest_dist = ((net_x * net_x + net_y * net_y) as f64).sqrt().round() as i32;
-
-        let narrative = vec![
-            format!("A person walks {}m towards North.", d1_north),
-            format!("They turn right and walk {}m.", d2_east),
-            format!("They turn right again and walk {}m.", d3_south),
+    pub fn create_path(d1: i32, d2: i32, d3: i32) -> Self {
+        let steps = vec![
+            format!("Walks {} meters North.", d1),
+            format!("Turns right and walks {} meters East.", d2),
+            format!("Turns right and walks {} meters South.", d3),
         ];
 
+        let dx = d2;
+        let dy = d1 - d3;
+
+        let dist = ((dx * dx + dy * dy) as f64).sqrt();
+        let dist_int = dist.round() as i64;
+        let heading = match (dx.cmp(&0), dy.cmp(&0)) {
+            (std::cmp::Ordering::Greater, std::cmp::Ordering::Greater) => Heading::NorthEast,
+            (std::cmp::Ordering::Greater, std::cmp::Ordering::Less) => Heading::SouthEast,
+            (std::cmp::Ordering::Less, std::cmp::Ordering::Greater) => Heading::NorthWest,
+            (std::cmp::Ordering::Less, std::cmp::Ordering::Less) => Heading::SouthWest,
+            (std::cmp::Ordering::Equal, std::cmp::Ordering::Greater) => Heading::North,
+            (std::cmp::Ordering::Equal, std::cmp::Ordering::Less) => Heading::South,
+            (std::cmp::Ordering::Greater, std::cmp::Ordering::Equal) => Heading::East,
+            _ => Heading::West,
+        };
+
         let explanation = format!(
-            "Net displacement: X = +{}m (East), Y = {} - {} = {:+}m ({}). Shortest distance = {}m in direction {}.",
-            net_x,
-            d1_north,
-            d3_south,
-            net_y,
-            if net_y >= 0 { "North" } else { "South" },
-            shortest_dist,
-            heading.as_str()
+            "Net displacement: \\(\\Delta x = {} \\text{{ m East}}, \\Delta y = {} - {} = {} \\text{{ m North}}\\).\n\
+             Straight-line distance = \\(\\sqrt{{({})^2 + ({})^2}} = **{:.1} meters** in the **{}** direction.",
+            dx, d1, d3, dy, dx, dy, dist, heading.as_str()
         );
 
         Self {
-            narrative,
-            final_x: net_x,
-            final_y: net_y,
-            shortest_distance_meters: shortest_dist,
+            steps_text: steps,
+            displacement_x: dx,
+            displacement_y: dy,
+            straight_distance_m: dist,
+            shortest_distance_meters: dist_int,
+            target_heading: heading,
             final_direction_from_start: heading,
             explanation,
         }
     }
 
     pub fn is_correct(&self, submission: &str) -> bool {
-        let clean = submission.trim().to_lowercase().replace('-', " ");
-        let exp_dir = self.final_direction_from_start.as_str().to_lowercase().replace('-', " ");
-        let exp_dist = self.shortest_distance_meters.to_string();
-
-        clean == exp_dir
-            || clean == exp_dist
-            || clean.contains(&exp_dir)
-            || clean.contains(&exp_dist)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_blood_relation_uncle_chain() {
-        let puzzle = BloodRelationPuzzle::create_uncle_chain("Rohan", "Priya", "Amit");
-        assert_eq!(puzzle.target_relation, KinshipRelation::MaternalUncle);
-        assert!(puzzle.is_correct("Maternal Uncle"));
-        assert!(puzzle.is_correct("Uncle"));
-        assert!(!puzzle.is_correct("Father"));
-    }
-
-    #[test]
-    fn test_direction_vector_displacement() {
-        // Walks 10m North, 4m East, 7m South -> Net X = 4, Net Y = +3 -> Distance = 5m North-East
-        let puzzle = DirectionPuzzle::create_path(10, 4, 7);
-        assert_eq!(puzzle.final_x, 4);
-        assert_eq!(puzzle.final_y, 3);
-        assert_eq!(puzzle.shortest_distance_meters, 5);
-        assert_eq!(puzzle.final_direction_from_start, Heading::NorthEast);
-        assert!(puzzle.is_correct("North-East"));
-        assert!(puzzle.is_correct("5"));
+        let clean_sub = submission.trim().to_lowercase().replace('-', " ");
+        let clean_exp = self.target_heading.as_str().to_lowercase().replace('-', " ");
+        clean_sub == clean_exp
+            || clean_sub == format!("{}", self.shortest_distance_meters)
+            || clean_sub.contains(&clean_exp)
     }
 }

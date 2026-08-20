@@ -1,3 +1,6 @@
+// Copyright: Ankitects Pty Ltd and contributors
+// License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
+
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use serde_json::json;
@@ -102,6 +105,10 @@ impl StoichiometryGenerator {
             SpeciesCatalog::ammonia(),
             SpeciesCatalog::calcium_carbonate(),
             SpeciesCatalog::sodium_hydroxide(),
+            SpeciesCatalog::sodium_chloride(),
+            SpeciesCatalog::hydrochloric_acid(),
+            SpeciesCatalog::aluminum(),
+            SpeciesCatalog::iron(),
         ];
         let spec_idx = rng.random_range(0..species_choices.len());
         let species = &species_choices[spec_idx];
@@ -109,10 +116,10 @@ impl StoichiometryGenerator {
         let mode = variant.unwrap_or(if rng.random_bool(0.5) { "mass_to_moles" } else { "moles_to_mass" });
 
         let (prompt, correct_val, unit, step1_expr, step1_title, _step2_expr, step2_title) = if mode == "mass_to_moles" {
-            let moles = rng.random_range(2..25) as f64 * 0.25; // e.g. 0.5 to 6.0 mol
-            let mass = moles * species.molar_mass;
+            let moles = ((rng.random_range(1..=150) as f64) * 0.15 * 100.0).round() / 100.0;
+            let mass = ((moles * species.molar_mass) * 100.0).round() / 100.0;
             let p = format!(
-                "Calculate the amount of substance in moles contained in **{:.2} g** of {} ({}, molar mass = **{:.2} g/mol**).",
+                "Calculate the amount of substance in moles contained in **{:.2} g** of {} ({}, molar mass = **{:.2} g/mol**). (Round to 2 decimal places)",
                 mass, species.name, species.formatted_formula(), species.molar_mass
             );
             (
@@ -125,10 +132,10 @@ impl StoichiometryGenerator {
                 "Calculate Moles",
             )
         } else {
-            let moles = rng.random_range(1..20) as f64 * 0.25;
-            let mass = moles * species.molar_mass;
+            let moles = ((rng.random_range(1..=150) as f64) * 0.15 * 100.0).round() / 100.0;
+            let mass = ((moles * species.molar_mass) * 100.0).round() / 100.0;
             let p = format!(
-                "Calculate the mass in grams of **{:.2} mol** of {} ({}, molar mass = **{:.2} g/mol**).",
+                "Calculate the mass in grams of **{:.2} mol** of {} ({}, molar mass = **{:.2} g/mol**). (Round to 2 decimal places)",
                 moles, species.name, species.formatted_formula(), species.molar_mass
             );
             (
@@ -167,12 +174,7 @@ impl StoichiometryGenerator {
         )
         .with_expected_value(correct_val)
         .with_dependencies(vec!["formula".to_string()])
-        .as_final()
-        .with_hints(vec![
-            StepHint::principle("Divide the mass in grams by the molar mass in g/mol."),
-            StepHint::operation(format!("Compute the numerical value for {}", species.formula)),
-            StepHint::intermediate_relation(format!("{:.4} {}", correct_val, unit.symbol())),
-        ]);
+        .as_final();
 
         let graph = SolutionGraph::new(vec![step1, step2], "calc");
 
@@ -215,9 +217,10 @@ impl StoichiometryGenerator {
         let mut rng = StdRng::seed_from_u64(seed);
 
         let reactions = [
-            ReactionTemplates::haber_bosch(),                  // 1 N2 + 3 H2 -> 2 NH3 (ratio 2/1)
-            ReactionTemplates::aluminum_oxidation(),           // 4 Al + 3 O2 -> 2 Al2O3 (ratio 2/4 = 1/2)
-            ReactionTemplates::thermite_reaction(),            // 2 Al + Fe2O3 -> Al2O3 + 2 Fe (ratio 1/2 for Al2O3)
+            ReactionTemplates::haber_bosch(),                  // 1 N2 + 3 H2 -> 2 NH3
+            ReactionTemplates::aluminum_oxidation(),           // 4 Al + 3 O2 -> 2 Al2O3
+            ReactionTemplates::thermite_reaction(),            // 2 Al + Fe2O3 -> Al2O3 + 2 Fe
+            ReactionTemplates::methane_combustion(),           // CH4 + 2 O2 -> CO2 + 2 H2O
         ];
         let rxn_idx = rng.random_range(0..reactions.len());
         let rxn = &reactions[rxn_idx];
@@ -227,8 +230,8 @@ impl StoichiometryGenerator {
         let a = rxn.reactants[0].coefficient;
         let b = rxn.products[0].coefficient;
 
-        let n_reactant = (rng.random_range(2..16) as f64) * 0.5 * (a as f64);
-        let n_product = n_reactant * (b as f64) / (a as f64);
+        let n_reactant = ((rng.random_range(5..=250) as f64) * 0.15 * (a as f64) * 100.0).round() / 100.0;
+        let n_product = ((n_reactant * (b as f64) / (a as f64)) * 100.0).round() / 100.0;
 
         let prompt = format!(
             "Consider the balanced reaction:\n$$\\text{{{}}}$$\nIf **{:.1} mol** of {} reacts completely, how many moles of {} will be produced?",
@@ -263,12 +266,7 @@ impl StoichiometryGenerator {
         )
         .with_expected_value(n_product)
         .with_dependencies(vec!["ratio".to_string()])
-        .as_final()
-        .with_hints(vec![
-            StepHint::principle("Multiply reactant moles by the stoichiometric ratio."),
-            StepHint::operation(format!("Compute {:.1} * ({:.0} / {:.0})", n_reactant, b, a)),
-            StepHint::intermediate_relation(format!("{:.2} mol {}", n_product, product.formula)),
-        ]);
+        .as_final();
 
         let graph = SolutionGraph::new(vec![step1, step2], "calc_moles");
 
@@ -317,10 +315,10 @@ impl StoichiometryGenerator {
         let reactant = &rxn.reactants[0].species; // CaCO3, M = 100.086
         let product = &rxn.products[0].species;   // CaO, M = 56.077
 
-        let mass_a = (rng.random_range(2..12) as f64) * 25.0; // 50g, 75g, 100g, etc.
+        let mass_a = (rng.random_range(20..=600) as f64) * 2.5; 
         let moles_a = mass_a / reactant.molar_mass;
         let moles_b = moles_a * 1.0; // 1:1 ratio
-        let mass_b = moles_b * product.molar_mass;
+        let mass_b = ((moles_b * product.molar_mass) * 100.0).round() / 100.0;
 
         let prompt = format!(
             "For the decomposition reaction:\n$$\\text{{{}}}$$\nIf **{:.1} g** of {} ({}, molar mass = **{:.2} g/mol**) decomposes completely, what mass of {} ({}, molar mass = **{:.2} g/mol**) is produced in **grams**?",
@@ -344,12 +342,7 @@ impl StoichiometryGenerator {
             format!("{:.1} / {:.2} = {:.4} mol", mass_a, reactant.molar_mass, moles_a),
             format!("{:.4}", moles_a),
         )
-        .with_expected_value(moles_a)
-        .with_hints(vec![
-            StepHint::principle("Divide the given reactant mass by its molar mass to find moles: n = m / M."),
-            StepHint::operation(format!("Compute {:.1} / {:.2}", mass_a, reactant.molar_mass)),
-            StepHint::intermediate_relation(format!("{:.4} mol {}", moles_a, reactant.formula)),
-        ]);
+        .with_expected_value(moles_a);
 
         let step2 = StepNode::new(
             "calc_mass_b",
@@ -360,12 +353,7 @@ impl StoichiometryGenerator {
         )
         .with_expected_value(mass_b)
         .with_dependencies(vec!["calc_moles_a".to_string()])
-        .as_final()
-        .with_hints(vec![
-            StepHint::principle("Multiply product moles by product molar mass: m = n * M."),
-            StepHint::operation(format!("Compute {:.4} * {:.2}", moles_b, product.molar_mass)),
-            StepHint::intermediate_relation(format!("{:.2} g {}", mass_b, product.formula)),
-        ]);
+        .as_final();
 
         let graph = SolutionGraph::new(vec![step1, step2], "calc_mass_b");
 
@@ -412,17 +400,16 @@ impl StoichiometryGenerator {
 
         let rxn = ReactionTemplates::haber_bosch(); // N2 + 3 H2 -> 2 NH3
 
-        // Create an asymmetric initial mixture where H2 or N2 is strictly limiting
-        let n_n2 = rng.random_range(3..10) as f64; // e.g. 4.0 mol
-        let n_h2 = rng.random_range(6..20) as f64; // e.g. 9.0 mol
+        let n_n2 = rng.random_range(2..=50) as f64;
+        let n_h2 = rng.random_range(2..=150) as f64;
 
         let ratio_n2 = n_n2 / 1.0;
         let ratio_h2 = n_h2 / 3.0;
 
         let (limiting_name, limiting_moles, coeff_limiting, theoretical_nh3) = if ratio_n2 < ratio_h2 {
-            ("N2", n_n2, 1, n_n2 * 2.0)
+            ("N2", n_n2, 1, ((n_n2 * 2.0) * 100.0).round() / 100.0)
         } else {
-            ("H2", n_h2, 3, (n_h2 / 3.0) * 2.0)
+            ("H2", n_h2, 3, (((n_h2 / 3.0) * 2.0) * 100.0).round() / 100.0)
         };
 
         let prompt = format!(
@@ -460,12 +447,7 @@ impl StoichiometryGenerator {
         )
         .with_expected_value(theoretical_nh3)
         .with_dependencies(vec!["find_limiting".to_string()])
-        .as_final()
-        .with_hints(vec![
-            StepHint::principle("Calculate product yield strictly from the limiting reagent amount."),
-            StepHint::operation(format!("Multiply moles of {} by the ratio (2 / {})", limiting_name, coeff_limiting)),
-            StepHint::intermediate_relation(format!("{:.2} mol NH3", theoretical_nh3)),
-        ]);
+        .as_final();
 
         let graph = SolutionGraph::new(vec![step1, step2], "calc_yield");
 
@@ -511,13 +493,13 @@ impl StoichiometryGenerator {
         let al = &rxn.reactants[0].species;   // Al, M = 26.982
         let al2o3 = &rxn.products[0].species; // Al2O3, M = 101.96
 
-        let mass_al = (rng.random_range(4..15) as f64) * 27.0; // e.g. 108g Al
+        let mass_al = (rng.random_range(10..=250) as f64) * 5.4; 
         let moles_al = mass_al / al.molar_mass;
-        let theoretical_moles_al2o3 = moles_al * (2.0 / 4.0); // 2 Al2O3 per 4 Al = 0.5
+        let theoretical_moles_al2o3 = moles_al * (2.0 / 4.0);
         let theoretical_mass_al2o3 = theoretical_moles_al2o3 * al2o3.molar_mass;
 
-        let yield_pct = rng.random_range(75..95) as f64; // e.g. 85%
-        let actual_mass_al2o3 = theoretical_mass_al2o3 * (yield_pct / 100.0);
+        let yield_pct = rng.random_range(70..=95) as f64; // e.g. 70% to 95%
+        let actual_mass_al2o3 = ((theoretical_mass_al2o3 * (yield_pct / 100.0)) * 100.0).round() / 100.0;
 
         let prompt = format!(
             "Aluminum reacts with excess oxygen to produce aluminum oxide according to:\n$$\\text{{{}}}$$\nIf **{:.1} g** of Al (molar mass = **{:.2} g/mol**) is reacted with excess oxygen and the reaction proceeds with a **{:.0}% yield**, what is the **actual mass of Al₂O₃** (molar mass = **{:.2} g/mol**) isolated in grams?",
@@ -535,15 +517,10 @@ impl StoichiometryGenerator {
             "theo_mass",
             StepType::ApplyStoichiometricRatio,
             "Calculate Theoretical Al2O3 Mass",
-            format!("n(Al) = {:.1}/{:.2} = {:.3} mol. Theo n(Al2O3) = {:.3} * (2/4) = {:.3} mol. Theo mass = {:.2} g", mass_al, al.molar_mass, moles_al, moles_al, theoretical_moles_al2o3, theoretical_mass_al2o3),
+            format!("Theo mass = {:.2} g", theoretical_mass_al2o3),
             format!("{:.2}", theoretical_mass_al2o3),
         )
-        .with_expected_value(theoretical_mass_al2o3)
-        .with_hints(vec![
-            StepHint::principle("Find the 100% theoretical yield before applying the percentage yield factor."),
-            StepHint::operation(format!("Convert {:.1} g Al to moles, multiply by (2/4), then multiply by {:.2} g/mol.", mass_al, al2o3.molar_mass)),
-            StepHint::intermediate_relation(format!("Theoretical yield = {:.2} g", theoretical_mass_al2o3)),
-        ]);
+        .with_expected_value(theoretical_mass_al2o3);
 
         let step2 = StepNode::new(
             "actual_mass",
@@ -554,12 +531,7 @@ impl StoichiometryGenerator {
         )
         .with_expected_value(actual_mass_al2o3)
         .with_dependencies(vec!["theo_mass".to_string()])
-        .as_final()
-        .with_hints(vec![
-            StepHint::principle("Actual yield = Theoretical yield * (Percentage yield / 100)."),
-            StepHint::operation(format!("Multiply {:.2} g by {:.2}.", theoretical_mass_al2o3, yield_pct / 100.0)),
-            StepHint::intermediate_relation(format!("{:.2} g Al2O3", actual_mass_al2o3)),
-        ]);
+        .as_final();
 
         let graph = SolutionGraph::new(vec![step1, step2], "actual_mass");
 
@@ -659,12 +631,7 @@ impl ProblemValidator for StoichiometryValidator {
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
 
-        let parsed_val = match student_answer {
-            serde_json::Value::Number(n) => n.as_f64(),
-            serde_json::Value::String(s) => NumericAnswerParser::parse_string(s),
-            serde_json::Value::Object(map) => map.get("value").and_then(|v| v.as_f64()),
-            _ => None,
-        };
+        let parsed_val = NumericAnswerParser::parse_value(student_answer);
 
         let Some(val) = parsed_val else {
             return AnswerEvaluation::incorrect(
@@ -673,7 +640,6 @@ impl ProblemValidator for StoichiometryValidator {
             );
         };
 
-        // Invariant check: mass/moles must be non-negative
         if val < -1e-4 {
             return AnswerEvaluation::incorrect(
                 ErrorCategory::Concept,
@@ -682,7 +648,8 @@ impl ProblemValidator for StoichiometryValidator {
             .with_parsed_values(val, expected_val);
         }
 
-        let is_correct = (val - expected_val).abs() <= 0.05 * expected_val.abs().max(1e-4);
+        let is_correct = (val - expected_val).abs() <= 0.05 * expected_val.abs().max(1e-4)
+            || (val - expected_val).abs() <= 0.05;
 
         if is_correct {
             let score = if time_taken_ms <= target_time_ms {
@@ -693,11 +660,9 @@ impl ProblemValidator for StoichiometryValidator {
             AnswerEvaluation::correct(score, time_taken_ms, target_time_ms)
                 .with_parsed_values(val, expected_val)
         } else {
-            // Misconception diagnostic checks
             let difficulty = instance.parameters.get("difficulty").and_then(|v| v.as_u64()).unwrap_or(1);
 
             let (cat, msg) = if difficulty == 2 {
-                // Inverted stoichiometric ratio check
                 let b = instance.parameters.get("ratio_coeff_target").and_then(|v| v.as_f64()).unwrap_or(1.0);
                 let a = instance.parameters.get("ratio_coeff_source").and_then(|v| v.as_f64()).unwrap_or(1.0);
                 let n_reactant = instance.parameters.get("n_reactant").and_then(|v| v.as_f64()).unwrap_or(1.0);
@@ -711,7 +676,6 @@ impl ProblemValidator for StoichiometryValidator {
                     (ErrorCategory::Calculation, "Incorrect stoichiometric mole calculation.".to_string())
                 }
             } else if difficulty == 4 {
-                // Limiting reagent error: calculated from excess instead of limiting
                 (ErrorCategory::Strategy, "Limiting Reagent Error: Check which reactant is completely consumed first.".to_string())
             } else {
                 (ErrorCategory::Calculation, "Incorrect stoichiometric value calculation.".to_string())
@@ -744,11 +708,9 @@ mod tests {
         let inst = StoichiometryGenerator::generate_problem(999, 2, None);
         let correct_val = inst.correct_answer.get("value").unwrap().as_f64().unwrap();
 
-        // Correct evaluation
         let eval = validator.evaluate(&inst, &serde_json::json!(correct_val), 20000, 35000);
         assert!(eval.is_correct);
 
-        // Inverted ratio misconception
         let a = inst.parameters.get("ratio_coeff_source").unwrap().as_f64().unwrap();
         let b = inst.parameters.get("ratio_coeff_target").unwrap().as_f64().unwrap();
         let n_r = inst.parameters.get("n_reactant").unwrap().as_f64().unwrap();

@@ -5,7 +5,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::chemistry::generators::{
-    EquilibriumGenerator, EquilibriumValidator, StoichiometryGenerator, StoichiometryValidator,
+    BuffersTitrationGenerator, BuffersTitrationValidator, ChemicalKineticsGenerator,
+    ChemicalKineticsValidator, ElectrochemistryGenerator, ElectrochemistryValidator,
+    EquilibriumGenerator, EquilibriumValidator, ReactionNetworksGenerator,
+    ReactionNetworksValidator, StoichiometryGenerator, StoichiometryValidator,
 };
 use crate::core::{ProblemFamilyId, ProceduralError, Result};
 use crate::physics::generators::{
@@ -23,18 +26,26 @@ use crate::problems::generators::{
     TimeSpeedDistanceGenerator, TimeSpeedDistanceValidator, TimeWorkGenerator, TimeWorkValidator,
 };
 use crate::reasoning::generators::{
-    RelationsGenerator, RelationsValidator, SeatingGenerator, SeatingValidator, SeriesGenerator,
-    SeriesValidator, SyllogismGenerator, SyllogismValidator,
+    CodedExpressionsGenerator, CodedExpressionsValidator, DataSufficiencyGenerator,
+    DataSufficiencyValidator, FloorGridGenerator, FloorGridValidator, LogicDagGenerator,
+    LogicDagValidator, RelationsGenerator, RelationsValidator, SeatingGenerator, SeatingValidator,
+    SeriesGenerator, SeriesValidator, SyllogismGenerator, SyllogismValidator,
 };
 use crate::problems::validator::{PercentageSuccessiveValidator, ProblemValidator};
 use crate::problems::ProblemInstance;
 
 /// Unified registry for dynamic, domain-agnostic dispatch of problem generators and validators.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct ProblemRegistry {
     generators_by_family: HashMap<String, Arc<dyn ProblemGenerator>>,
     generators_by_template: HashMap<String, Arc<dyn ProblemGenerator>>,
     validators_by_family: HashMap<String, Arc<dyn ProblemValidator>>,
+}
+
+impl Default for ProblemRegistry {
+    fn default() -> Self {
+        Self::default_maths_registry()
+    }
 }
 
 impl ProblemRegistry {
@@ -93,7 +104,11 @@ impl ProblemRegistry {
 
     /// Build canonical Mathematics registry containing all 14 topic generators and validators.
     pub fn default_maths_registry() -> Self {
-        let mut registry = Self::new();
+        let mut registry = Self {
+            generators_by_family: HashMap::new(),
+            generators_by_template: HashMap::new(),
+            validators_by_family: HashMap::new(),
+        };
 
         // 1. Successive Percentage
         registry.register_generator(Arc::new(PercentageSuccessiveGenerator));
@@ -183,6 +198,22 @@ impl ProblemRegistry {
         // 18. Equilibrium & Concentration
         self.register_generator(Arc::new(EquilibriumGenerator));
         self.register_validator(Arc::new(EquilibriumValidator));
+
+        // 23. Ionic Equilibrium (Buffers & Titration)
+        self.register_generator(Arc::new(BuffersTitrationGenerator));
+        self.register_validator(Arc::new(BuffersTitrationValidator));
+
+        // 24. Electrochemistry (Nernst & Faraday)
+        self.register_generator(Arc::new(ElectrochemistryGenerator));
+        self.register_validator(Arc::new(ElectrochemistryValidator));
+
+        // 25. Chemical Kinetics (Integrated Rates)
+        self.register_generator(Arc::new(ChemicalKineticsGenerator));
+        self.register_validator(Arc::new(ChemicalKineticsValidator));
+
+        // 26. Reaction Networks (Multi-Stage Synthesis)
+        self.register_generator(Arc::new(ReactionNetworksGenerator));
+        self.register_validator(Arc::new(ReactionNetworksValidator));
     }
 
     /// Register all Reasoning problem generators and validators.
@@ -202,6 +233,22 @@ impl ProblemRegistry {
         // 22. Relational Graphs & Direction
         self.register_generator(Arc::new(RelationsGenerator));
         self.register_validator(Arc::new(RelationsValidator));
+
+        // 27. Analytical CSP (Floor / Grid)
+        self.register_generator(Arc::new(FloorGridGenerator));
+        self.register_validator(Arc::new(FloorGridValidator));
+
+        // 28. Deductive Logic (Multi-Premise DAG)
+        self.register_generator(Arc::new(LogicDagGenerator));
+        self.register_validator(Arc::new(LogicDagValidator));
+
+        // 29. Meta-Cognitive (Data Sufficiency)
+        self.register_generator(Arc::new(DataSufficiencyGenerator));
+        self.register_validator(Arc::new(DataSufficiencyValidator));
+
+        // 30. Graph/Relational (Coded Expressions)
+        self.register_generator(Arc::new(CodedExpressionsGenerator));
+        self.register_validator(Arc::new(CodedExpressionsValidator));
     }
 
     /// Build canonical full registry containing all Mathematics, Physics, Chemistry, and Reasoning families.
@@ -251,6 +298,61 @@ mod tests {
             let inst = registry
                 .generate(&fam_id, template_ref, 42, 2, None)
                 .unwrap();
+            assert!(!inst.rendered_prompt.is_empty(), "Prompt should not be empty for {}", fam_id_str);
+
+            let validator = registry.get_validator(fam_id_str);
+            assert!(validator.is_some(), "Validator should exist for {}", fam_id_str);
+        }
+    }
+
+    #[test]
+    fn test_registry_dispatch_all_thirty_multi_domain_families() {
+        let registry = ProblemRegistry::default_registry();
+
+        let all_families = vec![
+            // 14 Maths
+            ("family.math.percentage.successive", "math.percentage.successive.v1"),
+            (FAMILY_LINEAR_EQUATIONS, TEMPLATE_LINEAR_EQUATIONS_V1),
+            (FAMILY_PROFIT_LOSS, TEMPLATE_PROFIT_LOSS_V1),
+            (FAMILY_RATIO, TEMPLATE_RATIO_V1),
+            (FAMILY_AVERAGE, TEMPLATE_AVERAGE_V1),
+            (FAMILY_DIVISIBILITY, TEMPLATE_DIVISIBILITY_V1),
+            (FAMILY_TIME_WORK, TEMPLATE_TIME_WORK_V1),
+            (FAMILY_TIME_SPEED_DISTANCE, TEMPLATE_TIME_SPEED_DISTANCE_V1),
+            (FAMILY_MIXTURES_ALLIGATION, TEMPLATE_MIXTURES_ALLIGATION_V1),
+            (FAMILY_REMAINDERS_MODULAR, TEMPLATE_REMAINDERS_MODULAR_V1),
+            (FAMILY_LINEAR_INEQUALITIES, TEMPLATE_LINEAR_INEQUALITIES_V1),
+            (FAMILY_ALGEBRAIC_IDENTITIES, TEMPLATE_ALGEBRAIC_IDENTITIES_V1),
+            (FAMILY_GEOMETRY_TRIANGLES, TEMPLATE_GEOMETRY_TRIANGLES_V1),
+            (FAMILY_COMBINED_MULTI_CONCEPT, TEMPLATE_COMBINED_MULTI_CONCEPT_V1),
+            // 2 Physics
+            (crate::physics::generators::FAMILY_PHYSICS_KINEMATICS, crate::physics::generators::TEMPLATE_PHYSICS_KINEMATICS_V1),
+            (crate::physics::generators::FAMILY_PHYSICS_WORK_ENERGY, crate::physics::generators::TEMPLATE_PHYSICS_WORK_ENERGY_V1),
+            // 6 Chemistry
+            (crate::chemistry::generators::FAMILY_CHEMISTRY_STOICHIOMETRY, crate::chemistry::generators::TEMPLATE_CHEMISTRY_STOICHIOMETRY_V1),
+            (crate::chemistry::generators::FAMILY_CHEMISTRY_EQUILIBRIUM, crate::chemistry::generators::TEMPLATE_CHEMISTRY_EQUILIBRIUM_V1),
+            (crate::chemistry::generators::FAMILY_CHEMISTRY_BUFFERS_TITRATION, crate::chemistry::generators::TEMPLATE_CHEMISTRY_BUFFERS_TITRATION_V1),
+            (crate::chemistry::generators::FAMILY_CHEMISTRY_ELECTROCHEMISTRY, crate::chemistry::generators::TEMPLATE_CHEMISTRY_ELECTROCHEMISTRY_V1),
+            (crate::chemistry::generators::FAMILY_CHEMISTRY_KINETICS, crate::chemistry::generators::TEMPLATE_CHEMISTRY_KINETICS_V1),
+            (crate::chemistry::generators::FAMILY_CHEMISTRY_REACTION_NETWORKS, crate::chemistry::generators::TEMPLATE_CHEMISTRY_REACTION_NETWORKS_V1),
+            // 8 Reasoning
+            (crate::reasoning::generators::FAMILY_REASONING_SERIES, crate::reasoning::generators::TEMPLATE_REASONING_SERIES_V1),
+            (crate::reasoning::generators::FAMILY_REASONING_SYLLOGISM, crate::reasoning::generators::TEMPLATE_REASONING_SYLLOGISM_V1),
+            (crate::reasoning::generators::FAMILY_REASONING_SEATING, crate::reasoning::generators::TEMPLATE_REASONING_SEATING_V1),
+            (crate::reasoning::generators::FAMILY_REASONING_RELATIONS, crate::reasoning::generators::TEMPLATE_REASONING_RELATIONS_V1),
+            (crate::reasoning::generators::FAMILY_REASONING_FLOOR_GRID, crate::reasoning::generators::TEMPLATE_REASONING_FLOOR_GRID_V1),
+            (crate::reasoning::generators::FAMILY_REASONING_LOGIC_DAG, crate::reasoning::generators::TEMPLATE_REASONING_LOGIC_DAG_V1),
+            (crate::reasoning::generators::FAMILY_REASONING_DATA_SUFFICIENCY, crate::reasoning::generators::TEMPLATE_REASONING_DATA_SUFFICIENCY_V1),
+            (crate::reasoning::generators::FAMILY_REASONING_CODED_EXPRESSIONS, crate::reasoning::generators::TEMPLATE_REASONING_CODED_EXPRESSIONS_V1),
+        ];
+
+        assert_eq!(all_families.len(), 30, "Must have exactly 30 registered multi-domain families");
+
+        for (fam_id_str, template_ref) in all_families {
+            let fam_id = ProblemFamilyId::new(fam_id_str);
+            let inst = registry
+                .generate(&fam_id, template_ref, 101, 2, None)
+                .unwrap_or_else(|e| panic!("Failed to generate for {}: {:?}", fam_id_str, e));
             assert!(!inst.rendered_prompt.is_empty(), "Prompt should not be empty for {}", fam_id_str);
 
             let validator = registry.get_validator(fam_id_str);

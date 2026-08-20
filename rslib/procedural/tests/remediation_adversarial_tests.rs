@@ -55,14 +55,14 @@ fn test_adversarial_persistent_concept_failure_escalates_without_infinite_loops(
     assert_eq!(kinds[2], RemediationActionKind::WorkedExample);
     // 4th failure -> PrerequisiteReview
     assert_eq!(kinds[3], RemediationActionKind::PrerequisiteReview);
-    // 5th failure -> PrerequisiteReview (ceiling reached, no infinite repetition)
-    assert_eq!(kinds[4], RemediationActionKind::PrerequisiteReview);
+    // 5th failure -> CircuitBreaker (halts wheel-spinning after repeated prerequisite failures)
+    assert_eq!(kinds[4], RemediationActionKind::CircuitBreaker);
 
     // Verify queue only holds 1 active action (deduplicated to latest escalation)
     assert_eq!(queue.len(), 1);
     let top = queue.select_next_remediation(&PracticeMode::MixedMaths).unwrap();
-    assert_eq!(top.kind, RemediationActionKind::PrerequisiteReview);
-    assert_eq!(top.urgency, RemediationUrgency::Critical);
+    assert_eq!(top.kind, RemediationActionKind::CircuitBreaker);
+    assert_eq!(top.urgency, RemediationUrgency::Advisory);
 }
 
 #[test]
@@ -81,7 +81,12 @@ fn test_adversarial_hint_dependent_learner_avoids_false_mastery() {
             hint_dependence: 4,
             retry_dependence: 2,
             variant_exposure: Some("standard".to_string()),
+            variant_category: procedural::VariantCategory::Parameter,
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: Some(true),
+            time_since_last_ms: None,
             transfer_evidence: false,
+            domain_competence_verified: Some(true),
             latency_evidence: 45000,
             diagnostic_errors: vec![],
         };

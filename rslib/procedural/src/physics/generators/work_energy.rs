@@ -81,8 +81,8 @@ impl WorkEnergyGenerator {
 
     /// Level 1: Direct Kinetic Energy: KE = 1/2 m v^2
     fn generate_level_1(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let mass: f64 = (rng.random_range(2..=12) * 2) as f64; // even mass for clean 1/2 m
-        let velocity: f64 = rng.random_range(5..=20) as f64; // m/s
+        let mass: f64 = (rng.random_range(1..=50) * 2) as f64; // even mass for clean 1/2 m
+        let velocity: f64 = rng.random_range(2..=50) as f64; // m/s
         let ke = 0.5 * mass * velocity * velocity; // J
 
         let prompt = format!(
@@ -179,8 +179,8 @@ impl WorkEnergyGenerator {
 
     /// Level 2: Work Done by Constant Force at an Angle: W = F * d * cos(theta)
     fn generate_level_2(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let force: f64 = (rng.random_range(5..=25) * 10) as f64; // e.g. 50, 80, 120 N
-        let distance: f64 = rng.random_range(4..=15) as f64; // m
+        let force: f64 = rng.random_range(10..=250) as f64;
+        let distance: f64 = rng.random_range(2..=50) as f64; // m
         let angle_deg: f64 = 60.0; // cos(60) = 0.5 exactly for clean arithmetic
         let cos_theta = 0.5;
         let work = force * distance * cos_theta; // J
@@ -287,9 +287,9 @@ impl WorkEnergyGenerator {
 
     /// Level 3: Work-Energy Theorem: W_net = Delta KE = 1/2 m (v_f^2 - v_i^2)
     fn generate_level_3(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let mass: f64 = 4.0; // kg
-        let v_i: f64 = rng.random_range(2..=6) as f64; // m/s
-        let v_f: f64 = v_i + rng.random_range(4..=8) as f64; // m/s
+        let mass: f64 = (rng.random_range(1..=20) * 2) as f64; // kg
+        let v_i: f64 = rng.random_range(2..=20) as f64; // m/s
+        let v_f: f64 = v_i + rng.random_range(2..=20) as f64; // m/s
         let delta_ke = 0.5 * mass * (v_f * v_f - v_i * v_i); // J (work done)
 
         let prompt = format!(
@@ -393,12 +393,10 @@ impl WorkEnergyGenerator {
     /// Level 4: Conservation of Mechanical Energy: mgh_i = 1/2 m v_f^2 => v_f = sqrt(2gh)
     fn generate_level_4(rng: &mut StdRng, seed: u64) -> ProblemInstance {
         let g: f64 = 9.8; // m/s^2
-        // Heights giving clean speeds: h = 5 => 2gh = 98 ~ 9.9, h = 20 => 2gh = 392 ~ 19.8
-        // If g = 9.8, 2 * 9.8 * h: e.g. h = 10 => v^2 = 196 => v = 14 m/s exactly!
-        // h = 40 => v^2 = 784 => v = 28 m/s exactly!
-        let clean_heights = [2.5, 10.0, 22.5, 40.0]; // 2*9.8*2.5 = 49 (v=7), 2*9.8*10 = 196 (v=14), 2*9.8*22.5 = 441 (v=21), 2*9.8*40 = 784 (v=28)
-        let height: f64 = clean_heights[rng.random_range(0..clean_heights.len())];
-        let mass: f64 = rng.random_range(2..=10) as f64; // kg
+        // Use v = 7 * k. v^2 = 49 * k^2. h = v^2 / 19.6 = 2.5 * k^2
+        let k = rng.random_range(1..=20) as f64;
+        let height: f64 = 2.5 * k * k; 
+        let mass: f64 = rng.random_range(2..=50) as f64; // kg
         let v_final = (2.0 * g * height).sqrt(); // m/s
 
         let prompt = format!(
@@ -513,9 +511,9 @@ impl WorkEnergyGenerator {
 
     /// Level 5: Power & Mechanical Rate Transfer: P = W / t = F * v
     fn generate_level_5(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let mass: f64 = (rng.random_range(2..=8) * 100) as f64; // e.g. 200, 400, 600 kg elevator
-        let height: f64 = rng.random_range(10..=30) as f64; // m
-        let time: f64 = rng.random_range(8..=20) as f64; // s
+        let mass: f64 = (rng.random_range(20..=200) * 10) as f64;
+        let height: f64 = rng.random_range(10..=60) as f64; // m
+        let time: f64 = rng.random_range(5..=60) as f64; // s
         let g = 9.8;
         let work = mass * g * height; // J
         let power = work / time; // W

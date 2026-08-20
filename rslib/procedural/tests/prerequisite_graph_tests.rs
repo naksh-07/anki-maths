@@ -160,9 +160,13 @@ fn test_readiness_evaluation_states_and_accuracy_signals() {
         latency_ms: 40_000,
         target_latency_ms: 35_000,
         variant: None,
+        variant_category: None,
         error_category: None,
         max_hint_level: None,
         hint_count: None,
+        independence: Some(procedural::IndependenceLevel::Independent),
+        solution_graph_fingerprint: None,
+        cognitive_decision_correct: Some(false),
         timestamp: 1000,
     });
     states.insert(prereq_2.clone(), state_2_weak);
@@ -183,9 +187,13 @@ fn test_readiness_evaluation_states_and_accuracy_signals() {
             latency_ms: 25_000,
             target_latency_ms: 35_000,
             variant: None,
+            variant_category: None,
             error_category: None,
             max_hint_level: None,
             hint_count: None,
+            independence: Some(procedural::IndependenceLevel::Independent),
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: Some(true),
             timestamp: 2000,
         });
     }

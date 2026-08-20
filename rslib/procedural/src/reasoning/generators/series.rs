@@ -16,7 +16,7 @@ use crate::core::decision::{CognitiveDecisionPoint, DecisionOption};
 use crate::reasoning::models::{ReasoningProblemMetadata, SchemaKind, StrategyKind};
 use crate::reasoning::series::{SeriesProblem, SeriesRule};
 
-/// Generator for Number and Alphabet Series pattern problems.
+/// Generator for Number and Alphabetical Pattern Series reasoning problems.
 pub struct SeriesGenerator;
 
 impl SeriesGenerator {
@@ -25,162 +25,181 @@ impl SeriesGenerator {
 
         let is_strategy_drill = variant == Some("strategy_drill") || variant == Some("decision_point");
 
-        let (rule, start, count) = match difficulty_level {
+        let (prob, strategy_kind) = match difficulty_level {
             1 => {
-                let diff = rng.random_range(2..=9);
-                let start = rng.random_range(1..=20);
-                (SeriesRule::ConstantDifference { diff }, start, 4)
+                let diff = (rng.random_range(2..=15) as i64) * if rng.random_bool(0.3) { -1 } else { 1 };
+                let start = rng.random_range(5..=100) as i64;
+                (
+                    SeriesProblem::generate_numeric(SeriesRule::ConstantDifference { diff }, start, 5),
+                    StrategyKind::InspectDifferences,
+                )
             }
             2 => {
-                let start_diff = rng.random_range(2..=5);
-                let step = rng.random_range(2..=4);
-                let start = rng.random_range(1..=15);
-                (SeriesRule::IncreasingDifference { start_diff, step }, start, 4)
+                let start_diff = rng.random_range(2..=8) as i64;
+                let step = rng.random_range(2..=6) as i64;
+                let start = rng.random_range(1..=40) as i64;
+                (
+                    SeriesProblem::generate_numeric(
+                        SeriesRule::IncreasingDifference { start_diff, step },
+                        start,
+                        5,
+                    ),
+                    StrategyKind::InspectDifferences,
+                )
             }
             3 => {
-                if rng.random_bool(0.5) {
-                    let ratio = rng.random_range(2..=4);
-                    let start = rng.random_range(2..=6);
-                    (SeriesRule::Geometric { ratio }, start, 4)
+                let mode = rng.random_range(0..2);
+                if mode == 0 {
+                    let ratio = (rng.random_range(2..=5) as i64) * if rng.random_bool(0.5) { 1 } else { -1 };
+                    let start = (rng.random_range(2..=20) as i64) * if rng.random_bool(0.5) { 1 } else { -1 };
+                    (
+                        SeriesProblem::generate_numeric(SeriesRule::Geometric { ratio }, start, 5),
+                        StrategyKind::InspectRatios,
+                    )
                 } else {
-                    let diff1 = rng.random_range(4..=8);
-                    let diff2 = -rng.random_range(1..=3);
-                    let start = rng.random_range(10..=30);
-                    (SeriesRule::Alternating { diff1, diff2 }, start, 4)
+                    let start_k = rng.random_range(1..=10) as i64;
+                    let start = rng.random_range(1..=100) as i64;
+                    (
+                        SeriesProblem::generate_numeric(SeriesRule::SquareDifference { start_k }, start, 5),
+                        StrategyKind::InspectDifferences,
+                    )
                 }
             }
             4 => {
-                let shift = rng.random_range(2..=5);
-                let start_char_idx = rng.random_range(0..=10);
-                let start_char = (b'A' + start_char_idx as u8) as char;
-                let prob = SeriesProblem::generate_alphabet(start_char, shift, 4);
-                return Self::build_alphabet_instance(seed, prob, difficulty_level, is_strategy_drill);
+                let mode = rng.random_range(0..3);
+                if mode == 0 {
+                    let d1 = rng.random_range(3..=15) as i64;
+                    let d2 = (rng.random_range(2..=12) as i64) * -1;
+                    let start = rng.random_range(20..=120) as i64;
+                    (
+                        SeriesProblem::generate_numeric(SeriesRule::Alternating { diff1: d1, diff2: d2 }, start, 6),
+                        StrategyKind::InspectAlternating,
+                    )
+                } else if mode == 1 {
+                    let mult = rng.random_range(2..=5) as i64;
+                    let add = (rng.random_range(1..=10) as i64) * if rng.random_bool(0.5) { 1 } else { -1 };
+                    let start = rng.random_range(2..=20) as i64;
+                    (
+                        SeriesProblem::generate_numeric(SeriesRule::MultiplyAndAdd { mult, add }, start, 5),
+                        StrategyKind::InspectRatios,
+                    )
+                } else {
+                    let start = rng.random_range(1..=100) as i64;
+                    (
+                        SeriesProblem::generate_numeric(SeriesRule::FibonacciLike, start, 6),
+                        StrategyKind::InspectDifferences,
+                    )
+                }
             }
             _ => {
-                // Level 5: Transfer / multi-stage
-                let diff1 = rng.random_range(5..=10);
-                let diff2 = -rng.random_range(2..=4);
-                let start = rng.random_range(20..=50);
-                (SeriesRule::Alternating { diff1, diff2 }, start, 5)
+                let shift = rng.random_range(1..=25) as i32;
+                let start_char = (b'A' + rng.random_range(0..26)) as char;
+                (
+                    SeriesProblem::generate_alphabet(start_char, shift, 5),
+                    StrategyKind::InspectAlphabetShift,
+                )
             }
         };
 
-        let prob = SeriesProblem::generate_numeric(rule, start, count);
-        Self::build_numeric_instance(seed, prob, difficulty_level, is_strategy_drill)
-    }
-
-    fn build_numeric_instance(
-        seed: u64,
-        prob: SeriesProblem,
-        difficulty: u32,
-        is_strategy_drill: bool,
-    ) -> ProblemInstance {
-        let terms_str = prob.terms_string.join(", ");
-        let next_val = prob.expected_next_numeric.unwrap_or(0);
-
-        let prompt = if is_strategy_drill {
-            format!(
-                "Consider the sequence: **{}**, **?**\n\n**Strategy Drill**: What is the primary pattern operator governing this sequence?",
-                terms_str
-            )
+        let seq_str = if prob.is_alphabet {
+            prob.terms_string.join(", ")
         } else {
-            format!(
-                "Find the missing next number in the sequence:\n\n$$\\mathbf{{{}}}, \\quad \\mathbf{{?}}$$",
-                terms_str
-            )
+            prob.terms_numeric
+                .iter()
+                .map(|t| t.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
         };
 
-        let preferred_strategy = match prob.rule {
-            SeriesRule::ConstantDifference { .. } => StrategyKind::InspectDifferences,
-            SeriesRule::IncreasingDifference { .. } => StrategyKind::InspectDifferences,
-            SeriesRule::Geometric { .. } => StrategyKind::InspectRatios,
-            SeriesRule::Alternating { .. } => StrategyKind::InspectAlternating,
-            SeriesRule::AlphabetShift { .. } => StrategyKind::InspectAlphabetShift,
-        };
+        let prompt = format!(
+            "Find the next term in the following {}:\n\n\\[ {}, \\; \\mathbf{{?}} \\]",
+            if prob.is_alphabet { "alphabet sequence" } else { "number sequence" },
+            seq_str
+        );
+
+        let target_str = prob.expected_next_string.clone();
 
         let dp = CognitiveDecisionPoint::new(
-            "dp_series_strategy",
-            "Which pattern strategy should you apply first?",
+            "dp_series_first_step",
+            "What is the first analytical step to discover the underlying sequence pattern?",
             vec![
                 DecisionOption::new(
                     "opt_diff",
-                    "Inspect successive first differences between terms",
+                    "Compute first-order differences (Δ = a_{n} - a_{n-1}) between successive terms",
                     StrategyKind::InspectDifferences.as_str(),
-                    matches!(prob.rule, SeriesRule::ConstantDifference { .. } | SeriesRule::IncreasingDifference { .. }),
-                    "First differences reveal arithmetic and progressive difference patterns.",
+                    true,
+                    "Calculating successive differences immediately classifies arithmetic, progressive, and alternating progressions.",
                 ),
                 DecisionOption::new(
-                    "opt_ratio",
-                    "Inspect successive ratios / multiplication factors",
-                    StrategyKind::InspectRatios.as_str(),
-                    matches!(prob.rule, SeriesRule::Geometric { .. }),
-                    "Ratios reveal exponential / geometric growth patterns.",
-                ),
-                DecisionOption::new(
-                    "opt_alt",
-                    "Inspect alternating dual operations",
-                    StrategyKind::InspectAlternating.as_str(),
-                    matches!(prob.rule, SeriesRule::Alternating { .. }),
-                    "Alternating checks reveal multi-operation oscillation patterns.",
+                    "opt_skip",
+                    "Guess numbers randomly until one looks plausible",
+                    StrategyKind::BranchCases.as_str(),
+                    false,
+                    "Sub-optimal: Guessing fails on non-trivial polynomial and alternating series.",
                 ),
             ],
-            match preferred_strategy {
-                StrategyKind::InspectDifferences => "opt_diff",
-                StrategyKind::InspectRatios => "opt_ratio",
-                StrategyKind::InspectAlternating => "opt_alt",
-                _ => "opt_diff",
-            },
-            preferred_strategy.as_str(),
-            "Identifying the growth rate visually (linear vs exponential vs erratic) guides strategy selection.",
+            "opt_diff",
+            StrategyKind::InspectDifferences.as_str(),
+            "Always inspect the differences or ratios between consecutive terms.",
         );
 
-        let mut meta = ReasoningProblemMetadata::new(SchemaKind::NumberSeries, preferred_strategy)
-            .with_decision_point(dp);
+        let mut meta = ReasoningProblemMetadata::new(
+            if prob.is_alphabet { SchemaKind::AlphabetSeries } else { SchemaKind::NumberSeries },
+            strategy_kind,
+        )
+        .with_decision_point(dp)
+        .with_constraint_count(prob.terms_string.len());
+
         if is_strategy_drill {
             meta = meta.as_strategy_drill();
         }
 
         let step1 = StepNode::new(
-            "identify_rule",
-            StepType::SelectStrategy,
-            "Identify Sequence Rule",
-            "Determine the mathematical operation connecting successive terms.",
+            "find_pattern",
+            StepType::Transformation,
+            "Discover Pattern Rule",
+            prob.rule.description(),
             prob.rule.description(),
         )
         .with_hints(vec![
-            StepHint::new(HintLevel::Principle, "Pattern Principle", "Look at the rate of growth between successive terms."),
-            StepHint::new(HintLevel::Operation, "Strategy Operation", "Calculate the differences between adjacent numbers."),
-            StepHint::new(HintLevel::IntermediateRelation, "Rule Setup", prob.rule.description()),
+            StepHint::new(HintLevel::Principle, "Pattern Principle", "Look for common difference, common ratio, or progressive steps."),
+            StepHint::new(HintLevel::Operation, "Strategy Operation", "Calculate the relationship between each consecutive pair."),
+            StepHint::new(HintLevel::IntermediateRelation, "Rule Found", &prob.rule.description()),
         ]);
 
         let step2 = StepNode::new(
-            "compute_next",
+            "apply_pattern",
             StepType::FinalAnswer,
             "Compute Next Term",
-            "Apply the identified rule to the last term to find the next value.",
-            next_val.to_string(),
+            format!("Apply rule to obtain next term: {}.", target_str),
+            target_str.clone(),
         )
-        .with_expected_value(next_val as f64)
-        .with_dependencies(vec!["identify_rule".to_string()])
+        .with_alternates(vec![
+            target_str.to_lowercase(),
+            target_str.to_uppercase(),
+        ])
+        .with_dependencies(vec!["find_pattern".to_string()])
         .as_final();
 
-        let graph = SolutionGraph::new(vec![step1, step2], "compute_next");
+        let graph = SolutionGraph::new(vec![step1, step2], "apply_pattern");
 
         let parameters = json!({
-            "difficulty": difficulty,
-            "terms": prob.terms_numeric,
-            "rule": prob.rule,
+            "difficulty": difficulty_level,
+            "is_alphabet": prob.is_alphabet,
+            "target": target_str,
             "reasoning_metadata": meta,
         });
 
         let correct_answer = json!({
-            "value": next_val,
-            "formatted": next_val.to_string(),
+            "value": target_str,
+            "formatted": target_str,
             "solution": prob.explanation,
         });
 
+        let instance_id = format!("inst-series-l{}-{}", difficulty_level, seed);
+
         ProblemInstance::new(
-            format!("inst-reas-ser-{}", seed),
+            instance_id,
             FAMILY_REASONING_SERIES,
             seed,
             parameters,
@@ -189,96 +208,10 @@ impl SeriesGenerator {
         )
         .with_solution_graph(graph)
         .with_metadata(json!({
-            "difficulty_level": difficulty,
+            "difficulty_level": difficulty_level,
             "target_time_ms": 25_000,
             "domain": "reasoning",
-        }))
-    }
-
-    fn build_alphabet_instance(
-        seed: u64,
-        prob: SeriesProblem,
-        difficulty: u32,
-        is_strategy_drill: bool,
-    ) -> ProblemInstance {
-        let terms_str = prob.terms_string.join(", ");
-        let next_char = prob.expected_next_string.clone();
-
-        let prompt = format!(
-            "Find the next letter in the alphabet sequence:\n\n$$\\mathbf{{{}}}, \\quad \\mathbf{{?}}$$",
-            terms_str
-        );
-
-        let dp = CognitiveDecisionPoint::new(
-            "dp_alphabet_shift",
-            "What strategy applies to alphabet letter sequences?",
-            vec![
-                DecisionOption::new(
-                    "opt_shift",
-                    "Calculate positional character shifts (e.g. +2, -1)",
-                    StrategyKind::InspectAlphabetShift.as_str(),
-                    true,
-                    "Alphabet series are isomorphic to number difference series via positional indexes.",
-                ),
-            ],
-            "opt_shift",
-            StrategyKind::InspectAlphabetShift.as_str(),
-            prob.rule.description(),
-        );
-
-        let mut meta = ReasoningProblemMetadata::new(SchemaKind::AlphabetSeries, StrategyKind::InspectAlphabetShift)
-            .with_decision_point(dp);
-        if is_strategy_drill {
-            meta = meta.as_strategy_drill();
-        }
-
-        let step1 = StepNode::new(
-            "alphabet_shift",
-            StepType::MakeInference,
-            "Determine Character Shift",
-            "Calculate the positional index shift between successive letters.",
-            prob.rule.description(),
-        );
-
-        let step2 = StepNode::new(
-            "next_letter",
-            StepType::FinalAnswer,
-            "Find Next Letter",
-            "Apply shift to the last character.",
-            next_char.clone(),
-        )
-        .with_alternates(vec![next_char.to_lowercase()])
-        .with_dependencies(vec!["alphabet_shift".to_string()])
-        .as_final();
-
-        let graph = SolutionGraph::new(vec![step1, step2], "next_letter");
-
-        let parameters = json!({
-            "difficulty": difficulty,
-            "terms": prob.terms_string,
-            "rule": prob.rule,
-            "reasoning_metadata": meta,
-        });
-
-        let correct_answer = json!({
-            "value": next_char,
-            "formatted": next_char.clone(),
-            "solution": prob.explanation,
-        });
-
-        ProblemInstance::new(
-            format!("inst-reas-alph-{}", seed),
-            FAMILY_REASONING_SERIES,
-            seed,
-            parameters,
-            prompt,
-            correct_answer,
-        )
-        .with_solution_graph(graph)
-        .with_metadata(json!({
-            "difficulty_level": difficulty,
-            "target_time_ms": 20_000,
-            "domain": "reasoning",
+            "generator": TEMPLATE_REASONING_SERIES_V1,
         }))
     }
 }
@@ -294,8 +227,8 @@ impl ProblemGenerator for SeriesGenerator {
 
     fn supported_variants(&self) -> Vec<String> {
         vec![
-            "constant_difference".to_string(),
-            "increasing_difference".to_string(),
+            "constant_diff".to_string(),
+            "increasing_diff".to_string(),
             "geometric".to_string(),
             "alternating".to_string(),
             "alphabet_shift".to_string(),
@@ -305,10 +238,10 @@ impl ProblemGenerator for SeriesGenerator {
 
     fn target_latency_ms(&self, difficulty_level: u32) -> u64 {
         match difficulty_level {
-            1 => 18_000,
-            2 => 22_000,
+            1 => 15_000,
+            2 => 20_000,
             3 => 25_000,
-            4 => 25_000,
+            4 => 30_000,
             _ => 30_000,
         }
     }
@@ -324,7 +257,7 @@ impl ProblemGenerator for SeriesGenerator {
     }
 }
 
-/// Validator for Number and Alphabet Series problems.
+/// Validator for Number and Alphabetical Pattern Series problems.
 pub struct SeriesValidator;
 
 impl ProblemValidator for SeriesValidator {
@@ -342,24 +275,43 @@ impl ProblemValidator for SeriesValidator {
         let expected_str = instance
             .correct_answer
             .get("formatted")
+            .or_else(|| instance.correct_answer.get("value"))
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
         let student_str = match student_answer {
-            serde_json::Value::String(s) => s.trim().to_string(),
             serde_json::Value::Number(n) => n.to_string(),
+            serde_json::Value::String(s) => s.trim().to_string(),
+            serde_json::Value::Object(map) => {
+                map.get("formatted")
+                    .or_else(|| map.get("value"))
+                    .or_else(|| map.get("answer"))
+                    .map(|v| {
+                        if let Some(s) = v.as_str() {
+                            s.trim().to_string()
+                        } else if let Some(n) = v.as_i64() {
+                            n.to_string()
+                        } else if let Some(f) = v.as_f64() {
+                            format!("{:.0}", f)
+                        } else {
+                            "".to_string()
+                        }
+                    })
+                    .unwrap_or_else(|| "".to_string())
+            }
             _ => "".to_string(),
         };
 
-        let is_correct = student_str.eq_ignore_ascii_case(expected_str);
+        let is_correct = !student_str.is_empty()
+            && student_str.trim().eq_ignore_ascii_case(expected_str.trim());
 
         if is_correct {
             AnswerEvaluation::correct(1.0, time_taken_ms, target_time_ms)
         } else {
             AnswerEvaluation::incorrect(
-                ErrorCategory::Strategy,
+                ErrorCategory::Calculation,
                 format!(
-                    "Incorrect next term. Submitted '{}', expected '{}'.",
+                    "Incorrect series term. Submitted '{}', expected '{}'.",
                     student_str, expected_str
                 ),
             )

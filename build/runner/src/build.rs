@@ -29,7 +29,7 @@ pub fn run_build(args: BuildArgs) {
 
     let path = if cfg!(windows) {
         format!(
-            "out\\bin;out\\extracted\\node;node_modules\\.bin;{};\\msys64\\usr\\bin",
+            "out\\bin;out\\extracted\\node;node_modules\\.bin;{};\\msys64\\usr\\bin;C:\\Program Files\\Git\\usr\\bin",
             env::var("PATH").unwrap()
         )
     } else {

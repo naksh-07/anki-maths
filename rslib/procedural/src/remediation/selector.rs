@@ -5,7 +5,7 @@ use crate::core::{Domain, ProceduralError, Result};
 use crate::problems::registry::ProblemRegistry;
 use crate::remediation::actions::{RemediationAction, RemediationActionKind};
 use crate::remediation::objects::{
-    ConceptCheckObject, ConceptCheckOption, DeclarativeRecallBridge, PrerequisiteReviewObject,
+    CircuitBreakerObject, ConceptCheckObject, ConceptCheckOption, DeclarativeRecallBridge, PrerequisiteReviewObject,
     RemediationIntervention, RepresentationDrillObject, RepresentationOption, StrategyDrillObject,
     StrategyOption, WorkedExampleObject,
 };
@@ -23,6 +23,19 @@ impl RemediationSelector {
         seed: u64,
     ) -> Result<RemediationIntervention> {
         match action.kind {
+            RemediationActionKind::CircuitBreaker => {
+                Ok(RemediationIntervention::CircuitBreaker(
+                    CircuitBreakerObject::new(
+                        format!("cb-{}-{}", action.schema_id, seed),
+                        &action.skill_id,
+                        &action.schema_id,
+                        action.domain.clone(),
+                        action.recurrence_count,
+                        "Repeated isomorphic failure limit reached. Take a brief break or switch topics to reset working memory.",
+                        "Switch to a related foundational topic or return after spacing interval.",
+                    ),
+                ))
+            }
             RemediationActionKind::ConceptCheck => {
                 Ok(RemediationIntervention::ConceptCheck(
                     Self::build_concept_check(action, seed),

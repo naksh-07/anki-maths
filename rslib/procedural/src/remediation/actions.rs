@@ -28,6 +28,8 @@ pub enum RemediationActionKind {
     PrerequisiteReview,
     /// Return to foundational structural level after a transfer failure before retrying transfer.
     TransferRetry,
+    /// Controlled cooldown / deferral halting repetitive isomorphic wheel-spinning.
+    CircuitBreaker,
 }
 
 impl RemediationActionKind {
@@ -41,6 +43,7 @@ impl RemediationActionKind {
             RemediationActionKind::DeclarativeRecall => "declarative_recall",
             RemediationActionKind::PrerequisiteReview => "prerequisite_review",
             RemediationActionKind::TransferRetry => "transfer_retry",
+            RemediationActionKind::CircuitBreaker => "circuit_breaker",
         }
     }
 }

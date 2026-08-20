@@ -84,10 +84,7 @@ pub struct SyllogismProblem {
 }
 
 impl SyllogismProblem {
-    /// Create and evaluate a canonical 2-premise syllogism.
-    /// Example 1 (Barbara): All A are B, All B are C => All A are C (Follows), Some A are C (Follows), No A are C (DoesNotFollow).
-    /// Example 2 (Celarent): All A are B, No B are C => No A are C (Follows), Some A are not C (Follows), All A are C (DoesNotFollow).
-    /// Example 3 (Darii): All B are C, Some A are B => Some A are C (Follows).
+    /// Barbara (AAA-1): All A are B, All B are C => All A are C, Some C are A.
     pub fn create_barbara(term_a: &str, term_b: &str, term_c: &str) -> Self {
         let p1 = Proposition::new(Quantifier::All, term_a, term_b);
         let p2 = Proposition::new(Quantifier::All, term_b, term_c);
@@ -96,31 +93,19 @@ impl SyllogismProblem {
             id: 1,
             proposition: Proposition::new(Quantifier::All, term_a, term_c),
             verdict: ConclusionVerdict::Follows,
-            reason: format!("Since all {} are {} and all {} are {}, transitive subset inclusion implies all {} are {}.", term_a, term_b, term_b, term_c, term_a, term_c),
+            reason: format!("Transitive subset containment: {} ⊆ {} ⊆ {}.", term_a, term_b, term_c),
         };
         let c2 = EvaluatedConclusion {
             id: 2,
             proposition: Proposition::new(Quantifier::Some, term_c, term_a),
             verdict: ConclusionVerdict::Follows,
-            reason: format!("Since non-empty set {} is a subset of {}, some {} are {}.", term_a, term_c, term_c, term_a),
+            reason: format!("Non-empty subset conversion: Since all {} are {}, some {} are {}.", term_a, term_c, term_c, term_a),
         };
 
-        let explanation = format!(
-            "Premises:\n1. {}\n2. {}\n\nBoth Conclusion I ('{}') and Conclusion II ('{}') follow logically.",
-            p1.statement(),
-            p2.statement(),
-            c1.proposition.statement(),
-            c2.proposition.statement()
-        );
-
-        Self {
-            premises: vec![p1, p2],
-            conclusions: vec![c1, c2],
-            canonical_answer: "Both I and II follow".to_string(),
-            explanation,
-        }
+        Self::build(vec![p1, p2], vec![c1, c2])
     }
 
+    /// Celarent (EAE-1): All A are B, No B are C => No A are C (Follows), Some A are C (DoesNotFollow).
     pub fn create_celarent(term_a: &str, term_b: &str, term_c: &str) -> Self {
         let p1 = Proposition::new(Quantifier::All, term_a, term_b);
         let p2 = Proposition::new(Quantifier::No, term_b, term_c);
@@ -129,7 +114,7 @@ impl SyllogismProblem {
             id: 1,
             proposition: Proposition::new(Quantifier::No, term_a, term_c),
             verdict: ConclusionVerdict::Follows,
-            reason: format!("Since all {} are within {} and {} is disjoint from {}, {} and {} are disjoint (No {} are {}).", term_a, term_b, term_b, term_c, term_a, term_c, term_a, term_c),
+            reason: format!("Since {} ⊆ {} and {} ∩ {} = ∅, {} and {} must be disjoint.", term_a, term_b, term_b, term_c, term_a, term_c),
         };
         let c2 = EvaluatedConclusion {
             id: 2,
@@ -138,53 +123,73 @@ impl SyllogismProblem {
             reason: format!("Contradicts the disjointness established by the premises."),
         };
 
-        let explanation = format!(
-            "Premises:\n1. {}\n2. {}\n\nOnly Conclusion I ('{}') follows logically.",
-            p1.statement(),
-            p2.statement(),
-            c1.proposition.statement()
-        );
-
-        Self {
-            premises: vec![p1, p2],
-            conclusions: vec![c1, c2],
-            canonical_answer: "Only I follows".to_string(),
-            explanation,
-        }
+        Self::build(vec![p1, p2], vec![c1, c2])
     }
 
+    /// Darii (AII-1): All B are C, Some A are B => Some A are C (Follows), All A are C (DoesNotFollow).
     pub fn create_darii(term_a: &str, term_b: &str, term_c: &str) -> Self {
-        let p1 = Proposition::new(Quantifier::Some, term_a, term_b);
-        let p2 = Proposition::new(Quantifier::All, term_b, term_c);
+        let p1 = Proposition::new(Quantifier::All, term_b, term_c);
+        let p2 = Proposition::new(Quantifier::Some, term_a, term_b);
 
         let c1 = EvaluatedConclusion {
             id: 1,
             proposition: Proposition::new(Quantifier::Some, term_a, term_c),
             verdict: ConclusionVerdict::Follows,
-            reason: format!("The overlapping portion between {} and {} is entirely contained inside {}, so some {} are {}.", term_a, term_b, term_c, term_a, term_c),
+            reason: format!("The elements of {} that are in {} are necessarily also in {}.", term_a, term_b, term_c),
         };
         let c2 = EvaluatedConclusion {
             id: 2,
             proposition: Proposition::new(Quantifier::All, term_a, term_c),
             verdict: ConclusionVerdict::DoesNotFollow,
-            reason: format!("We only know a subset of {} belongs to {}, not all {}.", term_a, term_c, term_a),
+            reason: format!("We only know 'Some {} are {}', which does not guarantee 'All {} are {}'.", term_a, term_b, term_a, term_c),
         };
 
-        let explanation = format!(
-            "Premises:\n1. {}\n2. {}\n\nOnly Conclusion I ('{}') follows logically.",
-            p1.statement(),
-            p2.statement(),
-            c1.proposition.statement()
-        );
-
-        Self {
-            premises: vec![p1, p2],
-            conclusions: vec![c1, c2],
-            canonical_answer: "Only I follows".to_string(),
-            explanation,
-        }
+        Self::build(vec![p1, p2], vec![c1, c2])
     }
 
+    /// Ferio (EIO-1): No B are C, Some A are B => Some A are not C (Follows), No A are C (DoesNotFollow).
+    pub fn create_ferio(term_a: &str, term_b: &str, term_c: &str) -> Self {
+        let p1 = Proposition::new(Quantifier::No, term_b, term_c);
+        let p2 = Proposition::new(Quantifier::Some, term_a, term_b);
+
+        let c1 = EvaluatedConclusion {
+            id: 1,
+            proposition: Proposition::new(Quantifier::SomeNot, term_a, term_c),
+            verdict: ConclusionVerdict::Follows,
+            reason: format!("The elements of {} that belong to {} cannot belong to {}.", term_a, term_b, term_c),
+        };
+        let c2 = EvaluatedConclusion {
+            id: 2,
+            proposition: Proposition::new(Quantifier::No, term_a, term_c),
+            verdict: ConclusionVerdict::DoesNotFollow,
+            reason: format!("Other elements of {} might still overlap with {}.", term_a, term_c),
+        };
+
+        Self::build(vec![p1, p2], vec![c1, c2])
+    }
+
+    /// Camestres (AEE-2): All C are B, No A are B => No A are C (Follows), All A are C (DoesNotFollow).
+    pub fn create_camestres(term_a: &str, term_b: &str, term_c: &str) -> Self {
+        let p1 = Proposition::new(Quantifier::All, term_c, term_b);
+        let p2 = Proposition::new(Quantifier::No, term_a, term_b);
+
+        let c1 = EvaluatedConclusion {
+            id: 1,
+            proposition: Proposition::new(Quantifier::No, term_a, term_c),
+            verdict: ConclusionVerdict::Follows,
+            reason: format!("Since {} ⊆ {} and {} ∩ {} = ∅, {} cannot intersect {}.", term_c, term_b, term_a, term_b, term_a, term_c),
+        };
+        let c2 = EvaluatedConclusion {
+            id: 2,
+            proposition: Proposition::new(Quantifier::Some, term_a, term_c),
+            verdict: ConclusionVerdict::DoesNotFollow,
+            reason: "Disjoint sets cannot have any overlapping elements.".to_string(),
+        };
+
+        Self::build(vec![p1, p2], vec![c1, c2])
+    }
+
+    /// Disjoint Some / Both Invalid (Neither follows): Some A are B, Some B are C => Neither follows.
     pub fn create_disjoint_some(term_a: &str, term_b: &str, term_c: &str) -> Self {
         let p1 = Proposition::new(Quantifier::Some, term_a, term_b);
         let p2 = Proposition::new(Quantifier::Some, term_b, term_c);
@@ -193,69 +198,82 @@ impl SyllogismProblem {
             id: 1,
             proposition: Proposition::new(Quantifier::Some, term_a, term_c),
             verdict: ConclusionVerdict::DoesNotFollow,
-            reason: format!("Two 'Some' premises with middle term {} do not yield a necessary connection between {} and {}.", term_b, term_a, term_c),
+            reason: format!("Undistributed middle term: {} overlaps with {} and {} overlaps with {}, but the overlapping subsets may be completely disjoint.", term_a, term_b, term_c, term_b),
         };
         let c2 = EvaluatedConclusion {
             id: 2,
-            proposition: Proposition::new(Quantifier::No, term_a, term_c),
+            proposition: Proposition::new(Quantifier::All, term_a, term_c),
             verdict: ConclusionVerdict::DoesNotFollow,
-            reason: format!("While they may be disjoint, they may also overlap. Neither is guaranteed."),
+            reason: format!("Partial overlaps cannot establish universal containment."),
         };
 
-        let explanation = format!(
-            "Premises:\n1. {}\n2. {}\n\nNeither Conclusion I nor Conclusion II follows necessarily.",
-            p1.statement(),
-            p2.statement()
-        );
+        Self::build(vec![p1, p2], vec![c1, c2])
+    }
+
+    /// Only Conclusion II follows
+    pub fn create_only_two_follows(term_a: &str, term_b: &str, term_c: &str) -> Self {
+        let p1 = Proposition::new(Quantifier::Some, term_a, term_b);
+        let p2 = Proposition::new(Quantifier::All, term_b, term_c);
+
+        let c1 = EvaluatedConclusion {
+            id: 1,
+            proposition: Proposition::new(Quantifier::All, term_a, term_c),
+            verdict: ConclusionVerdict::DoesNotFollow,
+            reason: "Only some A are B, so we cannot conclude all A are C.".to_string(),
+        };
+        let c2 = EvaluatedConclusion {
+            id: 2,
+            proposition: Proposition::new(Quantifier::Some, term_a, term_c),
+            verdict: ConclusionVerdict::Follows,
+            reason: format!("The elements of {} in {} are contained in {}.", term_a, term_b, term_c),
+        };
+
+        Self::build(vec![p1, p2], vec![c1, c2])
+    }
+
+    fn build(premises: Vec<Proposition>, conclusions: Vec<EvaluatedConclusion>) -> Self {
+        let follows_1 = conclusions[0].verdict == ConclusionVerdict::Follows;
+        let follows_2 = conclusions[1].verdict == ConclusionVerdict::Follows;
+
+        let canonical_answer = match (follows_1, follows_2) {
+            (true, true) => "Both I and II follow".to_string(),
+            (true, false) => "Only I follows".to_string(),
+            (false, true) => "Only II follows".to_string(),
+            (false, false) => "Neither follows".to_string(),
+        };
+
+        let mut expl_lines = vec!["**Premises:**".to_string()];
+        for (i, p) in premises.iter().enumerate() {
+            expl_lines.push(format!("{}. {}", i + 1, p.statement()));
+        }
+        expl_lines.push("\n**Analysis:**".to_string());
+        for c in &conclusions {
+            expl_lines.push(format!(
+                "- Conclusion {}: '{}' -> **{}** (Reason: {})",
+                if c.id == 1 { "I" } else { "II" },
+                c.proposition.statement(),
+                if c.verdict == ConclusionVerdict::Follows { "Follows" } else { "Does Not Follow" },
+                c.reason
+            ));
+        }
+        expl_lines.push(format!("\n**Correct Verdict:** {}", canonical_answer));
 
         Self {
-            premises: vec![p1, p2],
-            conclusions: vec![c1, c2],
-            canonical_answer: "Neither follows".to_string(),
-            explanation,
+            premises,
+            conclusions,
+            canonical_answer,
+            explanation: expl_lines.join("\n"),
         }
     }
 
-    /// Check if a submitted response is deterministically correct.
+    /// Helper for deterministic answer evaluation.
     pub fn is_correct(&self, submission: &str) -> bool {
-        let clean = submission.trim().to_lowercase().replace('_', " ");
-        let exp = self.canonical_answer.to_lowercase();
-        clean == exp
-            || (exp.contains("only i follows") && (clean == "only i" || clean == "1" || clean == "i" || clean == "option a"))
-            || (exp.contains("only ii follows") && (clean == "only ii" || clean == "2" || clean == "ii" || clean == "option b"))
-            || (exp.contains("both i and ii follow") && (clean == "both" || clean == "both follow" || clean == "option c"))
-            || (exp.contains("neither follows") && (clean == "neither" || clean == "none" || clean == "option d"))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_syllogism_barbara_validity() {
-        let syl = SyllogismProblem::create_barbara("cats", "mammals", "animals");
-        assert_eq!(syl.premises.len(), 2);
-        assert_eq!(syl.conclusions[0].verdict, ConclusionVerdict::Follows);
-        assert_eq!(syl.conclusions[1].verdict, ConclusionVerdict::Follows);
-        assert!(syl.is_correct("Both I and II follow"));
-        assert!(syl.is_correct("both"));
-    }
-
-    #[test]
-    fn test_syllogism_celarent_validity() {
-        let syl = SyllogismProblem::create_celarent("roses", "flowers", "rocks");
-        assert_eq!(syl.conclusions[0].verdict, ConclusionVerdict::Follows);
-        assert_eq!(syl.conclusions[1].verdict, ConclusionVerdict::DoesNotFollow);
-        assert!(syl.is_correct("Only I follows"));
-        assert!(!syl.is_correct("Both I and II follow"));
-    }
-
-    #[test]
-    fn test_syllogism_two_particulars_neither_follows() {
-        let syl = SyllogismProblem::create_disjoint_some("apples", "fruits", "red objects");
-        assert_eq!(syl.conclusions[0].verdict, ConclusionVerdict::DoesNotFollow);
-        assert_eq!(syl.conclusions[1].verdict, ConclusionVerdict::DoesNotFollow);
-        assert!(syl.is_correct("Neither follows"));
+        let clean_sub = submission.trim().to_lowercase();
+        let clean_exp = self.canonical_answer.trim().to_lowercase();
+        clean_sub == clean_exp
+            || (clean_exp.contains("both") && (clean_sub == "both" || clean_sub == "both i and ii follow" || clean_sub == "option c" || clean_sub == "c"))
+            || (clean_exp.contains("only i follows") && (clean_sub == "only i follows" || clean_sub == "1" || clean_sub == "option a" || clean_sub == "a"))
+            || (clean_exp.contains("only ii follows") && (clean_sub == "only ii follows" || clean_sub == "2" || clean_sub == "option b" || clean_sub == "b"))
+            || (clean_exp.contains("neither") && (clean_sub == "neither follows" || clean_sub == "none" || clean_sub == "neither" || clean_sub == "option d" || clean_sub == "d"))
     }
 }

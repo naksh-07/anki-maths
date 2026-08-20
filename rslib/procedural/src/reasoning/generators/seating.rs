@@ -19,42 +19,30 @@ use crate::reasoning::seating::SeatingPuzzle;
 /// Generator for Linear Seating Arrangement CSP problems.
 pub struct SeatingGenerator;
 
-const NAMES: &[&str] = &["Alice", "Bob", "Charlie", "David", "Emma", "Frank", "Grace"];
-
 impl SeatingGenerator {
     pub fn generate_problem(seed: u64, difficulty_level: u32, variant: Option<&str>) -> ProblemInstance {
-        let _rng = StdRng::seed_from_u64(seed);
+        let mut rng = StdRng::seed_from_u64(seed);
 
         let is_strategy_drill = variant == Some("strategy_drill") || variant == Some("decision_point");
 
-        let p1 = NAMES[0];
-        let p2 = NAMES[1];
-        let p3 = NAMES[2];
-        let p4 = NAMES[3];
-        let p5 = NAMES[4];
-
-        let (puzzle, anchor_person, query_slot) = match difficulty_level {
-            1 => {
-                // 4 people: Alice at 1, Bob immediately left of Charlie, David at 4 -> Query 3 (Charlie)
-                let query = 3;
-                let pz = SeatingPuzzle::build_5person_anchor_puzzle(p1, 1, p2, p3, &[p4], query)
-                    .unwrap_or_else(|| SeatingPuzzle::build_5person_anchor_puzzle(p1, 1, p2, p3, &[p4], query).unwrap());
-                (pz, p1, query)
-            }
-            2 => {
-                // 5 people: Charlie at slot 3, Alice immediately left of Bob, David & Emma remaining
-                let query = 2;
-                let pz = SeatingPuzzle::build_5person_anchor_puzzle(p1, 1, p2, p3, &[p4, p5], query)
-                    .unwrap_or_else(|| SeatingPuzzle::build_5person_anchor_puzzle(p1, 1, p2, p3, &[p4], query).unwrap());
-                (pz, p1, query)
-            }
-            _ => {
-                let query = 4;
-                let pz = SeatingPuzzle::build_5person_anchor_puzzle(p1, 1, p2, p3, &[p4, p5], query)
-                    .unwrap_or_else(|| SeatingPuzzle::build_5person_anchor_puzzle(p1, 1, p2, p3, &[p4], query).unwrap());
-                (pz, p1, query)
-            }
+        let total_slots = match difficulty_level {
+            1 => 4,
+            2 => 5,
+            3 => 5,
+            4 => 6,
+            _ => 7,
         };
+
+        let puzzle = SeatingPuzzle::generate_dynamic(&mut rng, total_slots, difficulty_level)
+            .unwrap_or_else(|| {
+                SeatingPuzzle::build_5person_anchor_puzzle(
+                    "Alice", 1, "Bob", "Charlie", &["David", "Emma"], 3,
+                ).unwrap()
+            });
+
+        let anchor_person = puzzle.anchor_person.clone();
+        let query_slot = puzzle.query_slot;
+        let target_answer = puzzle.target_answer.clone();
 
         let conditions_formatted: Vec<String> = puzzle
             .conditions_text
@@ -64,7 +52,7 @@ impl SeatingGenerator {
             .collect();
 
         let prompt = format!(
-            "{} people ({}) sit in a single row facing North (positions 1 to {} from left to right).\n\n\
+            "**{} people** ({}) sit in a single row facing North (positions 1 to {} from left to right).\n\n\
             **Conditions:**\n{}\n\n\
             **Question:**\n{}",
             puzzle.total_slots,
@@ -110,21 +98,21 @@ impl SeatingGenerator {
             "place_anchor",
             StepType::ApplyConstraint,
             "Place Fixed Anchor",
-            format!("Fix {} at slot 1.", anchor_person),
-            format!("Slot 1 = {}", anchor_person),
+            format!("Fix {} at specified invariant anchor slot.", anchor_person),
+            format!("Anchor: {}", anchor_person),
         )
         .with_hints(vec![
             StepHint::new(HintLevel::Principle, "Constraint Principle", "Start with the most restrictive or fixed position condition."),
-            StepHint::new(HintLevel::Operation, "Strategy Operation", format!("Place {} into position 1.", anchor_person)),
-            StepHint::new(HintLevel::IntermediateRelation, "Slot Setup", format!("Slot 1: {}", anchor_person)),
+            StepHint::new(HintLevel::Operation, "Strategy Operation", format!("Identify the fixed position for {}.", anchor_person)),
+            StepHint::new(HintLevel::IntermediateRelation, "Anchor Placed", format!("Anchor person: {}", anchor_person)),
         ]);
 
         let step2 = StepNode::new(
             "propagate_relative",
             StepType::PropagateConstraint,
             "Propagate Relative Conditions",
-            "Place remaining people into available slots based on adjacency.",
-            format!("Slot {} = {}", query_slot, puzzle.target_answer),
+            "Place remaining people into available slots based on adjacency and ordering.",
+            format!("Slot {} = {}", query_slot, target_answer),
         )
         .with_dependencies(vec!["place_anchor".to_string()]);
 
@@ -133,9 +121,12 @@ impl SeatingGenerator {
             StepType::FinalAnswer,
             "Final Answer",
             format!("Identify person at slot {}.", query_slot),
-            puzzle.target_answer.clone(),
+            target_answer.clone(),
         )
-        .with_alternates(vec![puzzle.target_answer.to_lowercase()])
+        .with_alternates(vec![
+            target_answer.to_lowercase(),
+            target_answer.to_uppercase(),
+        ])
         .with_dependencies(vec!["propagate_relative".to_string()])
         .as_final();
 
@@ -143,19 +134,23 @@ impl SeatingGenerator {
 
         let parameters = json!({
             "difficulty": difficulty_level,
-            "target_answer": puzzle.target_answer,
+            "total_slots": puzzle.total_slots,
+            "target_answer": target_answer,
             "people": puzzle.people,
+            "query_slot": query_slot,
             "reasoning_metadata": meta,
         });
 
         let correct_answer = json!({
-            "value": puzzle.target_answer,
-            "formatted": puzzle.target_answer.clone(),
+            "value": target_answer,
+            "formatted": target_answer,
             "solution": puzzle.explanation,
         });
 
+        let instance_id = format!("inst-seating-l{}-{}", difficulty_level, seed);
+
         ProblemInstance::new(
-            format!("inst-reas-seat-{}", seed),
+            instance_id,
             FAMILY_REASONING_SEATING,
             seed,
             parameters,
@@ -167,6 +162,7 @@ impl SeatingGenerator {
             "difficulty_level": difficulty_level,
             "target_time_ms": 35_000,
             "domain": "reasoning",
+            "generator": TEMPLATE_REASONING_SEATING_V1,
         }))
     }
 }
@@ -228,15 +224,25 @@ impl ProblemValidator for SeatingValidator {
         let expected_str = instance
             .correct_answer
             .get("formatted")
+            .or_else(|| instance.correct_answer.get("value"))
             .and_then(|v| v.as_str())
             .unwrap_or("");
 
         let student_str = match student_answer {
             serde_json::Value::String(s) => s.trim().to_string(),
+            serde_json::Value::Object(map) => {
+                map.get("formatted")
+                    .or_else(|| map.get("value"))
+                    .or_else(|| map.get("answer"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .trim()
+                    .to_string()
+            }
             _ => "".to_string(),
         };
 
-        let is_correct = student_str.eq_ignore_ascii_case(expected_str);
+        let is_correct = !student_str.is_empty() && student_str.eq_ignore_ascii_case(expected_str);
 
         if is_correct {
             AnswerEvaluation::correct(1.0, time_taken_ms, target_time_ms)

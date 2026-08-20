@@ -135,8 +135,16 @@ impl RatingPolicy for StandardRatingPolicy {
         let required_support = outcome.hints_used > 0 || outcome.attempt_count > 1;
         let had_minor_error = outcome.error_category.is_some();
 
+        let is_early_learning = skill_state.map_or(false, |s| {
+            matches!(
+                s.practice_state,
+                crate::skills::PracticeProgressionState::New
+                    | crate::skills::PracticeProgressionState::Learning
+            )
+        });
+
         // 5. Check for Hard conditions:
-        // - significantly slow latency or severe initial hesitation
+        // - significantly slow latency or severe initial hesitation (in early learning stage, clean slow solves up to 2.5x target are permitted without Hard penalty)
         // - used hints (1-2) or needed 1 retry (attempt_count == 2)
         // - corrected an earlier step error during stepwise solving
         // - had a minor calculation slip
@@ -145,7 +153,13 @@ impl RatingPolicy for StandardRatingPolicy {
             s.consecutive_failures > 0 || (s.recent_attempts.len() >= 3 && s.recent_accuracy() < 0.5)
         });
 
-        if is_slow
+        let slow_penalized = if is_early_learning && !required_support && !had_step_error && !had_minor_error {
+            outcome.latency_ms > (outcome.target_latency_ms as f64 * 2.5) as u64
+        } else {
+            is_slow
+        };
+
+        if slow_penalized
             || required_support
             || had_step_error
             || had_first_action_stall
@@ -159,10 +173,14 @@ impl RatingPolicy for StandardRatingPolicy {
         // - clean independent solve (0 hints, 1 attempt, 0 step errors, no misconceptions)
         // - comfortably below target latency (fast)
         // - strong recent history (or no history but fast and unassisted)
+        // - structural familiarity gate: established skills must have passed >= 2 distinct structural forms and have longitudinal independence >= 70%
         let has_strong_history = match skill_state {
             Some(s) => {
-                s.consecutive_successes >= self.easy_consecutive_successes
-                    || s.recent_accuracy() >= self.easy_recent_accuracy
+                let streak_ok = s.consecutive_successes >= self.easy_consecutive_successes
+                    || s.recent_accuracy() >= self.easy_recent_accuracy;
+                let independence_ok = s.longitudinal_independence_ratio() >= 0.70;
+                let structural_ok = s.total_attempts < 4 || s.distinct_structural_forms_passed() >= 2 || s.variant_stats.len() >= 2;
+                streak_ok && independence_ok && structural_ok
             }
             None => true, // default to fast if no prior history
         };

@@ -71,6 +71,10 @@ pub enum SchemaKind {
     AlphabetSeries,
     BloodRelations,
     DirectionSense,
+    FloorGridCsp,
+    LogicDag,
+    DataSufficiency,
+    CodedExpressions,
 }
 
 impl SchemaKind {
@@ -83,6 +87,10 @@ impl SchemaKind {
             SchemaKind::AlphabetSeries => "alphabet_series",
             SchemaKind::BloodRelations => "blood_relations",
             SchemaKind::DirectionSense => "direction_sense",
+            SchemaKind::FloorGridCsp => "floor_grid_csp",
+            SchemaKind::LogicDag => "logic_dag",
+            SchemaKind::DataSufficiency => "data_sufficiency",
+            SchemaKind::CodedExpressions => "coded_expressions",
         }
     }
 }

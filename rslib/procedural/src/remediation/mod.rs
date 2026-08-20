@@ -17,7 +17,7 @@ pub mod selector;
 pub use actions::{RemediationAction, RemediationActionKind, RemediationUrgency};
 pub use audit::{RemediationAuditLog, RemediationAuditRecord, RemediationOutcomeStatus};
 pub use objects::{
-    ConceptCheckEvaluation, ConceptCheckObject, ConceptCheckOption, DeclarativeRecallBridge,
+    CircuitBreakerObject, ConceptCheckEvaluation, ConceptCheckObject, ConceptCheckOption, DeclarativeRecallBridge,
     PrerequisiteReviewObject, RemediationIntervention, RepresentationDrillEvaluation,
     RepresentationDrillObject, RepresentationOption, StrategyDrillEvaluation, StrategyDrillObject,
     StrategyOption, WorkedExampleObject,

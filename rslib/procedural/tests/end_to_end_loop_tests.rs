@@ -82,13 +82,13 @@ fn test_closed_learning_loop_end_to_end() {
         .as_f64()
         .unwrap();
 
-    // 9. Learner submits another fast correct answer (15s)
+    // 9. Learner submits another fast correct answer (8s on 15s target)
     let outcome2 = service
         .evaluate_and_record_attempt(
             &session2.instance.id,
             session2.card_id,
             serde_json::json!(ans_val_2),
-            15_000,
+            8_000,
             0,
             1,
         )

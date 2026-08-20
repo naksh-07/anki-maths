@@ -27,9 +27,13 @@ fn test_transfer_level_eligibility_progression() {
             latency_ms: 25_000,
             target_latency_ms: 30_000,
             variant: Some("standard".into()),
+            variant_category: Some(procedural::VariantCategory::Parameter),
             error_category: None,
             max_hint_level: None,
             hint_count: None,
+            independence: Some(procedural::IndependenceLevel::Independent),
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: Some(true),
             timestamp: 100,
         });
     }

@@ -1,8 +1,11 @@
 // Copyright: Ankitects Pty Ltd and contributors
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
+pub mod backlog_triage;
+pub mod coverage;
 pub mod difficulty;
 pub mod interleaving;
+pub mod macro_allocator;
 pub mod rating_policy;
 pub mod selector;
 pub mod speed;
@@ -17,8 +20,16 @@ use crate::practice::SchemaPracticeObject;
 use crate::problems::ProblemInstance;
 use crate::skills::SkillState;
 
+pub use backlog_triage::{
+    BacklogSeverity, BacklogTriageEngine, BacklogTriagePlan, TriagedBacklogItem,
+};
+pub use coverage::{StructuralCoverageEvaluator, StructuralCoverageProfile};
 pub use difficulty::{AdaptiveDifficultyEngine, DifficultyDecision};
 pub use interleaving::InterleavingPolicy;
+pub use macro_allocator::{
+    DomainBlock, DomainBudget, MacroBudgetPlanner, MacroPlanningContext, MacroSessionPlan,
+    DEFAULT_ANTI_STARVATION_FLOOR, MAX_REMEDIATION_SESSION_FRACTION,
+};
 pub use rating_policy::{derive_fsrs_rating, Rating, RatingPolicy, StandardRatingPolicy};
 pub use selector::{
     MultiSchemaSelectionDecision, MultiSchemaSelector, PracticeMode, SelectionDecision,

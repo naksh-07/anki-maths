@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::core::{Domain, SchemaId, SkillId};
 use crate::diagnostics::ErrorCategory;
 use crate::problems::ProblemInstance;
-use crate::skills::signals::{IndependenceLevel, MasteryEvidence};
+use crate::skills::signals::{IndependenceLevel, MasteryEvidence, VariantCategory};
 
 /// An option in a discrete conceptual check.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -108,7 +108,12 @@ impl ConceptCheckObject {
                 hint_dependence: 0,
                 retry_dependence: 0,
                 variant_exposure: Some("concept_check".to_string()),
+                variant_category: VariantCategory::Contextual,
+                solution_graph_fingerprint: None,
+                cognitive_decision_correct: Some(is_correct),
+                time_since_last_ms: None,
                 transfer_evidence: false,
+                domain_competence_verified: Some(is_correct),
                 latency_evidence: latency_ms,
                 diagnostic_errors,
             };
@@ -131,7 +136,12 @@ impl ConceptCheckObject {
                 hint_dependence: 0,
                 retry_dependence: 0,
                 variant_exposure: Some("concept_check".to_string()),
+                variant_category: VariantCategory::Contextual,
+                solution_graph_fingerprint: None,
+                cognitive_decision_correct: Some(false),
+                time_since_last_ms: None,
                 transfer_evidence: false,
+                domain_competence_verified: Some(false),
                 latency_evidence: latency_ms,
                 diagnostic_errors: vec![ErrorCategory::Concept],
             };
@@ -227,6 +237,7 @@ impl StrategyDrillObject {
     }
 
     /// Evaluate learner's strategy choice and construct R1 MasteryEvidence.
+    /// Evaluate learner's selection and construct R1 MasteryEvidence.
     pub fn evaluate_choice(&self, chosen_id: &str, latency_ms: u64) -> StrategyDrillEvaluation {
         if let Some(opt) = self.options.iter().find(|o| o.id == chosen_id) {
             let is_correct = opt.is_optimal;
@@ -244,7 +255,12 @@ impl StrategyDrillObject {
                 hint_dependence: 0,
                 retry_dependence: 0,
                 variant_exposure: Some("strategy_drill".to_string()),
+                variant_category: VariantCategory::Structural,
+                solution_graph_fingerprint: None,
+                cognitive_decision_correct: Some(is_correct),
+                time_since_last_ms: None,
                 transfer_evidence: false,
+                domain_competence_verified: Some(is_correct),
                 latency_evidence: latency_ms,
                 diagnostic_errors,
             };
@@ -267,7 +283,12 @@ impl StrategyDrillObject {
                 hint_dependence: 0,
                 retry_dependence: 0,
                 variant_exposure: Some("strategy_drill".to_string()),
+                variant_category: VariantCategory::Structural,
+                solution_graph_fingerprint: None,
+                cognitive_decision_correct: Some(false),
+                time_since_last_ms: None,
                 transfer_evidence: false,
+                domain_competence_verified: Some(false),
                 latency_evidence: latency_ms,
                 diagnostic_errors: vec![ErrorCategory::Strategy],
             };
@@ -377,7 +398,12 @@ impl RepresentationDrillObject {
                 hint_dependence: 0,
                 retry_dependence: 0,
                 variant_exposure: Some("representation_drill".to_string()),
+                variant_category: VariantCategory::Structural,
+                solution_graph_fingerprint: None,
+                cognitive_decision_correct: Some(is_correct),
+                time_since_last_ms: None,
                 transfer_evidence: false,
+                domain_competence_verified: Some(is_correct),
                 latency_evidence: latency_ms,
                 diagnostic_errors,
             };
@@ -400,7 +426,12 @@ impl RepresentationDrillObject {
                 hint_dependence: 0,
                 retry_dependence: 0,
                 variant_exposure: Some("representation_drill".to_string()),
+                variant_category: VariantCategory::Structural,
+                solution_graph_fingerprint: None,
+                cognitive_decision_correct: Some(false),
+                time_since_last_ms: None,
                 transfer_evidence: false,
+                domain_competence_verified: Some(false),
                 latency_evidence: latency_ms,
                 diagnostic_errors: vec![ErrorCategory::Concept],
             };
@@ -471,7 +502,12 @@ impl WorkedExampleObject {
             hint_dependence: 0,
             retry_dependence: 0,
             variant_exposure: Some("worked_example_view".to_string()),
+            variant_category: VariantCategory::Structural,
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: None,
+            time_since_last_ms: None,
             transfer_evidence: false,
+            domain_competence_verified: Some(false),
             latency_evidence: view_time_ms,
             diagnostic_errors: Vec::new(),
         }
@@ -572,6 +608,40 @@ impl PrerequisiteReviewObject {
     }
 }
 
+/// Cooldown / deferral intervention to prevent cognitive wheel-spinning after repeated persistent failures.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CircuitBreakerObject {
+    pub id: String,
+    pub skill_id: SkillId,
+    pub schema_id: SchemaId,
+    pub domain: Domain,
+    pub recurrence_count: u32,
+    pub advisory_message: String,
+    pub suggested_action: String,
+}
+
+impl CircuitBreakerObject {
+    pub fn new(
+        id: impl Into<String>,
+        skill_id: impl Into<SkillId>,
+        schema_id: impl Into<SchemaId>,
+        domain: Domain,
+        recurrence_count: u32,
+        advisory_message: impl Into<String>,
+        suggested_action: impl Into<String>,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            skill_id: skill_id.into(),
+            schema_id: schema_id.into(),
+            domain,
+            recurrence_count,
+            advisory_message: advisory_message.into(),
+            suggested_action: suggested_action.into(),
+        }
+    }
+}
+
 /// Concrete learning intervention presented to the learner during practice.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "intervention_type", rename_all = "snake_case")]
@@ -584,6 +654,7 @@ pub enum RemediationIntervention {
     DeclarativeRecall(DeclarativeRecallBridge),
     PrerequisiteReview(PrerequisiteReviewObject),
     TransferRetry(ProblemInstance),
+    CircuitBreaker(CircuitBreakerObject),
 }
 
 impl RemediationIntervention {
@@ -604,6 +675,7 @@ impl RemediationIntervention {
                 static DUMMY_SKILL: std::sync::OnceLock<SkillId> = std::sync::OnceLock::new();
                 DUMMY_SKILL.get_or_init(|| SkillId::new("unknown"))
             }
+            RemediationIntervention::CircuitBreaker(cb) => &cb.skill_id,
         }
     }
 }

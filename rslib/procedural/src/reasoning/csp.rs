@@ -171,18 +171,55 @@ pub struct SearchCase {
 }
 
 /// Lightweight, deterministic constraint satisfaction solver.
+pub const MAX_CSP_RECURSION_DEPTH: usize = 32;
+pub const MAX_CSP_SEARCH_NODES: usize = 10_000;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CspStatus {
+    Complete,
+    DepthLimitExceeded,
+    NodeBudgetExhausted,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CspSolveReport {
+    pub solutions: Vec<HashMap<String, usize>>,
+    pub nodes_visited: usize,
+    pub max_depth_reached: usize,
+    pub status: CspStatus,
+}
+
+/// Lightweight, deterministic constraint satisfaction solver with bounded recursion.
 pub struct CspSolver;
 
 impl CspSolver {
-    /// Solve the CSP problem and return all valid complete assignments.
+    /// Solve the CSP problem and return all valid complete assignments using safe default bounds.
     pub fn solve_all(&self, problem: &CspProblem) -> Vec<HashMap<String, usize>> {
+        self.solve_bounded(problem, MAX_CSP_RECURSION_DEPTH, MAX_CSP_SEARCH_NODES)
+            .solutions
+    }
+
+    /// Solve the CSP problem with explicit recursion depth and node search limits.
+    pub fn solve_bounded(
+        &self,
+        problem: &CspProblem,
+        max_depth: usize,
+        max_nodes: usize,
+    ) -> CspSolveReport {
         let mut solutions = Vec::new();
         let mut current_assignment = HashMap::new();
         let mut domains = problem.initial_domains.clone();
+        let mut nodes_visited = 0;
+        let mut max_depth_reached = 0;
+        let mut status = CspStatus::Complete;
 
-        // 1. Initial domain reduction via unary constraints
         if !self.propagate_unary_constraints(problem, &mut domains) {
-            return solutions;
+            return CspSolveReport {
+                solutions,
+                nodes_visited,
+                max_depth_reached,
+                status,
+            };
         }
 
         self.backtrack(
@@ -191,9 +228,19 @@ impl CspSolver {
             &domains,
             &mut solutions,
             0,
+            max_depth,
+            max_nodes,
+            &mut nodes_visited,
+            &mut max_depth_reached,
+            &mut status,
         );
 
-        solutions
+        CspSolveReport {
+            solutions,
+            nodes_visited,
+            max_depth_reached,
+            status,
+        }
     }
 
     /// Check if the problem has exactly one unique valid solution.
@@ -241,6 +288,7 @@ impl CspSolver {
         true
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn backtrack(
         &self,
         problem: &CspProblem,
@@ -248,7 +296,27 @@ impl CspSolver {
         domains: &HashMap<String, Vec<usize>>,
         solutions: &mut Vec<HashMap<String, usize>>,
         depth: usize,
+        max_depth: usize,
+        max_nodes: usize,
+        nodes_visited: &mut usize,
+        max_depth_reached: &mut usize,
+        status: &mut CspStatus,
     ) {
+        *nodes_visited += 1;
+        if depth > *max_depth_reached {
+            *max_depth_reached = depth;
+        }
+
+        if depth > max_depth {
+            *status = CspStatus::DepthLimitExceeded;
+            return;
+        }
+
+        if *nodes_visited > max_nodes {
+            *status = CspStatus::NodeBudgetExhausted;
+            return;
+        }
+
         // Stop search if exceeded safe bound (e.g. 50 solutions)
         if solutions.len() > 50 {
             return;
@@ -281,7 +349,18 @@ impl CspSolver {
                 // Forward checking: prune domain of remaining variables
                 let mut next_domains = domains.clone();
                 if self.forward_check(problem, assignment, &mut next_domains) {
-                    self.backtrack(problem, assignment, &next_domains, solutions, depth + 1);
+                    self.backtrack(
+                        problem,
+                        assignment,
+                        &next_domains,
+                        solutions,
+                        depth + 1,
+                        max_depth,
+                        max_nodes,
+                        nodes_visited,
+                        max_depth_reached,
+                        status,
+                    );
                 }
             }
 

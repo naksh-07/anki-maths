@@ -33,8 +33,28 @@ impl RemediationPolicy {
         let action_id = format!("rem-{}-{}", ctx.skill_id, ctx.source_attempt_id);
         let rec = ctx.recurrence_count;
 
-        // 1. ESCALATION FOR PERSISTENT REPEATED FAILURES (Recurrence >= 4)
-        if rec >= 4 {
+        // 1. CIRCUIT BREAKER FOR PERSISTENT REPEATED FAILURES (Recurrence >= 5)
+        // Halts repetitive isomorphic wheel-spinning, emits advisory cooldown, and preserves learner autonomy.
+        if rec >= 5 {
+            let action = RemediationAction::new(
+                action_id,
+                RemediationActionKind::CircuitBreaker,
+                ctx.skill_id,
+                ctx.schema_id,
+                ctx.domain.clone(),
+                ctx.primary_error.clone(),
+                ctx.source_attempt_id,
+                format!("Persistent failure threshold reached ({} attempts). Triggering circuit breaker cooldown to prevent wheel-spinning.", rec),
+            )
+            .with_recurrence(rec)
+            .with_urgency(RemediationUrgency::Advisory)
+            .with_step_error(ctx.step_error);
+
+            return action;
+        }
+
+        // 2. ESCALATION FOR PERSISTENT PREREQUISITE GAPS (Recurrence == 4)
+        if rec == 4 {
             let action = RemediationAction::new(
                 action_id,
                 RemediationActionKind::PrerequisiteReview,
@@ -43,7 +63,7 @@ impl RemediationPolicy {
                 ctx.domain.clone(),
                 ctx.primary_error.clone(),
                 ctx.source_attempt_id,
-                format!("Persistent failure recurrence ({}) detected. Advisory prerequisite review recommended.", rec),
+                format!("Persistent failure recurrence ({}) detected. Bounded JIT prerequisite review recommended.", rec),
             )
             .with_recurrence(rec)
             .with_urgency(RemediationUrgency::Critical)
@@ -52,7 +72,7 @@ impl RemediationPolicy {
             return action;
         }
 
-        // 2. ESCALATION FOR REPEATED CONCEPTUAL/STRATEGY FAILURES (Recurrence == 3)
+        // 3. ESCALATION FOR REPEATED CONCEPTUAL/STRATEGY FAILURES (Recurrence == 3)
         if rec == 3 {
             let action = RemediationAction::new(
                 action_id,

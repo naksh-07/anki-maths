@@ -66,7 +66,25 @@ impl ProceduralCardAnchor {
     }
 
     /// Parse a JSON string that may represent a procedural anchor.
+    /// Strictly parses valid JSON anchors; malformed anchors log diagnostics and return Ok(None)
+    /// to guarantee safe fallback to standard Anki card review without crashing the reviewer.
     pub fn from_json_str(s: &str) -> Result<Option<Self>> {
+        let trimmed = s.trim();
+        if !trimmed.starts_with('{') || !trimmed.contains("proc_schema") {
+            return Ok(None);
+        }
+
+        match serde_json::from_str::<ProceduralCardAnchor>(trimmed) {
+            Ok(anchor) => Ok(Some(anchor)),
+            Err(e) => {
+                eprintln!("[procedural] Malformed procedural card anchor metadata: {e}");
+                Ok(None)
+            }
+        }
+    }
+
+    /// Strict parser for programmatic validation where explicit error reporting is required.
+    pub fn from_json_str_strict(s: &str) -> Result<Option<Self>> {
         let trimmed = s.trim();
         if !trimmed.starts_with('{') || !trimmed.contains("proc_schema") {
             return Ok(None);

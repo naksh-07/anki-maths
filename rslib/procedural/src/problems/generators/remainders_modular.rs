@@ -76,8 +76,8 @@ impl RemaindersModularGenerator {
 
     /// Level 1: Division algorithm: Dividend = Divisor * Quotient + Remainder
     fn generate_level_1(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let divisor = rng.random_range(7..=19);
-        let quotient = rng.random_range(12..=45);
+        let divisor = rng.random_range(7..=99);
+        let quotient = rng.random_range(12..=99);
         let remainder = rng.random_range(1..divisor);
         let dividend = divisor * quotient + remainder;
 
@@ -159,12 +159,12 @@ impl RemaindersModularGenerator {
 
     /// Level 2: Expression remainder: (A * B) mod M using individual modular arithmetic
     fn generate_level_2(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let m = rng.random_range(7..=13); // Modulus
-        let k1 = rng.random_range(10..=30);
+        let m = rng.random_range(7..=25); // Modulus
+        let k1 = rng.random_range(10..=50);
         let r1 = rng.random_range(2..m);
         let a = k1 * m + r1;
 
-        let k2 = rng.random_range(10..=30);
+        let k2 = rng.random_range(10..=50);
         let r2 = rng.random_range(2..m);
         let b = k2 * m + r2;
 
@@ -253,14 +253,16 @@ impl RemaindersModularGenerator {
 
     /// Level 3: Cyclicity of powers & Unit digits (a^k mod 10)
     fn generate_level_3(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        // Base numbers with period 4 cyclicity modulo 10: 2, 3, 7, 8
-        let bases = [2, 3, 7, 8];
-        let base = bases[rng.random_range(0..bases.len())];
-        let exp = rng.random_range(35..=99);
+        // Base numbers with period 4 cyclicity modulo 10: ends in 2, 3, 7, 8
+        let unit_bases = [2, 3, 7, 8];
+        let unit = unit_bases[rng.random_range(0..unit_bases.len())];
+        let prefix = rng.random_range(0..=9);
+        let base = if prefix == 0 { unit } else { prefix * 10 + unit };
+        let exp = rng.random_range(35..=999);
 
         let rem_exp = exp % 4;
         let effective_exp = if rem_exp == 0 { 4 } else { rem_exp };
-        let unit_digit = (base as u32).pow(effective_exp) % 10;
+        let unit_digit = (base as u64).pow(effective_exp) % 10;
 
         let prompt = format!(
             "Find the unit digit (remainder when divided by **10**) of the expression:\n\n\\[ {}^{{{}}} \\]",
@@ -274,7 +276,7 @@ impl RemaindersModularGenerator {
              \\[ {} \\pmod{{4}} = {} \\implies \\text{{Effective exponent}} = {} \\]\n\n\
              **Step 3:** Calculate the unit digit:\n\
              \\[ {}^{{{}}} \\equiv **{}** \\pmod{{10}} \\]",
-            base, base, base % 10, base, (base * base) % 10, base, (base * base * base) % 10, base, (base * base * base * base) % 10,
+            base, base, base % 10, base, ((base as u64) * (base as u64)) % 10, base, ((base as u64) * (base as u64) * (base as u64)) % 10, base, ((base as u64) * (base as u64) * (base as u64) * (base as u64)) % 10,
             exp, rem_exp, effective_exp, base, effective_exp, unit_digit
         );
 
@@ -342,13 +344,40 @@ impl RemaindersModularGenerator {
         }))
     }
 
+    fn gcd(mut a: u32, mut b: u32) -> u32 {
+        while b != 0 {
+            let t = b;
+            b = a % b;
+            a = t;
+        }
+        a
+    }
+
+    fn lcm(a: u32, b: u32) -> u32 {
+        if a == 0 || b == 0 { return 0; }
+        (a / Self::gcd(a, b)) * b
+    }
+
     /// Level 4: Common remainder: Smallest number leaving remainder R for divisors D1, D2, D3
     fn generate_level_4(rng: &mut StdRng, seed: u64) -> ProblemInstance {
-        let d1 = 6;
-        let d2 = 8;
-        let d3 = 12;
-        let lcm = 24; // LCM(6, 8, 12) = 24
-        let r = rng.random_range(2..=5); // common remainder (e.g. 5)
+        let mut d1 = rng.random_range(4..=25);
+        let mut d2 = rng.random_range(4..=25);
+        let mut d3 = rng.random_range(4..=25);
+        
+        while d1 == d2 || d2 == d3 || d1 == d3 {
+            d1 = rng.random_range(4..=25);
+            d2 = rng.random_range(4..=25);
+            d3 = rng.random_range(4..=25);
+        }
+        
+        let mut d_vec = vec![d1, d2, d3];
+        d_vec.sort_unstable();
+        let d1 = d_vec[0];
+        let d2 = d_vec[1];
+        let d3 = d_vec[2];
+
+        let lcm = Self::lcm(Self::lcm(d1, d2), d3);
+        let r = rng.random_range(2..d1); // common remainder (e.g. 5)
         let smallest_n = lcm + r;
 
         let prompt = format!(
@@ -433,7 +462,7 @@ impl RemaindersModularGenerator {
         let days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
         let start_day_idx = rng.random_range(0..7);
         let start_day = days[start_day_idx];
-        let n_days = rng.random_range(45..=150);
+        let n_days = rng.random_range(45..=9999);
         let rem_days = n_days % 7;
         let target_day_idx = (start_day_idx + rem_days) % 7;
         let target_day = days[target_day_idx];

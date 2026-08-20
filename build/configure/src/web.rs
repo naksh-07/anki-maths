@@ -147,12 +147,20 @@ fn build_and_check_tslib(build: &mut Build) -> Result<()> {
     build.add_dependency("ts:generated:proto", inputs![":rslib:proto:ts"]);
     // copy source files from ts/lib/generated
     build.add_action(
-        "ts:generated:src",
-        CopyFiles {
-            inputs: inputs![glob!["ts/lib/generated/*.ts"]],
-            output_folder: "ts/lib/generated",
+        "ts:generated:src:ftl",
+        ninja_gen::copy::CopyFile {
+            input: inputs!["ts/lib/generated/ftl-helpers.ts"],
+            output: "ts/lib/generated/ftl-helpers.ts",
         },
     )?;
+    build.add_action(
+        "ts:generated:src:post",
+        ninja_gen::copy::CopyFile {
+            input: inputs!["ts/lib/generated/post.ts"],
+            output: "ts/lib/generated/post.ts",
+        },
+    )?;
+    build.add_dependency("ts:generated:src", inputs![":ts:generated:src:ftl", ":ts:generated:src:post"]);
 
     let src_files = inputs![glob!["ts/lib/**"]];
 

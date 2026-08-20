@@ -35,9 +35,13 @@ fn test_retirement_eligibility_evaluation() {
             latency_ms: 20_000,
             target_latency_ms: 30_000,
             variant: Some("v1".into()),
+            variant_category: Some(procedural::VariantCategory::Structural),
             error_category: None,
             max_hint_level: None,
             hint_count: None,
+            independence: Some(procedural::IndependenceLevel::Independent),
+            solution_graph_fingerprint: None,
+            cognitive_decision_correct: Some(true),
             timestamp: 100,
         });
     }

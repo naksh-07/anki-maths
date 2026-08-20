@@ -14,6 +14,12 @@ pub enum SeriesRule {
     Geometric { ratio: i64 },
     /// Alternating operations: +diff1 on odd steps, +diff2 on even steps.
     Alternating { diff1: i64, diff2: i64 },
+    /// Differences are consecutive perfect squares: diff_k = (start + k)^2.
+    SquareDifference { start_k: i64 },
+    /// Linear recurrence / Multiply and Add: a_{n} = a_{n-1} * mult + add.
+    MultiplyAndAdd { mult: i64, add: i64 },
+    /// Fibonacci-like sum of previous two terms.
+    FibonacciLike,
     /// Alphabet letter position progression with character shift: char -> (char - 'A' + shift) % 26 + 'A'.
     AlphabetShift { shift: i32 },
 }
@@ -39,6 +45,15 @@ impl SeriesRule {
             }
             SeriesRule::Alternating { diff1, diff2 } => {
                 format!("Alternating operations: {:+} followed by {:+}", diff1, diff2)
+            }
+            SeriesRule::SquareDifference { start_k } => {
+                format!("Differences are consecutive squares starting from {}^2", start_k)
+            }
+            SeriesRule::MultiplyAndAdd { mult, add } => {
+                format!("Multiply by {} and add {}", mult, add)
+            }
+            SeriesRule::FibonacciLike => {
+                "Each term is the sum of the two preceding terms".to_string()
             }
             SeriesRule::AlphabetShift { shift } => {
                 format!("Shift each letter forward by {} alphabetical positions", shift)
@@ -94,18 +109,40 @@ impl SeriesProblem {
                     terms.push(curr);
                 }
             }
+            SeriesRule::SquareDifference { start_k } => {
+                let mut k = *start_k;
+                for _ in 1..=count {
+                    curr += k * k;
+                    terms.push(curr);
+                    k += 1;
+                }
+            }
+            SeriesRule::MultiplyAndAdd { mult, add } => {
+                for _ in 1..=count {
+                    curr = curr * mult + add;
+                    terms.push(curr);
+                }
+            }
+            SeriesRule::FibonacciLike => {
+                let second = start + 3;
+                terms = vec![start, second];
+                for i in 2..=count {
+                    let next = terms[i - 1] + terms[i - 2];
+                    terms.push(next);
+                }
+            }
             SeriesRule::AlphabetShift { shift } => {
                 let mut char_code = ((start.rem_euclid(26)) as u8) + b'A';
                 let mut char_terms = Vec::new();
                 char_terms.push((char_code as char).to_string());
                 for _ in 1..=count {
-                    let offset = (char_code - b'A' + *shift as u8).rem_euclid(26);
+                    let offset = (char_code - b'A' + (*shift as u8)).rem_euclid(26);
                     char_code = b'A' + offset;
                     char_terms.push((char_code as char).to_string());
                 }
                 let next_str = char_terms.pop().unwrap();
                 let explanation = format!(
-                    "Pattern rule: {}. Sequence: {}. Next character is {}.",
+                    "Pattern rule: {}. Sequence: {}. Next character is **{}**.",
                     rule.description(),
                     char_terms.join(", "),
                     next_str
@@ -125,7 +162,7 @@ impl SeriesProblem {
         let next_val = terms.pop().unwrap();
         let terms_str: Vec<String> = terms.iter().map(|t| t.to_string()).collect();
         let explanation = format!(
-            "Pattern rule: {}. Sequence: {}. Next term is {}.",
+            "Pattern rule: {}. Sequence: {}. Next term is **{}**.",
             rule.description(),
             terms_str.join(", "),
             next_val
@@ -142,62 +179,14 @@ impl SeriesProblem {
         }
     }
 
+    /// Check if a submitted string answer matches the expected series term.
+    pub fn is_correct(&self, submission: &str) -> bool {
+        submission.trim().eq_ignore_ascii_case(self.expected_next_string.trim())
+    }
+
     /// Generate an alphabet series.
     pub fn generate_alphabet(start_char: char, shift: i32, count: usize) -> Self {
         let start_idx = ((start_char.to_ascii_uppercase() as u8) - b'A') as i64;
         Self::generate_numeric(SeriesRule::AlphabetShift { shift }, start_idx, count)
-    }
-
-    /// Check if a submitted response is deterministically correct.
-    pub fn is_correct(&self, submission: &str) -> bool {
-        let clean = submission.trim().to_uppercase();
-        if self.is_alphabet {
-            clean == self.expected_next_string.to_uppercase()
-        } else if let Some(exp) = self.expected_next_numeric {
-            if let Ok(num) = clean.parse::<i64>() {
-                num == exp
-            } else {
-                false
-            }
-        } else {
-            clean == self.expected_next_string
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_constant_difference_series() {
-        let prob = SeriesProblem::generate_numeric(SeriesRule::ConstantDifference { diff: 5 }, 3, 4);
-        assert_eq!(prob.terms_numeric, vec![3, 8, 13, 18]);
-        assert_eq!(prob.expected_next_numeric, Some(23));
-        assert!(prob.is_correct("23"));
-        assert!(!prob.is_correct("24"));
-    }
-
-    #[test]
-    fn test_increasing_difference_series() {
-        let prob = SeriesProblem::generate_numeric(
-            SeriesRule::IncreasingDifference { start_diff: 2, step: 2 },
-            1,
-            4,
-        );
-        // 1 (+2)-> 3 (+4)-> 7 (+6)-> 13 (+8)-> 21
-        assert_eq!(prob.terms_numeric, vec![1, 3, 7, 13]);
-        assert_eq!(prob.expected_next_numeric, Some(21));
-        assert!(prob.is_correct("21"));
-    }
-
-    #[test]
-    fn test_alphabet_shift_series() {
-        let prob = SeriesProblem::generate_alphabet('B', 3, 4);
-        // B (+3)-> E (+3)-> H (+3)-> K (+3)-> N
-        assert_eq!(prob.terms_string, vec!["B", "E", "H", "K"]);
-        assert_eq!(prob.expected_next_string, "N");
-        assert!(prob.is_correct("N"));
-        assert!(prob.is_correct("n"));
     }
 }

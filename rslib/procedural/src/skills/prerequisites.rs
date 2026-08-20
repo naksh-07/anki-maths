@@ -385,4 +385,61 @@ impl PrerequisiteGraphService {
             advisory_message,
         }
     }
+
+    /// Returns all skills in the graph that directly or transitively depend on `target_skill_id`.
+    pub fn get_downstream_dependents(&self, target_skill_id: &SkillId) -> Vec<SkillId> {
+        let g = self.graph.read().unwrap();
+        let all_keys: Vec<SkillId> = g.keys().cloned().collect();
+        drop(g);
+
+        let mut dependents = Vec::new();
+        for skill_id in &all_keys {
+            if skill_id == target_skill_id {
+                continue;
+            }
+            let (transitive, _) = self.get_transitive_prerequisites(skill_id);
+            if transitive.contains(target_skill_id) {
+                dependents.push(skill_id.clone());
+            }
+        }
+        dependents
+    }
+
+    /// Computes effective prerequisite value propagation across the DAG.
+    /// Foundational skills with direct weight 0 accumulate propagated value
+    /// from high-yield downstream dependent skills:
+    /// EffectiveValue(u) = DirectValue(u) + sum_{v in dependents(u)} decay^{depth(u, v)} * DirectValue(v)
+    pub fn compute_effective_prerequisite_values(
+        &self,
+        direct_values: &HashMap<SkillId, f64>,
+        decay_factor: f64,
+    ) -> HashMap<SkillId, f64> {
+        let decay = decay_factor.clamp(0.1, 1.0);
+        let g = self.graph.read().unwrap();
+        let all_skills: HashSet<SkillId> = g.keys().cloned().chain(direct_values.keys().cloned()).collect();
+        drop(g);
+
+        // Pre-initialize with direct values
+        let mut effective_values: HashMap<SkillId, f64> = all_skills
+            .iter()
+            .map(|s| (s.clone(), direct_values.get(s).copied().unwrap_or(0.0)))
+            .collect();
+
+        // Single-pass push propagation from downstream leaf skills to their transitive prerequisites
+        for (target_v, &v_value) in direct_values.iter() {
+            if v_value <= 0.0 {
+                continue;
+            }
+            let (transitive, _) = self.get_transitive_prerequisites(target_v);
+            for (idx, prereq) in transitive.iter().enumerate() {
+                let depth = (idx + 1) as i32;
+                let add_val = decay.powi(depth) * v_value;
+                if let Some(val) = effective_values.get_mut(prereq) {
+                    *val += add_val;
+                }
+            }
+        }
+
+        effective_values
+    }
 }

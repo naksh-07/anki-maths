@@ -88,7 +88,12 @@ fn test_remediation_maths_end_to_end_flow() {
                 hint_dependence: 0,
                 retry_dependence: 0,
                 variant_exposure: Some("simpler_numbers".to_string()),
+                variant_category: procedural::VariantCategory::Parameter,
+                solution_graph_fingerprint: None,
+                cognitive_decision_correct: Some(true),
+                time_since_last_ms: None,
                 transfer_evidence: false,
+                domain_competence_verified: Some(true),
                 latency_evidence: 18000,
                 diagnostic_errors: vec![],
             };
