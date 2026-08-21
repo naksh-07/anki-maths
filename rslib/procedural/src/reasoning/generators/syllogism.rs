@@ -37,6 +37,16 @@ const NOUN_POOL: &[&str] = &[
 ];
 
 impl SyllogismGenerator {
+    pub fn target_latency(difficulty_level: u32) -> u64 {
+        match difficulty_level {
+            1 => 20_000,
+            2 => 25_000,
+            3 => 30_000,
+            4 => 35_000,
+            _ => 40_000,
+        }
+    }
+
     pub fn generate_problem(seed: u64, difficulty_level: u32, variant: Option<&str>) -> ProblemInstance {
         let mut rng = StdRng::seed_from_u64(seed);
 
@@ -48,17 +58,22 @@ impl SyllogismGenerator {
 
         let is_strategy_drill = variant == Some("strategy_drill") || variant == Some("decision_point");
 
-        // Mode determines which classical form to generate to balance conclusions
-        let mode = rng.random_range(0..6);
-
-        let prob = match mode {
-            0 => SyllogismProblem::create_barbara(term_a, term_b, term_c), // Both follow
-            1 => SyllogismProblem::create_celarent(term_a, term_b, term_c), // Only I follows
-            2 => SyllogismProblem::create_darii(term_a, term_b, term_c), // Only I follows
-            3 => SyllogismProblem::create_only_two_follows(term_a, term_b, term_c), // Only II follows
-            4 => SyllogismProblem::create_ferio(term_a, term_b, term_c), // Only I follows
-            _ => SyllogismProblem::create_disjoint_some(term_a, term_b, term_c), // Neither follows
+        let prob = if let Some(v) = variant {
+            match v {
+                "barbara_aaa" => SyllogismProblem::create_barbara(term_a, term_b, term_c),
+                "celarent_eae" => SyllogismProblem::create_celarent(term_a, term_b, term_c),
+                "camestres_aee" => SyllogismProblem::create_camestres(term_a, term_b, term_c),
+                "darii_aii" => SyllogismProblem::create_darii(term_a, term_b, term_c),
+                "only_two_follows" => SyllogismProblem::create_only_two_follows(term_a, term_b, term_c),
+                "ferio_eio" => SyllogismProblem::create_ferio(term_a, term_b, term_c),
+                "disjoint_invalid" => SyllogismProblem::create_disjoint_some(term_a, term_b, term_c),
+                _ => Self::generate_by_level(&mut rng, difficulty_level, term_a, term_b, term_c),
+            }
+        } else {
+            Self::generate_by_level(&mut rng, difficulty_level, term_a, term_b, term_c)
         };
+
+        let target_time_ms = Self::target_latency(difficulty_level);
 
         let premises_formatted: Vec<String> = prob
             .premises
@@ -187,10 +202,43 @@ impl SyllogismGenerator {
         .with_solution_graph(graph)
         .with_metadata(json!({
             "difficulty_level": difficulty_level,
-            "target_time_ms": 30_000,
+            "target_time_ms": target_time_ms,
             "domain": "reasoning",
             "generator": TEMPLATE_REASONING_SYLLOGISM_V1,
         }))
+    }
+
+    fn generate_by_level(
+        rng: &mut StdRng,
+        difficulty_level: u32,
+        term_a: &str,
+        term_b: &str,
+        term_c: &str,
+    ) -> SyllogismProblem {
+        match difficulty_level {
+            // Level 1: Simpler valid universal categorical structure (Barbara AAA-1: Both follow)
+            1 => SyllogismProblem::create_barbara(term_a, term_b, term_c),
+            // Level 2: Universal negative structure (Celarent EAE-1 / Camestres AEE-2)
+            2 => {
+                if rng.random_bool(0.5) {
+                    SyllogismProblem::create_celarent(term_a, term_b, term_c)
+                } else {
+                    SyllogismProblem::create_camestres(term_a, term_b, term_c)
+                }
+            }
+            // Level 3: Particular affirmative inference (Darii AII-1 / Only-Two-Follows)
+            3 => {
+                if rng.random_bool(0.5) {
+                    SyllogismProblem::create_darii(term_a, term_b, term_c)
+                } else {
+                    SyllogismProblem::create_only_two_follows(term_a, term_b, term_c)
+                }
+            }
+            // Level 4: Particular negative inference (Ferio EIO-1: "Some ... are not")
+            4 => SyllogismProblem::create_ferio(term_a, term_b, term_c),
+            // Level 5: Fallacy of undistributed middle / disjoint sets (Neither follows)
+            _ => SyllogismProblem::create_disjoint_some(term_a, term_b, term_c),
+        }
     }
 }
 
@@ -207,20 +255,17 @@ impl ProblemGenerator for SyllogismGenerator {
         vec![
             "barbara_aaa".to_string(),
             "celarent_eae".to_string(),
+            "camestres_aee".to_string(),
             "darii_aii".to_string(),
+            "only_two_follows".to_string(),
+            "ferio_eio".to_string(),
             "disjoint_invalid".to_string(),
             "strategy_drill".to_string(),
         ]
     }
 
     fn target_latency_ms(&self, difficulty_level: u32) -> u64 {
-        match difficulty_level {
-            1 => 20_000,
-            2 => 25_000,
-            3 => 30_000,
-            4 => 35_000,
-            _ => 40_000,
-        }
+        Self::target_latency(difficulty_level)
     }
 
     fn generate(

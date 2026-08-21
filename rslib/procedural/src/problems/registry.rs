@@ -26,10 +26,11 @@ use crate::problems::generators::{
     TimeSpeedDistanceGenerator, TimeSpeedDistanceValidator, TimeWorkGenerator, TimeWorkValidator,
 };
 use crate::reasoning::generators::{
-    CodedExpressionsGenerator, CodedExpressionsValidator, DataSufficiencyGenerator,
-    DataSufficiencyValidator, FloorGridGenerator, FloorGridValidator, LogicDagGenerator,
-    LogicDagValidator, RelationsGenerator, RelationsValidator, SeatingGenerator, SeatingValidator,
-    SeriesGenerator, SeriesValidator, SyllogismGenerator, SyllogismValidator,
+    BloodRelationsGenerator, BloodRelationsValidator, CodedExpressionsGenerator,
+    CodedExpressionsValidator, DataSufficiencyGenerator, DataSufficiencyValidator,
+    DirectionSenseGenerator, DirectionSenseValidator, FloorGridGenerator, FloorGridValidator,
+    LogicDagGenerator, LogicDagValidator, RelationsGenerator, RelationsValidator, SeatingGenerator,
+    SeatingValidator, SeriesGenerator, SeriesValidator, SyllogismGenerator, SyllogismValidator,
 };
 use crate::problems::validator::{PercentageSuccessiveValidator, ProblemValidator};
 use crate::problems::ProblemInstance;
@@ -249,6 +250,14 @@ impl ProblemRegistry {
         // 30. Graph/Relational (Coded Expressions)
         self.register_generator(Arc::new(CodedExpressionsGenerator));
         self.register_validator(Arc::new(CodedExpressionsValidator));
+
+        // 31. Blood Relations (Kinship Graph)
+        self.register_generator(Arc::new(BloodRelationsGenerator));
+        self.register_validator(Arc::new(BloodRelationsValidator));
+
+        // 32. Direction Sense (Spatial Orientation)
+        self.register_generator(Arc::new(DirectionSenseGenerator));
+        self.register_validator(Arc::new(DirectionSenseValidator));
     }
 
     /// Build canonical full registry containing all Mathematics, Physics, Chemistry, and Reasoning families.

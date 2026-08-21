@@ -1,0 +1,427 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "catalog_version": "1.0.0",
+  "generated_at": "2026-08-21T20:08:00Z",
+  "audit_phase": "Phase 18 — Source-Grounded Difficulty & Representative Archetype Audit",
+  "domains": [
+    {
+      "domain": "Mathematics",
+      "chapters_audited": [
+        {
+          "chapter": "LCM-HCF",
+          "skill_id": "math.number_system.lcm_hcf",
+          "total_source_items": 29,
+          "solvable_questions": 16,
+          "reference_only_items": 13,
+          "archetypes": [
+            {
+              "archetype_id": "arch.math.lcm_hcf.prime_grid",
+              "name": "Multi-Integer Prime Factorization Grid",
+              "schema_id": "schema.prime-factor-index-grid",
+              "family_id": "family.Arithmetic::LCM-HCF",
+              "difficulty_range": [1.0, 3.0],
+              "natural_levels": [1, 2, 3],
+              "representative_question_ids": ["q-lcm-hcf-001", "q-lcm-hcf-002", "q-lcm-hcf-003", "q-lcm-hcf-014"],
+              "difficulty_drivers": [
+                "number_magnitude",
+                "count_of_integers",
+                "prime_factor_overlap_density"
+              ],
+              "variant_categories": ["parameter", "isomorphic", "structural"],
+              "target_time_ms_by_level": { "1": 30000, "2": 45000, "3": 60000 },
+              "generator_contract": {
+                "invariants": ["Canonical prime factorization law: LCM takes maximum exponent, HCF takes minimum exponent"],
+                "adjustable_parameters": ["number_count (3 to 5)", "magnitude (2-digit to 4-digit)", "factor_bases (2, 3, 5, 7, 11, 13)"],
+                "structural_transformations": ["LCM calculation -> HCF calculation -> Repunit algebraic factorization"],
+                "validity_constraints": ["All input integers must be positive integers > 1", "No two input integers may be identical"],
+                "transfer_boundary": "Becomes algebraic polynomial HCF when base terms contain variable exponents"
+              },
+              "source_provenance": {
+                "anchor_pyq": "RRB ALP 2018 (Shift 1)",
+                "source_type": "AUTHENTIC_PYQ"
+              }
+            },
+            {
+              "archetype_id": "arch.math.lcm_hcf.fractional",
+              "name": "Rational & Fractional LCM/HCF",
+              "schema_id": "schema.fraction-decimal-lcm-hcf",
+              "family_id": "family.Arithmetic::LCM-HCF",
+              "difficulty_range": [2.0, 3.0],
+              "natural_levels": [2, 3],
+              "representative_question_ids": ["q-lcm-hcf-004"],
+              "difficulty_drivers": [
+                "fraction_count",
+                "unsimplified_ratios",
+                "co-primality_of_denominators"
+              ],
+              "variant_categories": ["structural", "parameter"],
+              "target_time_ms_by_level": { "2": 40000, "3": 55000 },
+              "generator_contract": {
+                "invariants": ["HCF(a/b, c/d) = HCF(a,c)/LCM(b,d)", "LCM(a/b, c/d) = LCM(a,c)/HCF(b,d)"],
+                "adjustable_parameters": ["numerator_values", "denominator_values", "term_count (2 to 4)"],
+                "structural_transformations": ["Proper fractions -> Improper fractions -> Decimals converted to fractions"],
+                "validity_constraints": ["Denominators must be non-zero", "Fractions must be expressed in lowest reduced terms before formula application"],
+                "transfer_boundary": "Becomes algebraic rational expression when variables appear in denominators"
+              },
+              "source_provenance": {
+                "anchor_pyq": "SSC CGL 2023 (Tier-1 Shift 2)",
+                "source_type": "AUTHENTIC_PYQ"
+              }
+            },
+            {
+              "archetype_id": "arch.math.lcm_hcf.product_coprime",
+              "name": "Product Formula & Coprime Factor Pairs",
+              "schema_id": "schema.product-formula-coprime-pairs",
+              "family_id": "family.Arithmetic::LCM-HCF",
+              "difficulty_range": [2.0, 4.0],
+              "natural_levels": [2, 3, 4],
+              "representative_question_ids": ["q-lcm-hcf-005", "q-lcm-hcf-013", "q-lcm-hcf-015"],
+              "difficulty_drivers": [
+                "indirect_formulation",
+                "system_of_quadratic_equations",
+                "algebraic_parameterization"
+              ],
+              "variant_categories": ["parameter", "structural", "multi_concept"],
+              "target_time_ms_by_level": { "2": 35000, "3": 50000, "4": 70000 },
+              "generator_contract": {
+                "invariants": ["HCF * LCM = A * B for two positive integers", "A = H*x, B = H*y with gcd(x,y)=1"],
+                "adjustable_parameters": ["HCF_value", "LCM_value", "coprime_ratio_pairs (x,y)", "target_query (other number, mean, sum of squares)"],
+                "structural_transformations": ["Direct single unknown recovery -> Sum/Difference equations -> Homogeneous quadratic factoring"],
+                "validity_constraints": ["LCM must be an exact integer multiple of HCF", "Coprime components must satisfy gcd(x,y) = 1"],
+                "transfer_boundary": "Extends to 3 numbers where H*L != A*B*C"
+              },
+              "source_provenance": {
+                "anchor_pyq": "SSC CHSL 2023 / SSC CPO 2024",
+                "source_type": "AUTHENTIC_PYQ"
+              }
+            },
+            {
+              "archetype_id": "arch.math.lcm_hcf.hcf_remainders",
+              "name": "Constrained Divisor with Remainder (HCF)",
+              "schema_id": "schema.hcf-remainders-square-tiles",
+              "family_id": "family.Arithmetic::LCM-HCF",
+              "difficulty_range": [3.0, 4.0],
+              "natural_levels": [3, 4],
+              "representative_question_ids": ["q-lcm-hcf-006", "q-lcm-hcf-007", "q-lcm-hcf-016"],
+              "difficulty_drivers": [
+                "uniform_vs_distinct_remainders",
+                "magnitude_of_dividends",
+                "spatial_2d_tiling_context"
+              ],
+              "variant_categories": ["structural", "contextual"],
+              "target_time_ms_by_level": { "3": 50000, "4": 65000 },
+              "generator_contract": {
+                "invariants": ["Divisor = HCF(N1 - r1, N2 - r2, N3 - r3)", "Tile Count = (Length * Width) / HCF^2"],
+                "adjustable_parameters": ["dividend_values", "remainder_values", "room_dimensions"],
+                "structural_transformations": ["Uniform remainder subtraction -> Distinct remainder vector subtraction -> 2D Area paving"],
+                "validity_constraints": ["Each remainder r_i must be strictly less than the calculated HCF", "N_i - r_i must be positive"],
+                "transfer_boundary": "Becomes modular algebra congruence when divisors are unknown"
+              },
+              "source_provenance": {
+                "anchor_pyq": "HCF & LCM Classroom Compendium",
+                "source_type": "CURATED_SOURCE"
+              }
+            },
+            {
+              "archetype_id": "arch.math.lcm_hcf.lcm_remainders",
+              "name": "Cyclic & Periodic Multiples with Remainder (LCM)",
+              "schema_id": "schema.lcm-remainders-periodic-events",
+              "family_id": "family.Arithmetic::LCM-HCF",
+              "difficulty_range": [3.0, 5.0],
+              "natural_levels": [3, 4, 5],
+              "representative_question_ids": ["q-lcm-hcf-008", "q-lcm-hcf-009"],
+              "difficulty_drivers": [
+                "constant_remainder_vs_common_difference",
+                "modular_multiple_constraint",
+                "indirect_digit_sum_query"
+              ],
+              "variant_categories": ["structural", "transfer"],
+              "target_time_ms_by_level": { "3": 50000, "4": 65000, "5": 80000 },
+              "generator_contract": {
+                "invariants": ["Form N = k * LCM(d1, d2, ...) + r", "Periodic coincidence period = LCM(p1, p2, ...)"],
+                "adjustable_parameters": ["divisors_list", "remainder_r", "multiple_constraint_m", "query_format (value, digit sum, time of day)"],
+                "structural_transformations": ["Smallest integer -> N-digit bound -> Multi-constraint linear congruence optimization"],
+                "validity_constraints": ["Divisors must be distinct integers > 1", "Constrained multiplier must yield a unique minimal integer solution"],
+                "transfer_boundary": "Chinese Remainder Theorem with non-uniform differences"
+              },
+              "source_provenance": {
+                "anchor_pyq": "HCF & LCM Advanced Problem Sheet",
+                "source_type": "CURATED_SOURCE"
+              }
+            },
+            {
+              "archetype_id": "arch.math.lcm_hcf.algebraic_polynomials",
+              "name": "Algebraic Polynomial HCF/LCM",
+              "schema_id": "schema.algebraic-polynomials-lcm-hcf",
+              "family_id": "family.Algebra::Polynomials",
+              "difficulty_range": [4.0, 5.0],
+              "natural_levels": [4, 5],
+              "representative_question_ids": ["q-lcm-hcf-010"],
+              "difficulty_drivers": [
+                "polynomial_degree",
+                "identities_factoring_depth",
+                "composite_linear_factors"
+              ],
+              "variant_categories": ["structural", "multi_concept"],
+              "target_time_ms_by_level": { "4": 65000, "5": 85000 },
+              "generator_contract": {
+                "invariants": ["HCF = product of lowest powers of common irreducible polynomial factors"],
+                "adjustable_parameters": ["polynomial_degree (2 to 4)", "factoring_identities (difference of squares, perfect cube, common variable)"],
+                "structural_transformations": ["Quadratic trinomials -> Cubic expressions -> Quartic difference of squares"],
+                "validity_constraints": ["Polynomials must have integer coefficients", "At least one common non-trivial algebraic factor must exist"],
+                "transfer_boundary": "Multivariate rational expressions"
+              },
+              "source_provenance": {
+                "anchor_pyq": "DP Head Constable 2022",
+                "source_type": "AUTHENTIC_PYQ"
+              }
+            },
+            {
+              "archetype_id": "arch.math.lcm_hcf.binomial_exponents",
+              "name": "Binomial Power Exponent GCD",
+              "schema_id": "schema.binomial-exponents-lcm-hcf",
+              "family_id": "family.Arithmetic::NumberTheory",
+              "difficulty_range": [2.0, 3.0],
+              "natural_levels": [2, 3],
+              "representative_question_ids": ["q-lcm-hcf-011"],
+              "difficulty_drivers": [
+                "exponent_magnitude",
+                "base_value",
+                "sign_parity_plus_vs_minus"
+              ],
+              "variant_categories": ["structural", "parameter"],
+              "target_time_ms_by_level": { "2": 30000, "3": 45000 },
+              "generator_contract": {
+                "invariants": ["gcd(a^m - 1, a^n - 1) = a^gcd(m,n) - 1"],
+                "adjustable_parameters": ["base_a (usually 2, 3, 5, 10)", "exponent_m", "exponent_n"],
+                "structural_transformations": ["Difference of powers (a^m - 1) -> Sum of odd powers (a^m + 1)"],
+                "validity_constraints": ["Base a >= 2", "Exponents m, n >= 1"],
+                "transfer_boundary": "Mersenne primes and generalized cyclotomic polynomials"
+              },
+              "source_provenance": {
+                "anchor_pyq": "RPF Constable 2025",
+                "source_type": "AUTHENTIC_PYQ"
+              }
+            },
+            {
+              "archetype_id": "arch.math.lcm_hcf.euclidean_reversal",
+              "name": "Euclidean Division Algorithm Reversal",
+              "schema_id": "schema.euclidean-algorithm-reversal",
+              "family_id": "family.Arithmetic::NumberTheory",
+              "difficulty_range": [4.0, 5.0],
+              "natural_levels": [4, 5],
+              "representative_question_ids": ["q-lcm-hcf-012"],
+              "difficulty_drivers": [
+                "step_count_of_quotients",
+                "final_divisor_magnitude",
+                "composite_target_query_lcm"
+              ],
+              "variant_categories": ["structural", "multi_concept"],
+              "target_time_ms_by_level": { "4": 65000, "5": 85000 },
+              "generator_contract": {
+                "invariants": ["r_{k-2} = q_k * r_{k-1} + r_k with r_final = 0"],
+                "adjustable_parameters": ["quotient_sequence (e.g. 1, 5, 8)", "final_hcf_divisor"],
+                "structural_transformations": ["Recover smaller number -> Recover larger number -> Compute LCM or Sum of numbers"],
+                "validity_constraints": ["Quotients must be positive integers >= 1", "Final divisor must be >= 1"],
+                "transfer_boundary": "Continued fractions expansion and Bezout identity coefficients"
+              },
+              "source_provenance": {
+                "anchor_pyq": "RRB NTPC 2025",
+                "source_type": "AUTHENTIC_PYQ"
+              }
+            }
+          ]
+        }
+      ],
+      "generator_families_audited": [
+        {
+          "family_id": "family.math.percentage.successive",
+          "template_ref": "math.percentage.successive.v1",
+          "natural_difficulty_range": [1, 4],
+          "variants": [
+            { "variant": "forward_two_step", "difficulty_level": 1, "target_time_ms": 30000, "structural_demand": "2 sequential multipliers forward" },
+            { "variant": "forward_two_step_mixed", "difficulty_level": 2, "target_time_ms": 35000, "structural_demand": "Opposing signs (+a%, -b%) forward" },
+            { "variant": "reverse_initial", "difficulty_level": 3, "target_time_ms": 50000, "structural_demand": "Variable inversion (solve for initial given final)" },
+            { "variant": "forward_three_step", "difficulty_level": 4, "target_time_ms": 65000, "structural_demand": "3 sequential compounding transformations" },
+            { "variant": "net_equivalent_change", "difficulty_level": 5, "target_time_ms": 55000, "structural_demand": "Abstract formula / base-independent net percentage" }
+          ],
+          "monotonicity_verdict": "MONOTONIC_VALID",
+          "monotonicity_notes": "Levels scale from 2-step forward to inverse division to 3-step compounding."
+        },
+        {
+          "family_id": "family.algebra.linear_equations",
+          "template_ref": "algebra.linear_equations.v1",
+          "natural_difficulty_range": [1, 5],
+          "variants": [
+            { "variant": "two_step_basic", "difficulty_level": 1, "target_time_ms": 25000, "structural_demand": "ax + b = c" },
+            { "variant": "variables_both_sides", "difficulty_level": 2, "target_time_ms": 35000, "structural_demand": "ax + b = cx + d" },
+            { "variant": "distributive", "difficulty_level": 3, "target_time_ms": 50000, "structural_demand": "a(bx + c) = dx + e" },
+            { "variant": "fractional_coefficients", "difficulty_level": 4, "target_time_ms": 65000, "structural_demand": "Fractional clearing with denominators" },
+            { "variant": "word_problem", "difficulty_level": 5, "target_time_ms": 60000, "structural_demand": "Semantic translation from word problem to equation" }
+          ],
+          "monotonicity_verdict": "MONOTONIC_VALID",
+          "monotonicity_notes": "Exemplary structural progression across all 5 discrete levels."
+        },
+        {
+          "family_id": "family.arithmetic.profit_loss",
+          "template_ref": "arithmetic.profit_loss.v1",
+          "natural_difficulty_range": [1, 5],
+          "variants": [
+            { "variant": "direct_profit_loss", "difficulty_level": 1, "target_time_ms": 25000, "structural_demand": "Given CP and SP, find profit/loss %" },
+            { "variant": "calculate_cp_sp", "difficulty_level": 2, "target_time_ms": 35000, "structural_demand": "Given CP and profit%, find SP (or reverse)" },
+            { "variant": "marked_price_discount", "difficulty_level": 3, "target_time_ms": 50000, "structural_demand": "Markup % and single Discount %, net profit %" },
+            { "variant": "successive_discounts", "difficulty_level": 4, "target_time_ms": 65000, "structural_demand": "Dual successive discounts on MP" },
+            { "variant": "chained_transaction", "difficulty_level": 5, "target_time_ms": 75000, "structural_demand": "A -> B -> C sequential resale chain" }
+          ],
+          "monotonicity_verdict": "MONOTONIC_VALID",
+          "monotonicity_notes": "Clear economic schema ladder."
+        }
+      ]
+    },
+    {
+      "domain": "Reasoning",
+      "chapters_audited": [
+        {
+          "chapter": "Syllogism-Seating-Arrangement",
+          "skill_id": "reasoning-study",
+          "total_source_items": 6,
+          "solvable_questions": 2,
+          "reference_only_items": 4,
+          "archetypes": [
+            {
+              "archetype_id": "arch.reasoning.syllogism_categorical",
+              "name": "Categorical Formal Syllogism (Euler / Venn Deduction)",
+              "schema_id": "schema.syllogism-either-or-possibility",
+              "family_id": "family.Logical Deduction::Syllogisms",
+              "difficulty_range": [1.0, 3.0],
+              "natural_levels": [1, 2, 3],
+              "representative_question_ids": ["reas-q-001"],
+              "difficulty_drivers": [
+                "quantifier_mix (All, Some, No, Some-Not)",
+                "possibility_modality",
+                "complementary_either_or_pairs"
+              ],
+              "variant_categories": ["structural", "isomorphic"],
+              "target_time_ms_by_level": { "1": 20000, "2": 25000, "3": 35000 },
+              "generator_contract": {
+                "invariants": ["Aristotelian syllogistic validity rules; universal affirmative distributes subject, negative distributes predicate"],
+                "adjustable_parameters": ["term_nouns (domain entities)", "premise_quantifiers", "conclusion_quantifiers"],
+                "structural_transformations": ["Barbara (All A B, All B C) -> Celarent (All A B, No B C) -> Darii (All A B, Some C A) -> Disjoint Fallacy"],
+                "validity_constraints": ["Two particular premises yield no valid deduction", "Two negative premises yield no valid deduction"],
+                "transfer_boundary": "Multi-premise DAG networks with conditional implications"
+              },
+              "source_provenance": {
+                "anchor_pyq": "IBPS PO 2020 Prelims",
+                "source_type": "AUTHENTIC_PYQ"
+              }
+            },
+            {
+              "archetype_id": "arch.reasoning.seating_linear_csp",
+              "name": "Linear Seating Arrangement Constraint Satisfaction",
+              "schema_id": "schema.linear-seating-definite-anchor",
+              "family_id": "family.Analytical Reasoning::SeatingArrangement",
+              "difficulty_range": [1.0, 4.0],
+              "natural_levels": [1, 2, 3, 4],
+              "representative_question_ids": ["reas-q-002"],
+              "difficulty_drivers": [
+                "entity_count (4 to 7 people)",
+                "fixed_anchor_presence",
+                "relative_spacing_and_facing_direction"
+              ],
+              "variant_categories": ["structural", "parameter"],
+              "target_time_ms_by_level": { "1": 30000, "2": 40000, "3": 55000, "4": 70000 },
+              "generator_contract": {
+                "invariants": ["Unambiguous single unique solution across 1D discrete slots 1..N"],
+                "adjustable_parameters": ["people_count (4..7)", "person_names", "fixed_slot_index", "spacing_distance"],
+                "structural_transformations": ["Immediate adjacency -> Fixed anchor + separated interval -> Parity endpoints"],
+                "validity_constraints": ["Total constraints must produce exactly 1 valid assignment (no contradictory or under-constrained configurations)"],
+                "transfer_boundary": "Circular seating with facing inside/outside or 2D floor grid matrix"
+              },
+              "source_provenance": {
+                "anchor_pyq": "RRB NTPC 2021 CBT-1",
+                "source_type": "AUTHENTIC_PYQ"
+              }
+            }
+          ]
+        }
+      ],
+      "generator_families_audited": [
+        {
+          "family_id": "family.reasoning.series.patterns",
+          "template_ref": "reasoning.series.patterns.v1",
+          "natural_difficulty_range": [1, 5],
+          "variants": [
+            { "variant": "constant_diff", "difficulty_level": 1, "target_time_ms": 20000, "structural_demand": "1st order constant difference" },
+            { "variant": "increasing_diff", "difficulty_level": 2, "target_time_ms": 25000, "structural_demand": "2nd order increasing difference" },
+            { "variant": "geometric_or_square", "difficulty_level": 3, "target_time_ms": 30000, "structural_demand": "Multiplicative ratio or square differences" },
+            { "variant": "alternating_dual", "difficulty_level": 4, "target_time_ms": 40000, "structural_demand": "Interleaved dual series or multiply-add" },
+            { "variant": "alpha_shift", "difficulty_level": 5, "target_time_ms": 35000, "structural_demand": "Modular alphabet position arithmetic" }
+          ],
+          "monotonicity_verdict": "MONOTONIC_VALID",
+          "monotonicity_notes": "Inductive rule complexity increases monotonically."
+        },
+        {
+          "family_id": "family.reasoning.relations.graph",
+          "template_ref": "reasoning.relations.graph.v1",
+          "natural_difficulty_range": [1, 3],
+          "variants": [
+            { "variant": "blood_relations_odd", "difficulty_level": 1, "target_time_ms": 20000, "structural_demand": "Kinship generation tree" },
+            { "variant": "direction_sense_even", "difficulty_level": 2, "target_time_ms": 25000, "structural_demand": "2D vector Manhattan path" }
+          ],
+          "monotonicity_verdict": "MONOTONIC_BROKEN_SKILL_SHIFT",
+          "monotonicity_notes": "CRITICAL: Alternates between Blood Relations and Direction Sense across even/odd difficulty levels. Must be split into two separate problem families."
+        },
+        {
+          "family_id": "family.reasoning.syllogism.categorical",
+          "template_ref": "reasoning.syllogism.categorical.v1",
+          "natural_difficulty_range": [1, 3],
+          "variants": [
+            { "variant": "uniform_random_mode", "difficulty_level": 1, "target_time_ms": 20000, "structural_demand": "Uniform 0..5 mode selection" }
+          ],
+          "monotonicity_verdict": "MONOTONIC_BROKEN_FLAT_DISTRIBUTION",
+          "monotonicity_notes": "CRITICAL: Ignores difficulty_level parameter in core generator logic and selects uniform random classical forms across all levels."
+        }
+      ]
+    }
+  ],
+  "cross_artifact_consistency_matrix": {
+    "problem_patterns_count": 10,
+    "practice_questions_count": 18,
+    "runtime_catalog_families_count": 22,
+    "runtime_catalog_schemas_count": 22,
+    "inconsistencies_detected": [
+      {
+        "issue_id": "ID_INCONSISTENCY_01",
+        "severity": "HIGH",
+        "description": "ProblemPatterns and PracticeQuestions in LCM-HCF use arbitrary schema IDs ('schema.prime-factor-index-grid', 'schema.product-formula-coprime-pairs') that differ from procedural catalog schema constants ('number_system_remainders_modular', 'arithmetic_ratio'). Ingester normalizes them into new schema objects dynamically, but static linking requires unified canonical names."
+      },
+      {
+        "issue_id": "SKILL_COUPLING_02",
+        "severity": "HIGH",
+        "description": "Reasoning generator RelationsGenerator bundles Blood Relations and Direction Sense into a single family, alternating them on odd/even difficulty levels."
+      },
+      {
+        "issue_id": "SYLLOGISM_DIFFICULTY_BYPASS_03",
+        "severity": "MEDIUM",
+        "description": "SyllogismGenerator does not branch classical logic forms based on difficulty_level."
+      }
+    ]
+  },
+  "compact_apkg_metadata_recommendation": {
+    "required_card_payload_fields": [
+      "proc_schema",
+      "seed_mode",
+      "difficulty_hint",
+      "variant_hint"
+    ],
+    "forbidden_payload_fields": [
+      "learner_history",
+      "skill_state",
+      "remediation_queue",
+      "generated_question_banks",
+      "duplicated_solution_blobs",
+      "runtime_telemetry"
+    ]
+  },
+  "verdict": "FOUNDATION GOOD, NEEDS CALIBRATION"
+}

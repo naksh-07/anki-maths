@@ -22,9 +22,20 @@ pub const TEMPLATE_REASONING_FLOOR_GRID_V1: &str = "reasoning.floor_grid.csp.v1"
 pub struct FloorGridGenerator;
 
 impl FloorGridGenerator {
+    pub fn target_latency(difficulty_level: u32) -> u64 {
+        match difficulty_level {
+            1 => 30_000,
+            2 => 35_000,
+            3 => 45_000,
+            4 => 55_000,
+            _ => 65_000,
+        }
+    }
+
     pub fn generate_problem(seed: u64, difficulty_level: u32, variant: Option<&str>) -> ProblemInstance {
         let mut rng = StdRng::seed_from_u64(seed);
         let is_strategy_drill = variant == Some("strategy_drill") || variant == Some("decision_point");
+        let target_time_ms = Self::target_latency(difficulty_level);
 
         let total_slots = match difficulty_level {
             1 => 5,
@@ -159,7 +170,7 @@ impl FloorGridGenerator {
         .with_solution_graph(solution_graph)
         .with_metadata(json!({
             "difficulty_level": difficulty_level,
-            "target_time_ms": 45_000,
+            "target_time_ms": target_time_ms,
             "domain": "reasoning",
             "generator": TEMPLATE_REASONING_FLOOR_GRID_V1,
         }))
@@ -179,8 +190,8 @@ impl ProblemGenerator for FloorGridGenerator {
         vec!["default".to_string(), "strategy_drill".to_string()]
     }
 
-    fn target_latency_ms(&self, _difficulty_level: u32) -> u64 {
-        45_000
+    fn target_latency_ms(&self, difficulty_level: u32) -> u64 {
+        Self::target_latency(difficulty_level)
     }
 
     fn generate(

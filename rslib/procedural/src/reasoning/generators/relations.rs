@@ -28,6 +28,16 @@ const NAME_POOL: &[&str] = &[
 ];
 
 impl RelationsGenerator {
+    pub fn target_latency(difficulty_level: u32) -> u64 {
+        match difficulty_level {
+            1 => 20_000,
+            2 => 25_000,
+            3 => 30_000,
+            4 => 35_000,
+            _ => 40_000,
+        }
+    }
+
     pub fn generate_problem(seed: u64, difficulty_level: u32, variant: Option<&str>) -> ProblemInstance {
         let mut rng = StdRng::seed_from_u64(seed);
 
@@ -66,6 +76,7 @@ impl RelationsGenerator {
         difficulty: u32,
         is_strategy_drill: bool,
     ) -> ProblemInstance {
+        let target_time_ms = Self::target_latency(difficulty);
         let stmts_text: Vec<String> = prob.statements.iter().map(|s| s.text()).collect();
         let prompt = format!(
             "{}\n\n**Question:** How is **{}** related to **{}**?",
@@ -165,7 +176,7 @@ impl RelationsGenerator {
         .with_solution_graph(graph)
         .with_metadata(json!({
             "difficulty_level": difficulty,
-            "target_time_ms": 30_000,
+            "target_time_ms": target_time_ms,
             "domain": "reasoning",
             "generator": TEMPLATE_REASONING_RELATIONS_V1,
         }))
@@ -177,6 +188,7 @@ impl RelationsGenerator {
         difficulty: u32,
         is_strategy_drill: bool,
     ) -> ProblemInstance {
+        let target_time_ms = Self::target_latency(difficulty);
         let prompt = format!(
             "A person starts from a fixed point O and performs the following walk:\n{}\n\n\
              **Question:** In which **direction** is the person located relative to the starting point?",
@@ -274,7 +286,7 @@ impl RelationsGenerator {
         .with_solution_graph(graph)
         .with_metadata(json!({
             "difficulty_level": difficulty,
-            "target_time_ms": 30_000,
+            "target_time_ms": target_time_ms,
             "domain": "reasoning",
             "generator": TEMPLATE_REASONING_RELATIONS_V1,
         }))
@@ -301,13 +313,7 @@ impl ProblemGenerator for RelationsGenerator {
     }
 
     fn target_latency_ms(&self, difficulty_level: u32) -> u64 {
-        match difficulty_level {
-            1 => 20_000,
-            2 => 25_000,
-            3 => 30_000,
-            4 => 35_000,
-            _ => 40_000,
-        }
+        Self::target_latency(difficulty_level)
     }
 
     fn generate(
@@ -361,11 +367,18 @@ impl ProblemValidator for RelationsValidator {
         let clean_exp = expected_str.to_lowercase().replace('-', " ").replace('_', " ");
 
         let is_correct = clean_sub == clean_exp
+            || clean_sub.contains(&clean_exp)
             || (clean_exp.contains("uncle") && clean_sub.contains("uncle"))
             || (clean_exp.contains("aunt") && clean_sub.contains("aunt"))
             || (clean_exp.contains("grandfather") && clean_sub.contains("grandfather"))
+            || (clean_exp.contains("grandmother") && clean_sub.contains("grandmother"))
             || (clean_exp.contains("cousin") && clean_sub.contains("cousin"))
-            || (clean_exp.contains("nephew") && clean_sub.contains("nephew"));
+            || (clean_exp.contains("nephew") && clean_sub.contains("nephew"))
+            || (clean_exp.contains("niece") && clean_sub.contains("niece"))
+            || (clean_exp.contains("north") && clean_sub == "north")
+            || (clean_exp.contains("south") && clean_sub == "south")
+            || (clean_exp.contains("east") && clean_sub == "east")
+            || (clean_exp.contains("west") && clean_sub == "west");
 
         if is_correct {
             AnswerEvaluation::correct(1.0, time_taken_ms, target_time_ms)

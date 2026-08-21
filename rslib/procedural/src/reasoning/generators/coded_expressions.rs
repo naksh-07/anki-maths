@@ -22,9 +22,20 @@ pub const TEMPLATE_REASONING_CODED_EXPRESSIONS_V1: &str = "reasoning.coded_expre
 pub struct CodedExpressionsGenerator;
 
 impl CodedExpressionsGenerator {
+    pub fn target_latency(difficulty_level: u32) -> u64 {
+        match difficulty_level {
+            1 => 25_000,
+            2 => 30_000,
+            3 => 40_000,
+            4 => 50_000,
+            _ => 60_000,
+        }
+    }
+
     pub fn generate_problem(seed: u64, difficulty_level: u32, variant: Option<&str>) -> ProblemInstance {
         let mut rng = StdRng::seed_from_u64(seed);
         let is_strategy_drill = variant == Some("strategy_drill") || variant == Some("decision_point");
+        let target_time_ms = Self::target_latency(difficulty_level);
 
         let puzzle = CodedExpressionsPuzzle::generate_dynamic(&mut rng, difficulty_level);
 
@@ -146,7 +157,7 @@ impl CodedExpressionsGenerator {
         .with_solution_graph(solution_graph)
         .with_metadata(json!({
             "difficulty_level": difficulty_level,
-            "target_time_ms": 40_000,
+            "target_time_ms": target_time_ms,
             "domain": "reasoning",
             "generator": TEMPLATE_REASONING_CODED_EXPRESSIONS_V1,
         }))
@@ -166,8 +177,8 @@ impl ProblemGenerator for CodedExpressionsGenerator {
         vec!["default".to_string(), "strategy_drill".to_string()]
     }
 
-    fn target_latency_ms(&self, _difficulty_level: u32) -> u64 {
-        40_000
+    fn target_latency_ms(&self, difficulty_level: u32) -> u64 {
+        Self::target_latency(difficulty_level)
     }
 
     fn generate(

@@ -25,9 +25,12 @@ use crate::problems::catalog::{
     SCHEMA_COMBINED_MULTI_CONCEPT, SCHEMA_DIVISIBILITY, SCHEMA_GEOMETRY_TRIANGLES,
     SCHEMA_LINEAR_EQUATIONS, SCHEMA_LINEAR_INEQUALITIES, SCHEMA_MIXTURES_ALLIGATION,
     SCHEMA_PHYSICS_KINEMATICS, SCHEMA_PHYSICS_WORK_ENERGY, SCHEMA_PROFIT_LOSS, SCHEMA_RATIO,
-    SCHEMA_REASONING_RELATIONS, SCHEMA_REASONING_SEATING, SCHEMA_REASONING_SERIES,
-    SCHEMA_REASONING_SYLLOGISM, SCHEMA_REMAINDERS_MODULAR, SCHEMA_SUCCESSIVE_PERCENTAGE,
-    SCHEMA_TIME_SPEED_DISTANCE, SCHEMA_TIME_WORK,
+    SCHEMA_REASONING_BLOOD_RELATIONS, SCHEMA_REASONING_CODED_EXPRESSIONS,
+    SCHEMA_REASONING_DATA_SUFFICIENCY, SCHEMA_REASONING_DIRECTION_SENSE,
+    SCHEMA_REASONING_FLOOR_GRID, SCHEMA_REASONING_LOGIC_DAG, SCHEMA_REASONING_RELATIONS,
+    SCHEMA_REASONING_SEATING, SCHEMA_REASONING_SERIES, SCHEMA_REASONING_SYLLOGISM,
+    SCHEMA_REMAINDERS_MODULAR, SCHEMA_SUCCESSIVE_PERCENTAGE, SCHEMA_TIME_SPEED_DISTANCE,
+    SCHEMA_TIME_WORK,
 };
 use crate::problems::registry::ProblemRegistry;
 use crate::problems::validator::PercentageSuccessiveValidator;
@@ -232,8 +235,26 @@ impl ProceduralService {
             "reasoning.seating.constraint_satisfaction" | "reasoning.seating" | "seating_linear" | "seating" => {
                 SCHEMA_REASONING_SEATING
             }
-            "reasoning.relations.graph_inference" | "reasoning.relations" | "relations_graph" | "relations" | "blood_relations" | "direction" => {
+            "reasoning.relations.graph_inference" | "reasoning.relations" | "relations_graph" | "relations" => {
                 SCHEMA_REASONING_RELATIONS
+            }
+            "reasoning.blood_relations.kinship_graph" | "reasoning.blood_relations" | "blood_relations" => {
+                SCHEMA_REASONING_BLOOD_RELATIONS
+            }
+            "reasoning.direction_sense.spatial_orientation" | "reasoning.direction_sense" | "direction_sense" | "direction" => {
+                SCHEMA_REASONING_DIRECTION_SENSE
+            }
+            "reasoning.floor_grid.spatial_csp" | "reasoning.floor_grid" | "floor_grid" => {
+                SCHEMA_REASONING_FLOOR_GRID
+            }
+            "reasoning.logic_dag.multi_step_inference" | "reasoning.logic_dag" | "logic_dag" => {
+                SCHEMA_REASONING_LOGIC_DAG
+            }
+            "reasoning.data_sufficiency.constraint_sufficiency" | "reasoning.data_sufficiency" | "data_sufficiency" => {
+                SCHEMA_REASONING_DATA_SUFFICIENCY
+            }
+            "reasoning.coded_expressions.symbolic_operators" | "reasoning.coded_expressions" | "coded_expressions" => {
+                SCHEMA_REASONING_CODED_EXPRESSIONS
             }
             _ => return Ok(None),
         };

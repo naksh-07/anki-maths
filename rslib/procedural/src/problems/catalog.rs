@@ -52,6 +52,8 @@ pub const SKILL_REASONING_SERIES: &str = "reasoning.series.pattern_recognition";
 pub const SKILL_REASONING_SYLLOGISM: &str = "reasoning.syllogism.formal_inference";
 pub const SKILL_REASONING_SEATING: &str = "reasoning.seating.constraint_satisfaction";
 pub const SKILL_REASONING_RELATIONS: &str = "reasoning.relations.graph_inference";
+pub const SKILL_REASONING_BLOOD_RELATIONS: &str = "reasoning.blood_relations.kinship_graph";
+pub const SKILL_REASONING_DIRECTION_SENSE: &str = "reasoning.direction_sense.spatial_orientation";
 pub const SKILL_REASONING_FLOOR_GRID: &str = "reasoning.floor_grid.spatial_csp";
 pub const SKILL_REASONING_LOGIC_DAG: &str = "reasoning.logic_dag.multi_step_inference";
 pub const SKILL_REASONING_DATA_SUFFICIENCY: &str = "reasoning.data_sufficiency.constraint_sufficiency";
@@ -84,6 +86,10 @@ pub const FAMILY_REASONING_SEATING: &str = crate::reasoning::generators::FAMILY_
 pub const TEMPLATE_REASONING_SEATING_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_SEATING_V1;
 pub const FAMILY_REASONING_RELATIONS: &str = crate::reasoning::generators::FAMILY_REASONING_RELATIONS;
 pub const TEMPLATE_REASONING_RELATIONS_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_RELATIONS_V1;
+pub const FAMILY_REASONING_BLOOD_RELATIONS: &str = crate::reasoning::generators::FAMILY_REASONING_BLOOD_RELATIONS;
+pub const TEMPLATE_REASONING_BLOOD_RELATIONS_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_BLOOD_RELATIONS_V1;
+pub const FAMILY_REASONING_DIRECTION_SENSE: &str = crate::reasoning::generators::FAMILY_REASONING_DIRECTION_SENSE;
+pub const TEMPLATE_REASONING_DIRECTION_SENSE_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_DIRECTION_SENSE_V1;
 pub const FAMILY_REASONING_FLOOR_GRID: &str = crate::reasoning::generators::FAMILY_REASONING_FLOOR_GRID;
 pub const TEMPLATE_REASONING_FLOOR_GRID_V1: &str = crate::reasoning::generators::TEMPLATE_REASONING_FLOOR_GRID_V1;
 pub const FAMILY_REASONING_LOGIC_DAG: &str = crate::reasoning::generators::FAMILY_REASONING_LOGIC_DAG;
@@ -127,6 +133,8 @@ pub const SCHEMA_REASONING_SERIES: &str = "reasoning_series_patterns";
 pub const SCHEMA_REASONING_SYLLOGISM: &str = "reasoning_syllogism_categorical";
 pub const SCHEMA_REASONING_SEATING: &str = "reasoning_seating_linear";
 pub const SCHEMA_REASONING_RELATIONS: &str = "reasoning_relations_graph";
+pub const SCHEMA_REASONING_BLOOD_RELATIONS: &str = "reasoning_blood_relations";
+pub const SCHEMA_REASONING_DIRECTION_SENSE: &str = "reasoning_direction_sense";
 pub const SCHEMA_REASONING_FLOOR_GRID: &str = "reasoning_floor_grid_spatial_csp";
 pub const SCHEMA_REASONING_LOGIC_DAG: &str = "reasoning_logic_dag_multi_step_inference";
 pub const SCHEMA_REASONING_DATA_SUFFICIENCY: &str = "reasoning_data_sufficiency_determinacy";
@@ -893,6 +901,16 @@ impl MathsCatalog {
         store.insert_problem_family(&Self::coded_expressions_family())?;
         store.insert_schema(&Self::coded_expressions_schema())?;
 
+        // 31. Reasoning: Blood Relations (Kinship Graph)
+        store.insert_skill(&Self::blood_relations_skill())?;
+        store.insert_problem_family(&Self::blood_relations_family())?;
+        store.insert_schema(&Self::blood_relations_schema())?;
+
+        // 32. Reasoning: Direction Sense (Spatial Orientation)
+        store.insert_skill(&Self::direction_sense_skill())?;
+        store.insert_problem_family(&Self::direction_sense_family())?;
+        store.insert_schema(&Self::direction_sense_schema())?;
+
         Ok(())
     }
 
@@ -1591,6 +1609,92 @@ impl MathsCatalog {
         .with_config(serde_json::json!({
             "target_time_ms": 40_000,
             "difficulty": 3.0,
+            "domain": "reasoning",
+        }))
+    }
+
+    // 31. Reasoning: Blood Relations (Kinship Graph)
+    pub fn blood_relations_skill() -> Skill {
+        Skill::new(
+            SKILL_REASONING_BLOOD_RELATIONS,
+            Domain::Reasoning,
+            "Blood Relations and Kinship Graph Inference",
+            "Constructs genealogical kinship trees and deduces multi-hop family relationships across generational tiers.",
+        )
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 30_000,
+            "typical_difficulty": 2.5,
+            "domain_category": "reasoning.blood_relations",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn blood_relations_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_REASONING_BLOOD_RELATIONS,
+            SKILL_REASONING_BLOOD_RELATIONS,
+            Domain::Reasoning,
+            "Blood Relations Problem Family",
+            TEMPLATE_REASONING_BLOOD_RELATIONS_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn blood_relations_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_REASONING_BLOOD_RELATIONS,
+            SKILL_REASONING_BLOOD_RELATIONS,
+            FAMILY_REASONING_BLOOD_RELATIONS,
+            "Blood Relations Practice",
+            "Practice solving multi-generational family kinship graphs and relationship deduction.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 30_000,
+            "difficulty": 2.5,
+            "domain": "reasoning",
+        }))
+    }
+
+    // 32. Reasoning: Direction Sense (Spatial Orientation)
+    pub fn direction_sense_skill() -> Skill {
+        Skill::new(
+            SKILL_REASONING_DIRECTION_SENSE,
+            Domain::Reasoning,
+            "Direction Sense and 2D Spatial Orientation",
+            "Traces 2D coordinate displacement vectors, turns, and computes cardinal and ordinal directions relative to origin.",
+        )
+        .with_metadata(serde_json::json!({
+            "target_time_ms": 30_000,
+            "typical_difficulty": 2.5,
+            "domain_category": "reasoning.direction_sense",
+            "catalog_version": PROCEDURAL_CATALOG_VERSION,
+        }))
+    }
+
+    pub fn direction_sense_family() -> ProblemFamily {
+        ProblemFamily::new(
+            FAMILY_REASONING_DIRECTION_SENSE,
+            SKILL_REASONING_DIRECTION_SENSE,
+            Domain::Reasoning,
+            "Direction Sense Problem Family",
+            TEMPLATE_REASONING_DIRECTION_SENSE_V1,
+        )
+        .with_difficulty_range(1.0, 5.0)
+    }
+
+    pub fn direction_sense_schema() -> SchemaPracticeObject {
+        SchemaPracticeObject::new(
+            SCHEMA_REASONING_DIRECTION_SENSE,
+            SKILL_REASONING_DIRECTION_SENSE,
+            FAMILY_REASONING_DIRECTION_SENSE,
+            "Direction Sense Practice",
+            "Practice decomposing multi-turn walks into 2D orthogonal displacement vectors and determining final compass headings.",
+        )
+        .with_target_mastery(0.85)
+        .with_config(serde_json::json!({
+            "target_time_ms": 30_000,
+            "difficulty": 2.5,
             "domain": "reasoning",
         }))
     }

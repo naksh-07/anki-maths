@@ -20,10 +20,21 @@ use crate::reasoning::seating::SeatingPuzzle;
 pub struct SeatingGenerator;
 
 impl SeatingGenerator {
+    pub fn target_latency(difficulty_level: u32) -> u64 {
+        match difficulty_level {
+            1 => 25_000,
+            2 => 35_000,
+            3 => 40_000,
+            4 => 45_000,
+            _ => 50_000,
+        }
+    }
+
     pub fn generate_problem(seed: u64, difficulty_level: u32, variant: Option<&str>) -> ProblemInstance {
         let mut rng = StdRng::seed_from_u64(seed);
 
         let is_strategy_drill = variant == Some("strategy_drill") || variant == Some("decision_point");
+        let target_time_ms = Self::target_latency(difficulty_level);
 
         let total_slots = match difficulty_level {
             1 => 4,
@@ -160,7 +171,7 @@ impl SeatingGenerator {
         .with_solution_graph(graph)
         .with_metadata(json!({
             "difficulty_level": difficulty_level,
-            "target_time_ms": 35_000,
+            "target_time_ms": target_time_ms,
             "domain": "reasoning",
             "generator": TEMPLATE_REASONING_SEATING_V1,
         }))
@@ -186,13 +197,7 @@ impl ProblemGenerator for SeatingGenerator {
     }
 
     fn target_latency_ms(&self, difficulty_level: u32) -> u64 {
-        match difficulty_level {
-            1 => 25_000,
-            2 => 35_000,
-            3 => 40_000,
-            4 => 45_000,
-            _ => 50_000,
-        }
+        Self::target_latency(difficulty_level)
     }
 
     fn generate(
