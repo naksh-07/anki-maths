@@ -332,6 +332,10 @@ class Reviewer:
         if self.mw.pm.video_driver() == VideoDriver.Software:
             fade = "<script>qFade=0;</script>"
         return f"""
+<script>
+window.anki = window.anki || {{}};
+window.anki._state_mutation_key = "{self._state_mutation_key}";
+</script>
 <div id="_mark" hidden>&#x2605;</div>
 <div id="_flag" hidden>&#x2691;</div>
 {fade}

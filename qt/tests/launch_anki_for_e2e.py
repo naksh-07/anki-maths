@@ -106,7 +106,7 @@ def main() -> int:
             # Flush Python output immediately so Playwright captures it.
             "PYTHONUNBUFFERED": "1",
         }
-        env.pop("QTWEBENGINE_REMOTE_DEBUGGING", None)
+        env["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
         env.pop("QTWEBENGINE_CHROMIUM_FLAGS", None)
         proc = subprocess.Popen(
             [sys.executable, str(REPO_ROOT / "tools" / "run.py"), "-p", TEST_PROFILE],

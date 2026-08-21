@@ -101,68 +101,75 @@ impl UnifiedSelectionDecision {
             }
             LearningObjectKind::Remediation(ref rem) => match rem {
                 RemediationIntervention::ProceduralProblem(p)
-                | RemediationIntervention::TransferRetry(p) => p.clone(),
+                | RemediationIntervention::TransferRetry(p) => {
+                    let mut meta_map = p.metadata.as_object().cloned().unwrap_or_default();
+                    meta_map.insert("remediation_message".to_string(), serde_json::Value::String(self.selection_reason.clone()));
+                    ProblemInstance {
+                        metadata: serde_json::Value::Object(meta_map),
+                        ..p.clone()
+                    }
+                },
                 RemediationIntervention::ConceptCheck(c) => ProblemInstance::new(
                     crate::core::ProblemInstanceId::new(format!("inst-cc-{}", c.id)),
                     self.schema.problem_family_id.clone(),
                     0,
-                    serde_json::json!({
-                        "object_type": "concept_check",
-                        "concept_check": c,
-                        "remediation_message": "💡 Conceptual Check: Let's verify the core principle before proceeding."
-                    }),
+                    serde_json::json!({}),
                     c.prompt.clone(),
                     serde_json::json!({
                         "expected_option_id": c.expected_option_id,
                         "explanation": c.explanation
                     }),
-                ),
+                ).with_metadata(serde_json::json!({
+                    "object_type": "concept_check",
+                    "concept_check": c,
+                    "remediation_message": "💡 Conceptual Check: Let's verify the core principle before proceeding."
+                })),
                 RemediationIntervention::StrategyDrill(s) => ProblemInstance::new(
                     crate::core::ProblemInstanceId::new(format!("inst-sd-{}", s.id)),
                     self.schema.problem_family_id.clone(),
                     0,
-                    serde_json::json!({
-                        "object_type": "strategy_drill",
-                        "strategy_drill": s,
-                        "remediation_message": "🧭 Strategy Drill: Identify the optimal model/method before calculating."
-                    }),
+                    serde_json::json!({}),
                     s.prompt.clone(),
                     serde_json::json!({
                         "preferred_option_id": s.preferred_option_id,
                         "explanation": s.explanation
                     }),
-                ),
+                ).with_metadata(serde_json::json!({
+                    "object_type": "strategy_drill",
+                    "strategy_drill": s,
+                    "remediation_message": "🧭 Strategy Drill: Identify the optimal model/method before calculating."
+                })),
                 RemediationIntervention::WorkedExample(w) => ProblemInstance::new(
                     crate::core::ProblemInstanceId::new(format!("inst-we-{}", w.id)),
                     self.schema.problem_family_id.clone(),
                     0,
-                    serde_json::json!({
-                        "object_type": "worked_example",
-                        "worked_example": w,
-                        "remediation_message": "📖 Step-by-Step Worked Example: Review canonical solution method."
-                    }),
+                    serde_json::json!({}),
                     w.prompt.clone(),
                     serde_json::json!({
                         "canonical_steps": w.canonical_steps,
                         "method_rationale": w.method_rationale
                     }),
-                ),
+                ).with_metadata(serde_json::json!({
+                    "object_type": "worked_example",
+                    "worked_example": w,
+                    "remediation_message": "📖 Step-by-Step Worked Example: Review canonical solution method."
+                })),
                 RemediationIntervention::DeclarativeRecall(d) => ProblemInstance::new(
                     crate::core::ProblemInstanceId::new(format!("inst-dr-{}", d.id)),
                     self.schema.problem_family_id.clone(),
                     0,
-                    serde_json::json!({
-                        "object_type": "declarative_recall",
-                        "declarative_recall": d,
-                        "remediation_message": "🧠 Declarative Bridge: Recall prerequisite formula or concept."
-                    }),
+                    serde_json::json!({}),
                     format!("Declarative Recall: {}", d.prompt_summary),
                     serde_json::json!({
                         "formula_or_fact": d.formula_or_fact,
                         "target_anki_card_id": d.target_anki_card_id,
                         "target_anki_tag": d.target_anki_tag
                     }),
-                ),
+                ).with_metadata(serde_json::json!({
+                    "object_type": "declarative_recall",
+                    "declarative_recall": d,
+                    "remediation_message": "🧠 Declarative Bridge: Recall prerequisite formula or concept."
+                })),
                 RemediationIntervention::PrerequisiteReview(prereq_obj) => {
                     if let Some(ref p) = prereq_obj.executable_problem {
                         p.clone()
@@ -171,17 +178,17 @@ impl UnifiedSelectionDecision {
                             crate::core::ProblemInstanceId::new(format!("inst-pr-{}", prereq_obj.id)),
                             self.schema.problem_family_id.clone(),
                             0,
-                            serde_json::json!({
-                                "object_type": "prerequisite_review",
-                                "prerequisite_review": prereq_obj,
-                                "remediation_message": "⚠️ Prerequisite Foundation: Foundational skill reinforcement recommended."
-                            }),
+                            serde_json::json!({}),
                             format!(
                                 "Prerequisite Recommendation: {}\n{}",
                                 prereq_obj.recommendation_summary, prereq_obj.advisory_message
                             ),
                             serde_json::json!({"ready": false}),
-                        )
+                        ).with_metadata(serde_json::json!({
+                            "object_type": "prerequisite_review",
+                            "prerequisite_review": prereq_obj,
+                            "remediation_message": "⚠️ Prerequisite Foundation: Foundational skill reinforcement recommended."
+                        }))
                     }
                 }
                 RemediationIntervention::RepresentationDrill(r) => ProblemInstance::new(

@@ -346,58 +346,136 @@ impl Collection {
         ) {
             card.last_review_time = Some(answer.answered_at.as_secs());
         }
-        if let Some(data) = answer.custom_data.take() {
-            if data.contains("proceduralRemediation") {
-                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) {
-                    if let Some(remediation) = parsed.pointer("/studylab/proceduralRemediation") {
-                        if remediation.get("needed").and_then(|v| v.as_bool()).unwrap_or(false) {
-                            if let Ok(service) = self.procedural_service() {
-                                let reason = remediation.get("reason").and_then(|v| v.as_str()).unwrap_or("unknown");
-                                let skill_id_str = remediation.get("skillId").and_then(|v| v.as_str()).unwrap_or("");
-                                let schema_id_str = remediation.get("schemaId").and_then(|v| v.as_str()).unwrap_or("");
-                                let domain_str = remediation.get("domain").and_then(|v| v.as_str()).unwrap_or("mathematics");
-                                let err_cat_str = remediation.get("mistakeType").and_then(|v| v.as_str()).unwrap_or(reason);
+        if let Some(mut data) = answer.custom_data.take() {
+            if data.contains("studylab") {
+                if let Ok(mut parsed) = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&data) {
+                    if let Some(studylab) = parsed.remove("studylab") {
+                        if let Ok(service) = self.procedural_service() {
+                            let attempt_id = procedural::core::AttemptId::new(format!("rev-{}-{}", answer.card_id.0, answer.answered_at.0));
+                            
+                            // 1. Persist the PracticeAttempt
+                            if let Some(attempt_res) = studylab.get("attemptResult") {
+                                let instance_id_str = attempt_res.get("instanceId").and_then(|v| v.as_str()).unwrap_or("");
+                                let is_correct = attempt_res.get("isCorrect").and_then(|v| v.as_bool()).unwrap_or(false);
+                                let score = attempt_res.get("score").and_then(|v| v.as_f64()).unwrap_or(if is_correct { 1.0 } else { 0.0 });
+                                let time_taken_ms = attempt_res.get("timeTakenMs").and_then(|v| v.as_u64()).unwrap_or(0);
+                                let hints_used = attempt_res.get("hintsUsed").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                                let user_answer = attempt_res.get("answer").cloned().unwrap_or(serde_json::Value::Null);
                                 
-                                if !skill_id_str.is_empty() && !schema_id_str.is_empty() {
-                                    use std::str::FromStr;
-                                    let domain = procedural::core::Domain::from_str(domain_str).unwrap_or(procedural::core::Domain::Mathematics);
-                                    let err_cat = match err_cat_str {
-                                        "silly_mistake" | "careless" => procedural::diagnostics::ErrorCategory::Careless,
-                                        "pattern_not_recognized" | "strategy" => procedural::diagnostics::ErrorCategory::Strategy,
-                                        "concept_not_known" | "concept" | "conceptual" => procedural::diagnostics::ErrorCategory::Concept,
-                                        "slow_correct" | "time" => procedural::diagnostics::ErrorCategory::Time,
-                                        "calculation" => procedural::diagnostics::ErrorCategory::Calculation,
-                                        other => procedural::diagnostics::ErrorCategory::DomainSpecific(other.to_string()),
-                                    };
+                                let target_time_ms = studylab.get("targetTimeMs").and_then(|v| v.as_u64()).unwrap_or(45000);
+                                let mistake_type_str = studylab.get("mistakeType").and_then(|v| v.as_str());
+                                let variant = attempt_res.get("variant").and_then(|v| v.as_str());
+
+                                if let Some(remediation) = studylab.get("proceduralRemediation") {
+                                    let skill_id_str = remediation.get("skillId").and_then(|v| v.as_str()).unwrap_or("");
+                                    let schema_id_str = remediation.get("schemaId").and_then(|v| v.as_str()).unwrap_or("");
                                     
-                                    let skill_id = procedural::core::SkillId::new(skill_id_str);
-                                    let schema_id = procedural::core::SchemaId::new(schema_id_str);
-                                    let state = service.load_skill_state(&skill_id).unwrap_or(None);
-                                    let recent_attempts = state.as_ref().map(|s| s.recent_attempts.as_slice()).unwrap_or(&[]);
-                                    let progression_state = state.as_ref().map(|s| s.practice_state).unwrap_or(procedural::skills::signals::PracticeProgressionState::New);
-                                    let recurrence_count = remediation.get("recurrence").and_then(|v| v.as_u64()).map(|v| v as u32).unwrap_or(1);
-                                    let is_transfer = remediation.get("mode").and_then(|v| v.as_str()).map_or(false, |m| m.contains("transfer"));
-                                    let attempt_id = procedural::core::AttemptId::new(format!("rev-{}", answer.answered_at.0));
-                                    
-                                    let ctx = procedural::remediation::policy::RemediationContext {
-                                        skill_id: &skill_id,
-                                        schema_id: &schema_id,
-                                        domain,
-                                        primary_error: err_cat,
-                                        step_error: None,
-                                        decision_point_correct: None,
-                                        independence: procedural::skills::signals::IndependenceLevel::Independent,
-                                        progression_state,
-                                        recent_attempts,
-                                        source_attempt_id: &attempt_id,
-                                        recurrence_count,
-                                        is_transfer_attempt: is_transfer,
-                                    };
-                                    
-                                    let action = procedural::remediation::policy::RemediationPolicy::evaluate(&ctx);
-                                    let _ = service.enqueue_remediation_action(action);
+                                    if !skill_id_str.is_empty() && !schema_id_str.is_empty() && !instance_id_str.is_empty() {
+                                        let skill_id = procedural::core::SkillId::new(skill_id_str);
+                                        let schema_id = procedural::core::SchemaId::new(schema_id_str);
+                                        let instance_id = procedural::core::ProblemInstanceId::new(instance_id_str);
+                                        
+                                        let mut attempt = procedural::practice::PracticeAttempt::new(
+                                            &attempt_id,
+                                            &instance_id,
+                                            &schema_id,
+                                            &skill_id,
+                                            user_answer,
+                                            is_correct,
+                                            score,
+                                            time_taken_ms,
+                                        ).with_card_id(answer.card_id.0);
+
+                                        let mut metadata = serde_json::json!({
+                                            "hints_used": hints_used,
+                                            "target_time_ms": target_time_ms,
+                                        });
+                                        if let Some(m) = mistake_type_str {
+                                            metadata["error_category"] = serde_json::json!(m);
+                                        }
+                                        if let Some(v) = variant {
+                                            metadata["variant"] = serde_json::json!(v);
+                                        }
+                                        attempt = attempt.with_metadata(metadata);
+
+                                        let mut errors = Vec::new();
+                                        if !is_correct {
+                                            if let Some(cat) = mistake_type_str {
+                                                let err_id = procedural::core::ErrorEventId::new(format!("err-{}-{}", answer.card_id.0, answer.answered_at.0));
+                                                errors.push(procedural::practice::ErrorEvent::new(err_id, &attempt_id, cat, serde_json::json!({})));
+                                            }
+                                        }
+
+                                        let res = service.record_practice_attempt_with_variant(attempt, errors, variant, target_time_ms);
+                                        if let Err(e) = res {
+                                            eprintln!("Failed to save practice attempt: {:?}", e);
+                                        } else {
+                                            eprintln!("Successfully saved practice attempt: {}", attempt_id);
+                                        }
+                                    } else {
+                                        eprintln!("Missing skill, schema or instance id! skill={}, schema={}, inst={}", skill_id_str, schema_id_str, instance_id_str);
+                                    }
+                                } else {
+                                    eprintln!("Missing proceduralRemediation in telemetry!");
                                 }
                             }
+
+                            // 2. Queue Remediation
+                            if let Some(remediation) = studylab.get("proceduralRemediation") {
+                                if remediation.get("needed").and_then(|v| v.as_bool()).unwrap_or(false) {
+                                    let reason = remediation.get("reason").and_then(|v| v.as_str()).unwrap_or("unknown");
+                                    let skill_id_str = remediation.get("skillId").and_then(|v| v.as_str()).unwrap_or("");
+                                    let schema_id_str = remediation.get("schemaId").and_then(|v| v.as_str()).unwrap_or("");
+                                    let domain_str = remediation.get("domain").and_then(|v| v.as_str()).unwrap_or("mathematics");
+                                    let err_cat_str = studylab.get("mistakeType").and_then(|v| v.as_str()).unwrap_or(reason);
+                                    
+                                    if !skill_id_str.is_empty() && !schema_id_str.is_empty() {
+                                        use std::str::FromStr;
+                                        let domain = procedural::core::Domain::from_str(domain_str).unwrap_or(procedural::core::Domain::Mathematics);
+                                        let err_cat = match err_cat_str {
+                                            "silly_mistake" | "careless" => procedural::diagnostics::ErrorCategory::Careless,
+                                            "pattern_not_recognized" | "strategy" => procedural::diagnostics::ErrorCategory::Strategy,
+                                            "concept_not_known" | "concept" | "conceptual" => procedural::diagnostics::ErrorCategory::Concept,
+                                            "slow_correct" | "time" => procedural::diagnostics::ErrorCategory::Time,
+                                            "calculation" => procedural::diagnostics::ErrorCategory::Calculation,
+                                            other => procedural::diagnostics::ErrorCategory::DomainSpecific(other.to_string()),
+                                        };
+                                        
+                                        let skill_id = procedural::core::SkillId::new(skill_id_str);
+                                        let schema_id = procedural::core::SchemaId::new(schema_id_str);
+                                        let state = service.load_skill_state(&skill_id).unwrap_or(None);
+                                        let recent_attempts = state.as_ref().map(|s| s.recent_attempts.as_slice()).unwrap_or(&[]);
+                                        let progression_state = state.as_ref().map(|s| s.practice_state).unwrap_or(procedural::skills::signals::PracticeProgressionState::New);
+                                        let recurrence_count = remediation.get("recurrence").and_then(|v| v.as_u64()).map(|v| v as u32).unwrap_or(1);
+                                        let is_transfer = studylab.get("mode").and_then(|v| v.as_str()).map_or(false, |m| m.contains("transfer"));
+                                        
+                                        let ctx = procedural::remediation::policy::RemediationContext {
+                                            skill_id: &skill_id,
+                                            schema_id: &schema_id,
+                                            domain,
+                                            primary_error: err_cat,
+                                            step_error: None,
+                                            decision_point_correct: None,
+                                            independence: procedural::skills::signals::IndependenceLevel::Independent,
+                                            progression_state,
+                                            recent_attempts,
+                                            source_attempt_id: &attempt_id,
+                                            recurrence_count,
+                                            is_transfer_attempt: is_transfer,
+                                        };
+                                        
+                                        let action = procedural::remediation::policy::RemediationPolicy::evaluate(&ctx);
+                                        let _ = service.enqueue_remediation_action(action);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Rewrite data without studylab payload to satisfy custom_data 100-byte DB limit
+                        if parsed.is_empty() {
+                            data = "".to_string();
+                        } else {
+                            data = serde_json::to_string(&parsed).unwrap_or_default();
                         }
                     }
                 }

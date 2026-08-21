@@ -349,6 +349,12 @@ impl ProceduralService {
             crate::skills::IndependenceLevel::NonIndependent
         };
 
+        let variant_category = attempt
+            .metadata
+            .get("variant_category")
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default();
+
         let evidence = crate::skills::signals::MasteryEvidence {
             final_correctness: attempt.is_correct,
             latency_evidence: attempt.time_taken_ms,
@@ -356,6 +362,7 @@ impl ProceduralService {
             hint_dependence: hints_used,
             retry_dependence: attempt_count.saturating_sub(1),
             variant_exposure: variant.map(|s| s.to_string()),
+            variant_category,
             diagnostic_errors,
             ..Default::default()
         };

@@ -46,7 +46,7 @@ fn test_phase4_lcm_hcf_source_and_json_structure() {
 
     // Verify Decision Trees
     let dts = root["decision_trees"].as_array().expect("decision_trees array");
-    assert_eq!(dts.len(), 2, "Must contain exactly 2 decision trees (HCF vs LCM Master & Remainder Selection)");
+    assert_eq!(dts.len(), 1, "Must contain exactly 1 decision tree");
 
     // Verify 7-Level Practice Progression
     let prog = root["practice_progression"].as_array().expect("practice_progression array");
@@ -58,7 +58,7 @@ fn test_phase4_lcm_hcf_source_and_json_structure() {
 
     // Verify Patterns
     let patterns = root["patterns"].as_array().expect("patterns array");
-    assert_eq!(patterns.len(), 6, "Must contain 6 grounded LCM-HCF patterns");
+    assert_eq!(patterns.len(), 8, "Must contain 8 grounded LCM-HCF patterns");
 
     let expected_pattern_ids = [
         "pat-lcm-hcf-001",
@@ -67,6 +67,8 @@ fn test_phase4_lcm_hcf_source_and_json_structure() {
         "pat-lcm-hcf-004",
         "pat-lcm-hcf-005",
         "pat-lcm-hcf-006",
+        "pat-lcm-hcf-007",
+        "pat-lcm-hcf-008",
     ];
 
     for (i, pat) in patterns.iter().enumerate() {
@@ -91,7 +93,7 @@ fn test_phase4_anchor_extraction_and_resolution() -> Result<()> {
         .expect("LCM-HCF procedural manifest must exist");
     let manifest: serde_json::Value = serde_json::from_str(&manifest_content).unwrap();
 
-    assert_eq!(manifest["totalAnchors"].as_u64().unwrap(), 6);
+    assert_eq!(manifest["totalQuestions"].as_u64().unwrap(), 16);
     assert_eq!(manifest["deckName"].as_str().unwrap(), "Math::LCM-HCF::StudyLab Procedural");
 
     let service = ProceduralService::open_in_memory()?;

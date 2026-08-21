@@ -118,8 +118,10 @@ impl Collection {
         browser: bool,
         partial_render: bool,
     ) -> Result<RenderCardOutput> {
+        println!("StudyLab debug: render_card called for notetype '{}', browser: {}, partial_render: {}", nt.name, browser, partial_render);
         // StudyLab Procedural Engine Interception Hook
-        if nt.name.as_str() == "StudyLab Procedural Anchor" && !browser && !partial_render {
+        if nt.name.as_str().starts_with("StudyLab Procedural Anchor") && !browser {
+            println!("StudyLab debug: Executing render_procedural_anchor!");
             return self.render_procedural_anchor(note, card, nt);
         }
 

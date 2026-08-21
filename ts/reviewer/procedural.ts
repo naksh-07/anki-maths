@@ -896,12 +896,13 @@ export class ProceduralReviewer {
             mode: mode,
             proceduralPerformance, // Embedded in standard telemetry payload
             proceduralRemediation, // Procedural practice signal
+            attemptResult, // Full canonical attempt context for backend persistence
         };
 
         if (globalThis.anki && typeof globalThis.anki.mutateNextCardStates === "function") {
             // We fire-and-forget this promise so it doesn't block the UI.
             // It modifies the card states in the backend prior to the user answering.
-            globalThis.anki.mutateNextCardStates("studylab_telemetry", async (states: any, customData: any) => {
+            globalThis.anki.mutateNextCardStates((globalThis.anki as any)._state_mutation_key, async (states: any, customData: any) => {
                 for (const state of ["again", "hard", "good", "easy"]) {
                     if (customData[state]) {
                         customData[state].studylab = {
