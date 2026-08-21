@@ -235,7 +235,7 @@ fn test_g3_reasoning_catalog_and_registry_full_integration() {
         );
     }
 
-    let registry = ProblemRegistry::new();
+    let registry = ProblemRegistry::default();
 
     // Verify registry can generate problem instances for all 8 reasoning families
     for fam in reasoning_families {

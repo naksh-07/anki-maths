@@ -2,6 +2,8 @@
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 pub mod catalog;
+pub mod contract;
+pub mod declarative;
 pub mod generator;
 pub mod generators;
 pub mod registry;
@@ -10,6 +12,8 @@ pub mod validator;
 pub mod variation;
 
 pub use catalog::*;
+pub use contract::*;
+pub use declarative::*;
 pub use generator::*;
 pub use generators::*;
 pub use registry::*;

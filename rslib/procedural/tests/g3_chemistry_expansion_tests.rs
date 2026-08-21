@@ -217,7 +217,7 @@ fn test_g3_chemistry_catalog_and_registry_full_integration() {
         );
     }
 
-    let registry = ProblemRegistry::new();
+    let registry = ProblemRegistry::default();
 
     // Verify registry can generate problem instances for all 6 chemistry families
     for fam in chem_families {

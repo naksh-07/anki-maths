@@ -10,9 +10,15 @@ use crate::chemistry::generators::{
     EquilibriumGenerator, EquilibriumValidator, ReactionNetworksGenerator,
     ReactionNetworksValidator, StoichiometryGenerator, StoichiometryValidator,
 };
-use crate::core::{ProblemFamilyId, ProceduralError, Result};
+use crate::core::{Domain, ProblemFamilyId, ProceduralError, Result};
 use crate::physics::generators::{
     Kinematics1DGenerator, Kinematics1DValidator, WorkEnergyGenerator, WorkEnergyValidator,
+};
+use crate::problems::contract::{
+    DeclarativeFamilyContract, ProblemFamilyCapability, ProblemFamilyContract,
+};
+use crate::problems::declarative::{
+    linear_equations_declarative_contract, DeclarativeProblemGenerator,
 };
 use crate::problems::generator::ProblemGenerator;
 use crate::problems::generators::{
@@ -41,6 +47,8 @@ pub struct ProblemRegistry {
     generators_by_family: HashMap<String, Arc<dyn ProblemGenerator>>,
     generators_by_template: HashMap<String, Arc<dyn ProblemGenerator>>,
     validators_by_family: HashMap<String, Arc<dyn ProblemValidator>>,
+    contracts_by_family: HashMap<String, Arc<ProblemFamilyContract>>,
+    declarative_generators: HashMap<String, Arc<DeclarativeProblemGenerator>>,
 }
 
 impl Default for ProblemRegistry {
@@ -51,7 +59,13 @@ impl Default for ProblemRegistry {
 
 impl ProblemRegistry {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            generators_by_family: HashMap::new(),
+            generators_by_template: HashMap::new(),
+            validators_by_family: HashMap::new(),
+            contracts_by_family: HashMap::new(),
+            declarative_generators: HashMap::new(),
+        }
     }
 
     /// Register a problem generator for its family and template references.
@@ -68,6 +82,24 @@ impl ProblemRegistry {
             .insert(validator.family_id().to_string(), validator);
     }
 
+    /// Register a problem family contract.
+    pub fn register_family_contract(&mut self, contract: Arc<ProblemFamilyContract>) {
+        self.contracts_by_family
+            .insert(contract.family_id.as_str().to_string(), contract);
+    }
+
+    /// Register a declarative problem family with its contract and generator.
+    pub fn register_declarative_family(&mut self, contract: DeclarativeFamilyContract) {
+        let contract_arc = Arc::new(contract.contract.clone());
+        self.register_family_contract(contract_arc);
+
+        let dec_gen = Arc::new(DeclarativeProblemGenerator::new(Arc::new(contract)));
+        self.declarative_generators
+            .insert(dec_gen.family_id().to_string(), dec_gen.clone());
+        self.generators_by_template
+            .insert(dec_gen.template_ref().to_string(), dec_gen);
+    }
+
     /// Retrieve generator by family ID or template reference.
     pub fn get_generator(&self, family_or_template: &str) -> Option<Arc<dyn ProblemGenerator>> {
         self.generators_by_family
@@ -81,7 +113,25 @@ impl ProblemRegistry {
         self.validators_by_family.get(family_id).cloned()
     }
 
+    /// Retrieve family contract by family ID.
+    pub fn get_family_contract(&self, family_id: &str) -> Option<Arc<ProblemFamilyContract>> {
+        self.contracts_by_family.get(family_id).cloned()
+    }
+
+    /// Retrieve generator capability for a given family ID.
+    pub fn get_capability(&self, family_id: &str) -> Option<ProblemFamilyCapability> {
+        self.contracts_by_family.get(family_id).map(|c| c.capability)
+    }
+
+    /// Retrieve declarative generator by family ID.
+    pub fn get_declarative_generator(&self, family_id: &str) -> Option<Arc<DeclarativeProblemGenerator>> {
+        self.declarative_generators.get(family_id).cloned()
+    }
+
     /// Generate a problem instance deterministically through dynamic dispatch.
+    /// Resilient strategy: attempts declarative generation with validation;
+    /// if declarative generation is missing or validation fails, automatically
+    /// falls back to the specialized generator.
     pub fn generate(
         &self,
         family_id: &ProblemFamilyId,
@@ -90,6 +140,32 @@ impl ProblemRegistry {
         difficulty_level: u32,
         variant: Option<&str>,
     ) -> Result<ProblemInstance> {
+        // 1. Attempt declarative generation if registered
+        if let Some(dec_gen) = self.get_declarative_generator(family_id.as_str()) {
+            if let Ok(instance) = dec_gen.generate(family_id, seed, difficulty_level, variant) {
+                // Verify generated instance against the registered validator
+                if let Some(validator) = self.get_validator(family_id.as_str()) {
+                    if let Some(ans_val) = instance.correct_answer.get("value") {
+                        let eval = validator.evaluate(
+                            &instance,
+                            ans_val,
+                            15_000,
+                            dec_gen.target_latency_ms(difficulty_level),
+                        );
+                        if eval.is_correct {
+                            return Ok(instance);
+                        }
+                    } else {
+                        return Ok(instance);
+                    }
+                } else {
+                    return Ok(instance);
+                }
+            }
+            // If declarative generation errored or validation rejected, fall through to specialized fallback!
+        }
+
+        // 2. Dispatch to specialized generator (or fallback)
         if let Some(gen) = self
             .get_generator(family_id.as_str())
             .or_else(|| self.get_generator(template_ref))
@@ -105,11 +181,7 @@ impl ProblemRegistry {
 
     /// Build canonical Mathematics registry containing all 14 topic generators and validators.
     pub fn default_maths_registry() -> Self {
-        let mut registry = Self {
-            generators_by_family: HashMap::new(),
-            generators_by_template: HashMap::new(),
-            validators_by_family: HashMap::new(),
-        };
+        let mut registry = Self::new();
 
         // 1. Successive Percentage
         registry.register_generator(Arc::new(PercentageSuccessiveGenerator));
@@ -167,6 +239,12 @@ impl ProblemRegistry {
         registry.register_generator(Arc::new(CombinedMultiConceptGenerator));
         registry.register_validator(Arc::new(CombinedMultiConceptValidator));
 
+        // Register all family contracts across domains
+        registry.register_all_contracts();
+
+        // Register Declarative MVP generator
+        registry.register_declarative_family(linear_equations_declarative_contract());
+
         // Physics generators & validators
         registry.register_physics();
 
@@ -177,6 +255,269 @@ impl ProblemRegistry {
         registry.register_reasoning();
 
         registry
+    }
+
+    /// Register structural and execution contracts for all 32 problem families across domains.
+    pub fn register_all_contracts(&mut self) {
+        // --- 14 Mathematics Families ---
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.percentage.successive",
+            "percentage.successive",
+            Domain::Mathematics,
+            "schema.math.percentage.successive.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["forward_two_step", "reverse_initial", "net_equivalent_change", "forward_three_step"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.algebra.linear_equations",
+            "algebra.linear_equations",
+            Domain::Mathematics,
+            "schema.algebra.linear_equations.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["two_step_basic", "variables_both_sides", "distributive", "fractional_coefficients", "word_problem"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.arithmetic.profit_loss",
+            "arithmetic.profit_loss",
+            Domain::Mathematics,
+            "schema.arithmetic.profit_loss.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["basic_profit_loss", "discount_markup", "successive_discounts", "false_weights", "faulty_transactions"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.arithmetic.ratio",
+            "arithmetic.ratio",
+            Domain::Mathematics,
+            "schema.arithmetic.ratio.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["divide_amount", "missing_proportion", "three_part_ratio", "ratio_shift", "mixture_proportion"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.arithmetic.average",
+            "arithmetic.average",
+            Domain::Mathematics,
+            "schema.arithmetic.average.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["direct_average", "missing_value", "inclusion_exclusion", "weighted_average", "average_speed"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.number_system.divisibility",
+            "number_system.divisibility",
+            Domain::Mathematics,
+            "schema.number_system.divisibility.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["rule_based_2_to_11", "composite_rules", "missing_digit_divisibility", "remainder_properties", "factor_count"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.time_work.basic",
+            "time_work.basic",
+            Domain::Mathematics,
+            "schema.time_work.basic.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["basic_two_person", "alternating_work", "pipes_cisterns", "man_days_equivalence", "efficiency_ratio"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.arithmetic.time_speed_distance",
+            "arithmetic.time_speed_distance",
+            Domain::Mathematics,
+            "schema.arithmetic.time_speed_distance.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["direct_speed_time", "relative_speed_opposite", "relative_speed_same", "train_crossing", "boats_streams"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.arithmetic.mixtures_alligation",
+            "arithmetic.mixtures_alligation",
+            Domain::Mathematics,
+            "schema.arithmetic.mixtures_alligation.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["simple_alligation_rule", "replacement_process", "three_component_mixture", "cost_price_mixture"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.number_system.remainders_modular",
+            "number_system.remainders_modular",
+            Domain::Mathematics,
+            "schema.number_system.remainders_modular.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["direct_mod_arithmetic", "linear_congruence", "chinese_remainder_theorem_simple", "wilson_fermat_powers"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.algebra.linear_inequalities",
+            "algebra.linear_inequalities",
+            Domain::Mathematics,
+            "schema.algebra.linear_inequalities.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["one_step_inequality", "two_step_inequality", "compound_inequality", "absolute_value_inequality", "sign_flip_trap"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.algebra.algebraic_identities",
+            "algebra.algebraic_identities",
+            Domain::Mathematics,
+            "schema.algebra.algebraic_identities.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["square_sum_diff", "difference_of_squares", "cube_identities", "symmetric_functions", "conditional_identities"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.geometry.triangles",
+            "geometry.triangles",
+            Domain::Mathematics,
+            "schema.geometry.triangles.v1",
+            ProblemFamilyCapability::DomainGeometry,
+        ).with_variants(vec!["angle_sum_exterior", "pythagoras_triplets", "similarity_ratio", "area_hero_special", "congruence_criteria"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.math.combined.multi_concept",
+            "combined.multi_concept",
+            Domain::Mathematics,
+            "schema.combined.multi_concept.v1",
+            ProblemFamilyCapability::Specialized,
+        ).with_variants(vec!["percentage_and_ratio", "profit_loss_and_discount", "speed_distance_and_work", "algebra_and_geometry"])));
+
+        // --- 2 Physics Families ---
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.physics.kinematics.1d",
+            "physics.kinematics.1d",
+            Domain::Physics,
+            "schema.physics.kinematics.1d.v1",
+            ProblemFamilyCapability::DomainPhysics,
+        ).with_variants(vec!["constant_velocity", "uniform_acceleration", "free_fall_gravity", "multi_stage_motion", "stopping_distance"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.physics.work_energy.mechanics",
+            "physics.work_energy.mechanics",
+            Domain::Physics,
+            "schema.physics.work_energy.mechanics.v1",
+            ProblemFamilyCapability::DomainPhysics,
+        ).with_variants(vec!["work_constant_force", "kinetic_potential_conversion", "conservation_mechanical_energy", "power_work_rate", "non_conservative_friction"])));
+
+        // --- 6 Chemistry Families ---
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.chemistry.stoichiometry.moles",
+            "chemistry.stoichiometry.moles",
+            Domain::Chemistry,
+            "schema.chemistry.stoichiometry.moles.v1",
+            ProblemFamilyCapability::DomainChemistry,
+        ).with_variants(vec!["molar_mass_conversions", "reaction_stoichiometry", "limiting_reagent", "percentage_yield", "gas_volume_stoichiometry"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.chemistry.equilibrium.concentration",
+            "chemistry.equilibrium.concentration",
+            Domain::Chemistry,
+            "schema.chemistry.equilibrium.concentration.v1",
+            ProblemFamilyCapability::DomainChemistry,
+        ).with_variants(vec!["kc_expression", "equilibrium_concentrations", "kp_from_partial_pressures", "le_chatelier_shift", "ice_table_solver"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.chemistry.ionic_equilibrium.buffers_titration",
+            "chemistry.ionic_equilibrium.buffers_titration",
+            Domain::Chemistry,
+            "schema.chemistry.ionic_equilibrium.buffers_titration.v1",
+            ProblemFamilyCapability::DomainChemistry,
+        ).with_variants(vec!["ph_strong_acid_base", "buffer_henderson_hasselbalch", "titration_equivalence_point", "solubility_product_ksp", "common_ion_effect"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.chemistry.electrochemistry.nernst_faraday",
+            "chemistry.electrochemistry.nernst_faraday",
+            Domain::Chemistry,
+            "schema.chemistry.electrochemistry.nernst_faraday.v1",
+            ProblemFamilyCapability::DomainChemistry,
+        ).with_variants(vec!["standard_cell_potential", "nernst_equation", "faradays_laws_electrolysis", "gibbs_free_energy_cell", "galvanic_cell_notation"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.chemistry.kinetics.rate_laws",
+            "chemistry.kinetics.rate_laws",
+            Domain::Chemistry,
+            "schema.chemistry.kinetics.rate_laws.v1",
+            ProblemFamilyCapability::DomainChemistry,
+        ).with_variants(vec!["initial_rates_order", "integrated_first_order", "half_life_calculation", "arrhenius_activation_energy", "reaction_mechanisms"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.chemistry.reaction_networks.multistage_synthesis",
+            "chemistry.reaction_networks.multistage_synthesis",
+            Domain::Chemistry,
+            "schema.chemistry.reaction_networks.multistage_synthesis.v1",
+            ProblemFamilyCapability::DomainChemistry,
+        ).with_variants(vec!["two_step_synthesis", "functional_group_interconversion", "overall_yield_network", "branched_reaction_tree", "reagent_selection_chain"])));
+
+        // --- 10 Reasoning Families ---
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.series.pattern_recognition",
+            "reasoning.series.pattern_recognition",
+            Domain::Reasoning,
+            "schema.reasoning.series.pattern_recognition.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["arithmetic_progression", "geometric_progression", "alternating_series", "difference_series", "fibonacci_like"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.syllogism.formal_inference",
+            "reasoning.syllogism.formal_inference",
+            Domain::Reasoning,
+            "schema.reasoning.syllogism.formal_inference.v1",
+            ProblemFamilyCapability::SymbolicLogic,
+        ).with_variants(vec!["two_premise_standard", "either_or_conclusion", "possibility_case", "three_premise_chain", "negative_premise_rules"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.seating.constraint_satisfaction",
+            "reasoning.seating.constraint_satisfaction",
+            Domain::Reasoning,
+            "schema.reasoning.seating.constraint_satisfaction.v1",
+            ProblemFamilyCapability::ConstraintSolver,
+        ).with_variants(vec!["linear_single_row", "circular_facing_center", "linear_facing_north_south", "circular_mixed_facing", "parallel_rows"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.relations.graph_inference",
+            "reasoning.relations.graph_inference",
+            Domain::Reasoning,
+            "schema.reasoning.relations.graph_inference.v1",
+            ProblemFamilyCapability::SymbolicLogic,
+        ).with_variants(vec!["order_and_ranking", "height_weight_comparison", "transitive_relations", "inequality_statements", "combined_relational_dag"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.floor_grid.spatial_csp",
+            "reasoning.floor_grid.spatial_csp",
+            Domain::Reasoning,
+            "schema.reasoning.floor_grid.spatial_csp.v1",
+            ProblemFamilyCapability::ConstraintSolver,
+        ).with_variants(vec!["building_floors_simple", "flat_floor_matrix", "schedule_day_time_grid", "box_stack_ordering", "multi_variable_grid"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.logic_dag.multi_step_inference",
+            "reasoning.logic_dag.multi_step_inference",
+            Domain::Reasoning,
+            "schema.reasoning.logic_dag.multi_step_inference.v1",
+            ProblemFamilyCapability::SymbolicLogic,
+        ).with_variants(vec!["cause_and_effect", "statement_assumptions", "course_of_action", "statement_arguments", "deductive_inference_dag"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.data_sufficiency.constraint_sufficiency",
+            "reasoning.data_sufficiency.constraint_sufficiency",
+            Domain::Reasoning,
+            "schema.reasoning.data_sufficiency.constraint_sufficiency.v1",
+            ProblemFamilyCapability::SymbolicLogic,
+        ).with_variants(vec!["algebra_sufficiency", "arithmetic_sufficiency", "geometry_sufficiency", "relations_sufficiency", "ordering_sufficiency"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.coded_expressions.symbolic_operators",
+            "reasoning.coded_expressions.symbolic_operators",
+            Domain::Reasoning,
+            "schema.reasoning.coded_expressions.symbolic_operators.v1",
+            ProblemFamilyCapability::Declarative,
+        ).with_variants(vec!["symbolic_arithmetic_substitution", "coded_inequalities", "operator_swap_validity", "binary_coded_logic", "nested_operator_trees"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.blood_relations.kinship_graph",
+            "reasoning.blood_relations.kinship_graph",
+            Domain::Reasoning,
+            "schema.reasoning.blood_relations.kinship_graph.v1",
+            ProblemFamilyCapability::SymbolicLogic,
+        ).with_variants(vec!["single_person_pointing", "coded_blood_relations", "family_tree_puzzle", "generation_gap_deduction", "multi_generation_kinship"])));
+
+        self.register_family_contract(Arc::new(ProblemFamilyContract::new(
+            "family.reasoning.direction_sense.spatial_orientation",
+            "reasoning.direction_sense.spatial_orientation",
+            Domain::Reasoning,
+            "schema.reasoning.direction_sense.spatial_orientation.v1",
+            ProblemFamilyCapability::SymbolicLogic,
+        ).with_variants(vec!["cardinal_turns_path", "shortest_distance_pythagoras", "shadow_sun_direction", "coded_direction_paths", "multi_person_relative_bearing"])));
     }
 
     /// Register all Physics problem generators and validators.

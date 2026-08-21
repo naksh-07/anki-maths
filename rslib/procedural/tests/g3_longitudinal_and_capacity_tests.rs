@@ -90,7 +90,7 @@ fn setup_full_30_family_environment() -> (
     let store = ProceduralStore::open_in_memory().unwrap();
     MathsCatalog::init_all(&store).unwrap();
 
-    let registry = ProblemRegistry::new();
+    let registry = ProblemRegistry::default_registry();
     let prereq_service = PrerequisiteGraphService::new();
     prereq_service.sync_from_store(&store).unwrap();
 
