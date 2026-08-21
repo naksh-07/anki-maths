@@ -228,10 +228,22 @@ impl Collection {
             Err(e) => return error_html(&format!("Failed to open procedural storage: {}", e)),
         };
 
-        let session = match service.prepare_practice_session(&anchor, Some(card.id.0)) {
+        let request = procedural::practice::PracticeRequest::new(
+            procedural::practice::PracticeScope::SingleSchema(anchor.proc_schema.clone()),
+            procedural::practice::PracticeObjective::Practice,
+        ).with_remediation_policy(procedural::practice::RemediationPrecedence::AllEligible);
+
+        let seed = match anchor.seed_mode {
+            procedural::anchor::SeedMode::Random => rand::random::<u64>(),
+            procedural::anchor::SeedMode::Fixed(s) => s,
+            procedural::anchor::SeedMode::Daily => (chrono::Utc::now().timestamp() / 86400) as u64,
+        };
+
+        let mut session = match service.prepare_unified_practice_session(&request, None, None, Some(seed)) {
             Ok(s) => s,
             Err(e) => return error_html(&format!("Failed to prepare practice session: {}", e)),
         };
+        session.card_id = Some(card.id.0);
 
         let html = procedural::reviewer::render_reviewer_html(&session);
         Ok(RenderCardOutput {

@@ -355,34 +355,46 @@ impl Collection {
                                 let reason = remediation.get("reason").and_then(|v| v.as_str()).unwrap_or("unknown");
                                 let skill_id_str = remediation.get("skillId").and_then(|v| v.as_str()).unwrap_or("");
                                 let schema_id_str = remediation.get("schemaId").and_then(|v| v.as_str()).unwrap_or("");
+                                let domain_str = remediation.get("domain").and_then(|v| v.as_str()).unwrap_or("mathematics");
+                                let err_cat_str = remediation.get("mistakeType").and_then(|v| v.as_str()).unwrap_or(reason);
                                 
                                 if !skill_id_str.is_empty() && !schema_id_str.is_empty() {
-                                    let (err_cat, kind) = match reason {
-                                        "silly_mistake" => (procedural::diagnostics::ErrorCategory::Careless, procedural::remediation::actions::RemediationActionKind::ProceduralVariant),
-                                        "pattern_not_recognized" => (procedural::diagnostics::ErrorCategory::Strategy, procedural::remediation::actions::RemediationActionKind::ProceduralVariant),
-                                        "concept_not_known" => (procedural::diagnostics::ErrorCategory::Concept, procedural::remediation::actions::RemediationActionKind::PrerequisiteReview),
-                                        "slow_correct" => (procedural::diagnostics::ErrorCategory::Time, procedural::remediation::actions::RemediationActionKind::ProceduralVariant),
-                                        _ => (procedural::diagnostics::ErrorCategory::Unknown, procedural::remediation::actions::RemediationActionKind::ProceduralVariant),
+                                    use std::str::FromStr;
+                                    let domain = procedural::core::Domain::from_str(domain_str).unwrap_or(procedural::core::Domain::Mathematics);
+                                    let err_cat = match err_cat_str {
+                                        "silly_mistake" | "careless" => procedural::diagnostics::ErrorCategory::Careless,
+                                        "pattern_not_recognized" | "strategy" => procedural::diagnostics::ErrorCategory::Strategy,
+                                        "concept_not_known" | "concept" | "conceptual" => procedural::diagnostics::ErrorCategory::Concept,
+                                        "slow_correct" | "time" => procedural::diagnostics::ErrorCategory::Time,
+                                        "calculation" => procedural::diagnostics::ErrorCategory::Calculation,
+                                        other => procedural::diagnostics::ErrorCategory::DomainSpecific(other.to_string()),
                                     };
                                     
-                                    let action = procedural::remediation::actions::RemediationAction {
-                                        id: format!("rem-{}", answer.answered_at.0),
-                                        kind,
-                                        skill_id: procedural::core::SkillId::new(skill_id_str),
-                                        schema_id: procedural::core::SchemaId::new(schema_id_str),
-                                        domain: procedural::core::Domain::Mathematics,
+                                    let skill_id = procedural::core::SkillId::new(skill_id_str);
+                                    let schema_id = procedural::core::SchemaId::new(schema_id_str);
+                                    let state = service.load_skill_state(&skill_id).unwrap_or(None);
+                                    let recent_attempts = state.as_ref().map(|s| s.recent_attempts.as_slice()).unwrap_or(&[]);
+                                    let progression_state = state.as_ref().map(|s| s.practice_state).unwrap_or(procedural::skills::signals::PracticeProgressionState::New);
+                                    let recurrence_count = remediation.get("recurrence").and_then(|v| v.as_u64()).map(|v| v as u32).unwrap_or(1);
+                                    let is_transfer = remediation.get("mode").and_then(|v| v.as_str()).map_or(false, |m| m.contains("transfer"));
+                                    let attempt_id = procedural::core::AttemptId::new(format!("rev-{}", answer.answered_at.0));
+                                    
+                                    let ctx = procedural::remediation::policy::RemediationContext {
+                                        skill_id: &skill_id,
+                                        schema_id: &schema_id,
+                                        domain,
                                         primary_error: err_cat,
                                         step_error: None,
-                                        preferred_difficulty: 2,
-                                        preferred_variant: None,
-                                        source_attempt_id: procedural::core::AttemptId::new(format!("rev-{}", answer.answered_at.0)),
-                                        urgency: procedural::remediation::actions::RemediationUrgency::Normal,
-                                        requires_acknowledgement: false,
-                                        recurrence_count: 1,
-                                        rationale: format!("Triggered by StudyLab telemetry: {}", reason),
-                                        created_at: answer.answered_at.0,
+                                        decision_point_correct: None,
+                                        independence: procedural::skills::signals::IndependenceLevel::Independent,
+                                        progression_state,
+                                        recent_attempts,
+                                        source_attempt_id: &attempt_id,
+                                        recurrence_count,
+                                        is_transfer_attempt: is_transfer,
                                     };
                                     
+                                    let action = procedural::remediation::policy::RemediationPolicy::evaluate(&ctx);
                                     let _ = service.enqueue_remediation_action(action);
                                 }
                             }
