@@ -15,6 +15,7 @@ export type ProceduralUIState =
     | "solving"
     | "hint"
     | "submitting"
+    | "mistake_classification"
     | "feedback"
     | "worked_example"
     | "next"
@@ -118,6 +119,9 @@ export interface ProceduralSetupOptions {
     containerId?: string;
     instanceId: string;
     familyId: string;
+    schemaId?: string;
+    skillId?: string;
+    topicId?: string;
     targetTimeMs: number;
     correctAnswer?: Record<string, any>;
     parameters?: Record<string, any>;
@@ -159,6 +163,8 @@ export class ProceduralReviewer {
     private focusTimeout: any = null;
     private selectedOptionId: string | null = null;
     private hasSubmitted = false;
+    private mistakeType: string | null = null;
+    private mistakePanel: HTMLElement | null = null;
 
     // DOM Elements
     private timerEl: HTMLElement | null = null;
@@ -180,11 +186,20 @@ export class ProceduralReviewer {
     private actualTimeEl: HTMLElement | null = null;
     private nextBtn: HTMLButtonElement | null = null;
 
+    // Footer Elements
+    private footerEl: HTMLElement | null = null;
+    private footerCenter: HTMLElement | null = null;
+    private footerSubmitBtn: HTMLButtonElement | null = null;
+    private editBtn: HTMLButtonElement | null = null;
+    private moreBtn: HTMLButtonElement | null = null;
+    private moreMenu: HTMLElement | null = null;
+
     constructor(container: HTMLElement, options: ProceduralSetupOptions) {
         this.container = container;
         this.options = options;
         this.startTime = Date.now();
         this.state = "ready";
+        this.buildFooter();
         this.bindElements();
         this.attachEventListeners();
         this.startTimer();
@@ -214,6 +229,34 @@ export class ProceduralReviewer {
         this.resultFeedback = this.container.querySelector("#proc-result-feedback");
         this.actualTimeEl = this.container.querySelector("#proc-actual-time");
         this.nextBtn = this.container.querySelector("#proc-next-btn");
+        this.footerSubmitBtn = this.container.querySelector("#proc-footer-submit-btn");
+    }
+
+    private buildFooter(): void {
+        this.footerEl = document.createElement("div");
+        this.footerEl.className = "proc-footer";
+        this.footerEl.innerHTML = `
+            <button class="proc-btn-secondary" id="proc-edit-btn">Edit</button>
+            <div class="proc-footer-center" id="proc-footer-center">
+                 <button class="proc-btn" id="proc-footer-submit-btn">Show Answer / Submit</button>
+            </div>
+            <div class="proc-footer-more">
+                 <button class="proc-btn-secondary" id="proc-more-btn">More ▾</button>
+                 <div id="proc-more-menu" class="proc-more-menu hidden">
+                     <button class="proc-more-item" data-action="hint">Hint</button>
+                     <button class="proc-more-item" data-action="tricks">Tricks</button>
+                     <button class="proc-more-item" data-action="solution">Solution</button>
+                     <button class="proc-more-item" data-action="explanation">Explanation</button>
+                     <button class="proc-more-item" data-action="source">Source</button>
+                 </div>
+            </div>
+        `;
+        this.container.appendChild(this.footerEl);
+        
+        this.footerCenter = this.footerEl.querySelector("#proc-footer-center");
+        this.editBtn = this.footerEl.querySelector("#proc-edit-btn");
+        this.moreBtn = this.footerEl.querySelector("#proc-more-btn");
+        this.moreMenu = this.footerEl.querySelector("#proc-more-menu");
     }
 
     private addListener<K extends keyof HTMLElementEventMap>(
@@ -234,8 +277,20 @@ export class ProceduralReviewer {
         this.addListener(this.tabQuickBtn, "click", () => this.switchMode("quick"));
         this.addListener(this.tabStepwiseBtn, "click", () => this.switchMode("stepwise"));
 
-        // Quick submit
-        this.addListener(this.quickSubmitBtn, "click", () => this.handleQuickSubmit());
+        // Quick submit (inline button usually replaced by footer, but we'll keep the listener in case)
+        if (this.quickSubmitBtn) {
+            this.addListener(this.quickSubmitBtn, "click", () => this.handleQuickSubmit());
+        }
+        if (this.footerSubmitBtn) {
+            this.addListener(this.footerSubmitBtn, "click", () => {
+                if (this.activeMode === "quick") {
+                    this.handleQuickSubmit();
+                } else if (this.activeMode === "stepwise") {
+                    this.handleStepwiseSubmit();
+                }
+            });
+        }
+        
         this.addListener(this.quickInput, "keydown", (e: KeyboardEvent) => {
             if (e.key === "Enter") {
                 this.handleQuickSubmit();
@@ -291,6 +346,35 @@ export class ProceduralReviewer {
 
         // Next problem / continue button
         this.addListener(this.nextBtn, "click", () => this.handleNext());
+        
+        // Footer actions
+        this.addListener(this.editBtn, "click", () => {
+            bridgeCommand("edit");
+        });
+        
+        this.addListener(this.moreBtn, "click", (e: Event) => {
+            e.stopPropagation();
+            this.moreMenu?.classList.toggle("hidden");
+        });
+        
+        // Close more menu when clicking outside
+        this.addListener(document.body, "click", () => {
+            this.moreMenu?.classList.add("hidden");
+        });
+        
+        const moreItems = this.moreMenu?.querySelectorAll<HTMLButtonElement>(".proc-more-item");
+        moreItems?.forEach((item) => {
+            this.addListener(item, "click", (e: Event) => {
+                e.stopPropagation();
+                this.moreMenu?.classList.add("hidden");
+                const action = item.dataset.action;
+                if (action === "hint") {
+                    this.requestHint();
+                } else if (action) {
+                    bridgeCommand(`procedural_more_action:${action}`);
+                }
+            });
+        });
 
         // Auto-focus initial input or first option
         this.focusTimeout = setTimeout(() => {
@@ -608,9 +692,69 @@ export class ProceduralReviewer {
     ): void {
         if (this.hasSubmitted || this.state === "teardown") {return;}
         this.hasSubmitted = true;
-        this.state = "feedback";
         clearInterval(this.timerInterval);
         const timeTakenMs = Date.now() - this.startTime;
+
+        if (!outcome.isCorrect) {
+            this.state = "mistake_classification";
+            this.showMistakeClassificationUI(outcome, data, mode, timeTakenMs);
+            return;
+        }
+
+        this.finalizeAndShowFeedback(outcome, data, mode, timeTakenMs);
+    }
+
+    private showMistakeClassificationUI(
+        outcome: { isCorrect: boolean; reason?: string; score: number },
+        data: { answer: string; steps: string[] },
+        mode: "quick" | "stepwise" | "concept_check" | "strategy_drill" | "worked_example" | "declarative_recall" | "prerequisite_review",
+        timeTakenMs: number
+    ): void {
+        this.quickContainer?.classList.add("hidden");
+        this.stepwiseContainer?.classList.add("hidden");
+        this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
+
+        if (this.footerCenter) {
+            this.footerCenter.innerHTML = `
+                <button class="proc-mistake-btn" data-value="silly_mistake">Silly mistake</button>
+                <button class="proc-mistake-btn" data-value="pattern_not_recognized">Pattern not recognized</button>
+                <button class="proc-mistake-btn" data-value="formula_or_concept_misapplied">Formula or concept misapplied</button>
+                <button class="proc-mistake-btn" data-value="concept_not_known">Concept not known</button>
+            `;
+            const buttons = this.footerCenter.querySelectorAll<HTMLButtonElement>(".proc-mistake-btn");
+            buttons.forEach(btn => {
+                this.addListener(btn, "click", () => {
+                    buttons.forEach(b => b.classList.remove("selected"));
+                    btn.classList.add("selected");
+                    this.mistakeType = btn.dataset.value || null;
+                    setTimeout(() => {
+                        this.finalizeAndShowFeedback(outcome, data, mode, timeTakenMs);
+                    }, 200);
+                });
+            });
+        }
+        
+        this.resultPanel?.classList.remove("hidden");
+        if (this.resultTitle) {this.resultTitle.textContent = "✗ Incorrect Answer";}
+        
+        const canonicalFormatted = this.options.correctAnswer?.formatted || this.options.correctAnswer?.value || "";
+        if (this.resultFeedback) {
+            this.resultFeedback.innerHTML = `
+                <div><strong>You answered:</strong> ${data.answer}</div>
+                <div><strong>Correct answer:</strong> ${canonicalFormatted}</div>
+                <div style="margin-top: 8px;"><em>Please classify this mistake in the footer to continue.</em></div>
+            `;
+        }
+        this.typesetMathJax(this.resultPanel);
+    }
+
+    private finalizeAndShowFeedback(
+        outcome: { isCorrect: boolean; reason?: string; score: number },
+        data: { answer: string; steps: string[] },
+        mode: "quick" | "stepwise" | "concept_check" | "strategy_drill" | "worked_example" | "declarative_recall" | "prerequisite_review",
+        timeTakenMs: number
+    ): void {
+        this.state = "feedback";
 
         // Hide input containers, show result panel
         this.quickContainer?.classList.add("hidden");
@@ -620,41 +764,52 @@ export class ProceduralReviewer {
 
         const quadrantInfo = this.computeSpeedQuadrant(outcome.isCorrect, timeTakenMs, this.options.targetTimeMs);
 
+        // Clear actualTimeEl in the panel since we move it to footer
         if (this.actualTimeEl) {
             while (this.actualTimeEl.firstChild) {
                 this.actualTimeEl.removeChild(this.actualTimeEl.firstChild);
             }
-            const timeDiv = document.createElement("div");
-            const strong = document.createElement("strong");
-            strong.textContent = "Actual Time: ";
-            timeDiv.appendChild(strong);
-            timeDiv.appendChild(document.createTextNode(`${(timeTakenMs / 1000).toFixed(1)}s`));
+        }
 
-            const quadrantDiv = document.createElement("div");
-            quadrantDiv.className = quadrantInfo.className;
-            quadrantDiv.textContent = quadrantInfo.label;
-
-            this.actualTimeEl.appendChild(timeDiv);
-            this.actualTimeEl.appendChild(quadrantDiv);
+        if (this.footerCenter) {
+            // For correct answers, show performance. For incorrect, clear mistake buttons or show performance.
+            if (outcome.isCorrect) {
+                this.footerCenter.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <strong>Time: ${(timeTakenMs / 1000).toFixed(1)}s</strong>
+                        <div class="${quadrantInfo.className}">${quadrantInfo.label}</div>
+                    </div>
+                `;
+            } else {
+                // Mistake classification is already done, clear footer
+                this.footerCenter.innerHTML = ``;
+            }
         }
 
         if (this.resultPanel) {
+            const canonicalFormatted = this.options.correctAnswer?.formatted || this.options.correctAnswer?.value || "";
             if (outcome.isCorrect) {
                 this.resultPanel.className = "proc-result correct";
                 if (this.resultTitle) {this.resultTitle.textContent = "✓ Correct Answer";}
-                let msg = `Completed in ${(timeTakenMs / 1000).toFixed(1)}s`;
-                if (timeTakenMs > this.options.targetTimeMs) {
-                    msg += ` (Target latency: ${(this.options.targetTimeMs / 1000).toFixed(0)}s)`;
-                }
+                
+                let msg = ``;
                 if (this.hintsUsed > 0) {
-                    msg += ` [${this.hintsUsed} hint(s) used]`;
+                    msg += `[${this.hintsUsed} hint(s) used]<br>`;
                 }
-                if (this.resultFeedback) {this.resultFeedback.textContent = msg;}
+                msg += `<div><strong>You answered:</strong> ${data.answer}</div>`;
+                if (this.resultFeedback) {this.resultFeedback.innerHTML = msg;}
             } else {
                 this.resultPanel.className = "proc-result incorrect";
                 if (this.resultTitle) {this.resultTitle.textContent = "✗ Incorrect Answer";}
                 if (this.resultFeedback) {
-                    this.resultFeedback.textContent = outcome.reason || "Review the step-by-step canonical solution below.";
+                    let msg = `
+                        <div><strong>You answered:</strong> ${data.answer}</div>
+                        <div><strong>Correct answer:</strong> ${canonicalFormatted}</div>
+                    `;
+                    if (outcome.reason) {
+                        msg += `<div style="margin-top: 8px;">${outcome.reason}</div>`;
+                    }
+                    this.resultFeedback.innerHTML = msg;
                 }
             }
         }
@@ -676,6 +831,88 @@ export class ProceduralReviewer {
 
         if (this.options.onCompleted) {
             this.options.onCompleted(attemptResult);
+        }
+
+        // --- STUDYLAB TELEMETRY & PERFORMANCE PERSISTENCE ---
+        let classification = "incorrect";
+        let timeRatio = 1.0;
+        
+        if (outcome.isCorrect) {
+            if (this.options.targetTimeMs && this.options.targetTimeMs > 0) {
+                timeRatio = timeTakenMs / this.options.targetTimeMs;
+                if (timeRatio <= 0.8) {
+                    classification = "fast_correct";
+                } else if (timeRatio <= 1.2) {
+                    classification = "on_target_correct";
+                } else {
+                    classification = "slow_correct";
+                }
+            } else {
+                classification = "on_target_correct"; // Fallback if no target time
+            }
+        }
+
+        const proceduralPerformance = {
+            classification,
+            timeRatio: parseFloat(timeRatio.toFixed(2)),
+            mistakeType: this.mistakeType || null,
+            hintsUsed: this.hintsUsed,
+        };
+
+        // Determine procedural remediation need
+        let remediationNeeded = false;
+        let remediationReason = "none";
+
+        if (this.mistakeType === "silly_mistake") {
+            remediationNeeded = true;
+            remediationReason = "silly_mistake";
+        } else if (this.mistakeType === "pattern_not_recognized") {
+            remediationNeeded = true;
+            remediationReason = "pattern_not_recognized";
+        } else if (this.mistakeType === "concept_not_known") {
+            remediationNeeded = true;
+            remediationReason = "concept_not_known";
+        } else if (outcome.isCorrect && classification === "slow_correct") {
+            remediationNeeded = true;
+            remediationReason = "slow_correct";
+        }
+
+        const proceduralRemediation = {
+            needed: remediationNeeded,
+            reason: remediationReason,
+            skillId: this.options.skillId || "",
+            schemaId: this.options.schemaId || "",
+            familyId: this.options.familyId || "",
+            topicId: this.options.topicId || ""
+        };
+
+        const telemetry = {
+            v: 1,
+            actualTimeMs: timeTakenMs,
+            targetTimeMs: this.options.targetTimeMs,
+            isCorrect: outcome.isCorrect,
+            hintsUsed: this.hintsUsed,
+            mistakeType: this.mistakeType || undefined,
+            mode: mode,
+            proceduralPerformance, // Embedded in standard telemetry payload
+            proceduralRemediation, // Procedural practice signal
+        };
+
+        if (globalThis.anki && typeof globalThis.anki.mutateNextCardStates === "function") {
+            // We fire-and-forget this promise so it doesn't block the UI.
+            // It modifies the card states in the backend prior to the user answering.
+            globalThis.anki.mutateNextCardStates("studylab_telemetry", async (states: any, customData: any) => {
+                for (const state of ["again", "hard", "good", "easy"]) {
+                    if (customData[state]) {
+                        customData[state].studylab = {
+                            ...(customData[state].studylab || {}),
+                            ...telemetry
+                        };
+                    }
+                }
+            }).catch((err: any) => {
+                console.error("Failed to persist StudyLab telemetry", err);
+            });
         }
 
         // Bridge notification for Python/Qt backend telemetry recording

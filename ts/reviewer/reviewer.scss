@@ -614,4 +614,105 @@ button {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* =========================================================================
+ * Footer & Mistake Classification
+ * ========================================================================= */
+
+.proc-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border, #e5e7eb);
+    padding-top: 12px;
+    margin-top: 24px;
+    gap: 12px;
+}
+
+.proc-footer-center {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.proc-footer-more {
+    position: relative;
+    display: inline-block;
+}
+
+.proc-more-menu {
+    position: absolute;
+    bottom: 110%;
+    right: 0;
+    background: var(--canvas-elevated, #ffffff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: var(--border-radius-default, 6px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    padding: 6px 0;
+}
+
+.nightMode .proc-more-menu {
+    background: var(--canvas-elevated, #24272e);
+    border-color: var(--border, #3b4048);
+}
+
+.proc-more-item {
+    padding: 8px 16px;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--fg, #1f2937);
+    cursor: pointer;
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.proc-more-item:hover {
+    background: var(--canvas-inset, #f3f4f6);
+}
+
+.nightMode .proc-more-item {
+    color: var(--fg, #d7dae0);
+}
+
+.nightMode .proc-more-item:hover {
+    background: var(--canvas-inset, #3b4048);
+}
+
+.proc-mistake-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background: var(--button-bg, #f3f4f6);
+    color: var(--fg, #374151);
+    border: 1px solid var(--border, #d1d5db);
+    border-radius: var(--border-radius-default, 4px);
+    cursor: pointer;
+    transition: all 150ms ease-in-out;
+    white-space: nowrap;
+}
+
+.proc-mistake-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+    color: #991b1b;
+}
+
+.nightMode .proc-mistake-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: #fca5a5;
+    color: #fca5a5;
+}
+
+.proc-mistake-btn.selected {
+    background: #ef4444;
+    color: white;
+    border-color: #dc2626;
+}
 

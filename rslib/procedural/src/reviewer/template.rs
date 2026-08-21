@@ -39,6 +39,8 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     let instance_id_attr = escape_html(session.instance.id.as_str());
     let family_id_js = escape_json_for_script(session.instance.family_id.as_str());
     let instance_id_js = escape_json_for_script(session.instance.id.as_str());
+    let skill_id_js = escape_json_for_script(session.schema.skill_id.as_str());
+    let schema_id_js = escape_json_for_script(session.schema.id.as_str());
 
     let object_type = session
         .instance
@@ -426,6 +428,8 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             containerId: "procedural-card",
             instanceId: "{instance_id_js}",
             familyId: "{family_id_js}",
+            skillId: "{skill_id_js}",
+            schemaId: "{schema_id_js}",
             targetTimeMs: {target_time_ms},
             correctAnswer: {canonical_json},
             parameters: {parameters_json},

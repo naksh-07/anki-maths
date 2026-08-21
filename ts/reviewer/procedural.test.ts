@@ -461,5 +461,254 @@ describe("ProceduralReviewer API", () => {
         expect((window as any).bridgeCommand).toHaveBeenCalledTimes(1);
         reviewer.destroy();
     });
+
+    test("mistake classification blocks feedback until selected and persists telemetry", async () => {
+        (globalThis as any).anki = {
+            mutateNextCardStates: vi.fn().mockResolvedValue(undefined)
+        };
+
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-mistake",
+            familyId: "math.algebra",
+            targetTimeMs: 45000,
+            correctAnswer: { value: 42.0 },
+        });
+
+        const input = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+        const submitBtn = container.querySelector<HTMLButtonElement>("#proc-submit-btn")!;
+        
+        // Enter wrong answer
+        input.value = "10";
+        submitBtn.click();
+
+        // Should show mistake classification buttons in footer
+        expect(reviewer.getState()).toBe("mistake_classification");
+        
+        const footerCenter = container.querySelector<HTMLElement>("#proc-footer-center")!;
+        const mistakeBtns = footerCenter.querySelectorAll<HTMLButtonElement>(".proc-mistake-btn");
+        expect(mistakeBtns.length).toBe(4);
+
+        // Feedback panel should be shown (with incorrect answer info)
+        const resultPanel = container.querySelector<HTMLElement>("#proc-result-panel")!;
+        expect(resultPanel.classList.contains("hidden")).toBe(false);
+        const resultTitle = resultPanel.querySelector<HTMLElement>("#proc-result-title")!;
+        expect(resultTitle.textContent).toContain("✗ Incorrect Answer");
+
+        // Select a mistake type
+        const sillyMistakeBtn = Array.from(mistakeBtns).find(b => b.dataset.value === "silly_mistake")!;
+        sillyMistakeBtn.click();
+
+        expect(sillyMistakeBtn.classList.contains("selected")).toBe(true);
+
+        // Wait for the setTimeout in showMistakeClassificationUI to resolve
+        await new Promise(resolve => setTimeout(resolve, 250));
+
+        // Now state should transition to feedback
+        expect(reviewer.getState()).toBe("feedback");
+
+        // Verify telemetry was persisted
+        expect((globalThis as any).anki.mutateNextCardStates).toHaveBeenCalledWith(
+            "studylab_telemetry",
+            expect.any(Function)
+        );
+
+        // Execute the callback passed to mutateNextCardStates to verify merge behavior
+        const mutateFn = (globalThis as any).anki.mutateNextCardStates.mock.calls[0][1];
+        
+        const dummyStates = {};
+        const dummyCustomData = {
+            again: { existingKey: "existingValue" },
+            good: { studylab: { v: 0, oldData: true } }
+        };
+
+        await mutateFn(dummyStates, dummyCustomData);
+
+        expect(dummyCustomData.again).toEqual({
+            existingKey: "existingValue",
+            studylab: {
+                v: 1,
+                actualTimeMs: expect.any(Number),
+                targetTimeMs: 45000,
+                isCorrect: false,
+                hintsUsed: 0,
+                mistakeType: "silly_mistake",
+                mode: "quick",
+                proceduralPerformance: {
+                    classification: "incorrect",
+                    timeRatio: expect.any(Number),
+                    mistakeType: "silly_mistake",
+                    hintsUsed: 0
+                },
+                proceduralRemediation: {
+                    needed: true,
+                    reason: "silly_mistake",
+                    skillId: "",
+                    schemaId: "",
+                    familyId: "math.algebra",
+                    topicId: ""
+                }
+            }
+        });
+
+        expect(dummyCustomData.good.studylab).toEqual({
+            v: 1,
+            oldData: true,
+            actualTimeMs: expect.any(Number),
+            targetTimeMs: 45000,
+            isCorrect: false,
+            hintsUsed: 0,
+            mistakeType: "silly_mistake",
+            mode: "quick",
+            proceduralPerformance: {
+                classification: "incorrect",
+                timeRatio: expect.any(Number),
+                mistakeType: "silly_mistake",
+                hintsUsed: 0
+            },
+            proceduralRemediation: {
+                needed: true,
+                reason: "silly_mistake",
+                skillId: "",
+                schemaId: "",
+                familyId: "math.algebra",
+                topicId: ""
+            }
+        });
+    });
 });
 
+describe("ProceduralReviewer Performance Classification", () => {
+    let container: HTMLElement;
+
+    beforeEach(() => {
+        container = document.createElement("div");
+        container.id = "procedural-card";
+        container.className = "procedural-card-container";
+        container.innerHTML = `
+            <div class="proc-header">
+                <span class="proc-timer" id="proc-stopwatch">00:00</span>
+            </div>
+            <div class="proc-mode-switch">
+                <button type="button" id="tab-quick" class="proc-tab active">Quick Solve</button>
+                <button type="button" id="tab-stepwise" class="proc-tab">Step-by-Step Solve</button>
+            </div>
+            <div id="proc-quick-container">
+                <input type="text" id="proc-answer-input" class="proc-input" />
+                <button type="button" id="proc-submit-btn" class="proc-btn">Submit</button>
+            </div>
+            <div id="proc-stepwise-container" class="hidden">
+                <div id="proc-steps-list">
+                    <div class="proc-step-row" data-step-idx="0">
+                        <span class="proc-step-label">Step 1</span>
+                        <input type="text" class="proc-input proc-step-input" />
+                    </div>
+                </div>
+                <div class="proc-controls">
+                    <button type="button" id="proc-add-step-btn" class="proc-btn">+ Add Step</button>
+                    <button type="button" id="proc-hint-btn" class="proc-btn">Hint</button>
+                    <button type="button" id="proc-reset-steps-btn" class="proc-btn">Reset</button>
+                    <button type="button" id="proc-check-steps-btn" class="proc-btn">Check</button>
+                </div>
+            </div>
+            <div id="proc-hint-container" class="proc-hint-box hidden"></div>
+            <div id="proc-result-panel" class="proc-result hidden">
+                <div id="proc-result-title"></div>
+                <div id="proc-result-feedback"></div>
+                <div id="proc-actual-time"></div>
+                <button type="button" id="proc-next-btn" class="proc-btn">Next</button>
+            </div>
+        `;
+        document.body.appendChild(container);
+        vi.useFakeTimers();
+        (globalThis as any).anki = {
+            mutateNextCardStates: vi.fn().mockResolvedValue(undefined)
+        };
+        (globalThis as any).bridgeCommand = vi.fn();
+    });
+
+    afterEach(() => {
+        document.body.removeChild(container);
+        vi.useRealTimers();
+        delete (globalThis as any).anki;
+        delete (globalThis as any).bridgeCommand;
+    });
+
+    async function runAttempt(timeMs: number, targetTimeMs: number | undefined, isCorrect: boolean) {
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst_123",
+            skillId: "test_skill",
+            schemaId: "test_schema",
+            familyId: "fam_123",
+            targetTimeMs,
+            correctAnswer: { type: "exact", value: 42 },
+        });
+
+        vi.advanceTimersByTime(timeMs);
+        
+        // Use evaluateLocally and finishAttempt to simulate a submit
+        const data = { answer: isCorrect ? "42" : "99", steps: [] };
+        
+        // Note: finishAttempt is private, so we trigger via the public method
+        const quickInput = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+        const submitBtn = container.querySelector<HTMLButtonElement>("#proc-submit-btn")!;
+        quickInput.value = data.answer;
+        submitBtn.click();
+
+        if (!isCorrect) {
+            // Need to select a mistake type to finish the attempt
+            const footerCenter = container.querySelector<HTMLElement>("#proc-footer-center")!;
+            const mistakeBtns = footerCenter.querySelectorAll<HTMLButtonElement>(".proc-mistake-btn");
+            const mistakeBtn = Array.from(mistakeBtns).find(b => b.dataset.value === "pattern_not_recognized")!;
+            mistakeBtn.click();
+            vi.advanceTimersByTime(250);
+            await Promise.resolve();
+        }
+
+        const mutateFn = (globalThis as any).anki.mutateNextCardStates.mock.calls[0][1];
+        const dummyCustomData = { again: {} };
+        await mutateFn({}, dummyCustomData);
+        
+        return (dummyCustomData.again as any).studylab;
+    }
+
+    test("classifies fast_correct (<= 0.8 ratio)", async () => {
+        const studylab = await runAttempt(20000, 40000, true); // 0.5 ratio
+        expect(studylab.proceduralPerformance.classification).toBe("fast_correct");
+        expect(studylab.proceduralPerformance.timeRatio).toBe(0.5);
+        expect(studylab.proceduralRemediation.needed).toBe(false);
+        expect(studylab.proceduralRemediation.reason).toBe("none");
+    });
+
+    test("classifies on_target_correct (> 0.8 and <= 1.2 ratio)", async () => {
+        const studylab = await runAttempt(40000, 40000, true); // 1.0 ratio
+        expect(studylab.proceduralPerformance.classification).toBe("on_target_correct");
+        expect(studylab.proceduralPerformance.timeRatio).toBe(1.0);
+        expect(studylab.proceduralRemediation.needed).toBe(false);
+    });
+
+    test("classifies slow_correct (> 1.2 ratio)", async () => {
+        const studylab = await runAttempt(60000, 40000, true); // 1.5 ratio
+        expect(studylab.proceduralPerformance.classification).toBe("slow_correct");
+        expect(studylab.proceduralPerformance.timeRatio).toBe(1.5);
+        expect(studylab.proceduralRemediation.needed).toBe(true);
+        expect(studylab.proceduralRemediation.reason).toBe("slow_correct");
+    });
+
+    test("classifies incorrect and maps mistake type", async () => {
+        const studylab = await runAttempt(20000, 40000, false);
+        expect(studylab.proceduralPerformance.classification).toBe("incorrect");
+        expect(studylab.proceduralPerformance.mistakeType).toBe("pattern_not_recognized");
+        expect(studylab.proceduralRemediation.needed).toBe(true);
+        expect(studylab.proceduralRemediation.reason).toBe("pattern_not_recognized");
+    });
+
+    test("handles zero targetTimeMs safely (fallback to on_target_correct)", async () => {
+        const perf = await runAttempt(30000, 0, true);
+        expect(perf.proceduralPerformance.classification).toBe("on_target_correct");
+    });
+
+    test("handles missing targetTimeMs safely (fallback to on_target_correct)", async () => {
+        const perf = await runAttempt(30000, undefined, true);
+        expect(perf.proceduralPerformance.classification).toBe("on_target_correct");
+    });
+});

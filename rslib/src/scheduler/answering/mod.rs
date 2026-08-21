@@ -347,6 +347,49 @@ impl Collection {
             card.last_review_time = Some(answer.answered_at.as_secs());
         }
         if let Some(data) = answer.custom_data.take() {
+            if data.contains("proceduralRemediation") {
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) {
+                    if let Some(remediation) = parsed.pointer("/studylab/proceduralRemediation") {
+                        if remediation.get("needed").and_then(|v| v.as_bool()).unwrap_or(false) {
+                            if let Ok(service) = self.procedural_service() {
+                                let reason = remediation.get("reason").and_then(|v| v.as_str()).unwrap_or("unknown");
+                                let skill_id_str = remediation.get("skillId").and_then(|v| v.as_str()).unwrap_or("");
+                                let schema_id_str = remediation.get("schemaId").and_then(|v| v.as_str()).unwrap_or("");
+                                
+                                if !skill_id_str.is_empty() && !schema_id_str.is_empty() {
+                                    let (err_cat, kind) = match reason {
+                                        "silly_mistake" => (procedural::diagnostics::ErrorCategory::Careless, procedural::remediation::actions::RemediationActionKind::ProceduralVariant),
+                                        "pattern_not_recognized" => (procedural::diagnostics::ErrorCategory::Strategy, procedural::remediation::actions::RemediationActionKind::ProceduralVariant),
+                                        "concept_not_known" => (procedural::diagnostics::ErrorCategory::Concept, procedural::remediation::actions::RemediationActionKind::PrerequisiteReview),
+                                        "slow_correct" => (procedural::diagnostics::ErrorCategory::Time, procedural::remediation::actions::RemediationActionKind::ProceduralVariant),
+                                        _ => (procedural::diagnostics::ErrorCategory::Unknown, procedural::remediation::actions::RemediationActionKind::ProceduralVariant),
+                                    };
+                                    
+                                    let action = procedural::remediation::actions::RemediationAction {
+                                        id: format!("rem-{}", answer.answered_at.0),
+                                        kind,
+                                        skill_id: procedural::core::SkillId::new(skill_id_str),
+                                        schema_id: procedural::core::SchemaId::new(schema_id_str),
+                                        domain: procedural::core::Domain::Mathematics,
+                                        primary_error: err_cat,
+                                        step_error: None,
+                                        preferred_difficulty: 2,
+                                        preferred_variant: None,
+                                        source_attempt_id: procedural::core::AttemptId::new(format!("rev-{}", answer.answered_at.0)),
+                                        urgency: procedural::remediation::actions::RemediationUrgency::Normal,
+                                        requires_acknowledgement: false,
+                                        recurrence_count: 1,
+                                        rationale: format!("Triggered by StudyLab telemetry: {}", reason),
+                                        created_at: answer.answered_at.0,
+                                    };
+                                    
+                                    let _ = service.enqueue_remediation_action(action);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             card.custom_data = data;
             card.validate_custom_data()?;
         }
