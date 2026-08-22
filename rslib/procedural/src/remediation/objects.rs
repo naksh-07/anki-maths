@@ -116,6 +116,7 @@ impl ConceptCheckObject {
                 domain_competence_verified: Some(is_correct),
                 latency_evidence: latency_ms,
                 diagnostic_errors,
+                domain_evidence: None,
             };
 
             ConceptCheckEvaluation {
@@ -144,6 +145,7 @@ impl ConceptCheckObject {
                 domain_competence_verified: Some(false),
                 latency_evidence: latency_ms,
                 diagnostic_errors: vec![ErrorCategory::Concept],
+                domain_evidence: None,
             };
 
             ConceptCheckEvaluation {
@@ -263,6 +265,7 @@ impl StrategyDrillObject {
                 domain_competence_verified: Some(is_correct),
                 latency_evidence: latency_ms,
                 diagnostic_errors,
+                domain_evidence: None,
             };
 
             StrategyDrillEvaluation {
@@ -291,6 +294,7 @@ impl StrategyDrillObject {
                 domain_competence_verified: Some(false),
                 latency_evidence: latency_ms,
                 diagnostic_errors: vec![ErrorCategory::Strategy],
+                domain_evidence: None,
             };
 
             StrategyDrillEvaluation {
@@ -406,6 +410,7 @@ impl RepresentationDrillObject {
                 domain_competence_verified: Some(is_correct),
                 latency_evidence: latency_ms,
                 diagnostic_errors,
+                domain_evidence: None,
             };
 
             RepresentationDrillEvaluation {
@@ -434,6 +439,7 @@ impl RepresentationDrillObject {
                 domain_competence_verified: Some(false),
                 latency_evidence: latency_ms,
                 diagnostic_errors: vec![ErrorCategory::Concept],
+                domain_evidence: None,
             };
 
             RepresentationDrillEvaluation {
@@ -510,6 +516,7 @@ impl WorkedExampleObject {
             domain_competence_verified: Some(false),
             latency_evidence: view_time_ms,
             diagnostic_errors: Vec::new(),
+            domain_evidence: None,
         }
     }
 }

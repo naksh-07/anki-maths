@@ -130,7 +130,7 @@ fn run_hot_path_component_benchmarks() {
         retry_dependence: 0,
         variant_exposure: Some("successive_discount".to_string()),
         variant_category: VariantCategory::Parameter,
-        diagnostic_errors: vec![],
+        diagnostic_errors: vec![], domain_evidence: None,
         ..Default::default()
     };
 
@@ -443,7 +443,7 @@ fn run_learner_profile_scale_benchmarks() {
                 retry_dependence: 0,
                 variant_exposure: Some(format!("var_{}", i % 5)),
                 variant_category: VariantCategory::Structural,
-                diagnostic_errors: if is_corr { vec![] } else { vec![ErrorCategory::Calculation] },
+                diagnostic_errors: if is_corr { vec![] } else { vec![ErrorCategory::Calculation] }, domain_evidence: None,
                 ..Default::default()
             };
 
@@ -753,7 +753,7 @@ fn run_difficulty_engine_benchmark() {
         retry_dependence: 0,
         variant_exposure: Some("v1".to_string()),
         variant_category: VariantCategory::Structural,
-        diagnostic_errors: vec![],
+        diagnostic_errors: vec![], domain_evidence: None,
         ..Default::default()
     };
     for _ in 0..10 {

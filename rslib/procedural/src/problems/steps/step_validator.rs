@@ -221,6 +221,69 @@ pub struct StepGraphEvaluation {
     pub step_latencies_ms: Vec<u64>,
 }
 
+impl StepGraphEvaluation {
+    /// Extract Chemistry domain diagnostic evidence from stepwise evaluation.
+    pub fn to_chemistry_physical_evidence(&self) -> Option<crate::skills::domain_evidence::ChemistryEvidence> {
+        if self.step_evaluations.is_empty() {
+            return None;
+        }
+
+        let first_err_idx = self.first_error_step;
+        let is_all_correct = self.is_correct;
+
+        if is_all_correct {
+            return Some(crate::skills::domain_evidence::ChemistryEvidence::Physical {
+                model_setup: Some(true),
+                equation_selection: Some(true),
+                intermediate_quantity: Some(true),
+                calculation: Some(true),
+                conservation: Some(true),
+                verification: Some(true),
+                transfer: None,
+            });
+        }
+
+        let (model_setup, intermediate_quantity, calculation, conservation) = match first_err_idx {
+            Some(0) => {
+                let is_concept = match self.first_error_type {
+                    Some(StepErrorType::ChemicalRepresentationError)
+                    | Some(StepErrorType::EquationBalanceError)
+                    | Some(StepErrorType::RegimeSelectionError)
+                    | Some(StepErrorType::FormulaSelectionError)
+                    | Some(StepErrorType::SetupError) => true,
+                    _ => false,
+                };
+                if is_concept {
+                    (Some(false), Some(false), Some(false), None)
+                } else {
+                    (Some(true), Some(false), Some(false), Some(true))
+                }
+            }
+            Some(i) if i >= 1 && i < self.step_evaluations.len().saturating_sub(1) => {
+                (Some(true), Some(false), Some(false), Some(true))
+            }
+            _ => {
+                let is_cons_violation = self.first_error_type == Some(StepErrorType::ConservationViolationError);
+                if is_cons_violation {
+                    (Some(true), Some(true), Some(false), Some(false))
+                } else {
+                    (Some(true), Some(true), Some(false), Some(true))
+                }
+            }
+        };
+
+        Some(crate::skills::domain_evidence::ChemistryEvidence::Physical {
+            model_setup,
+            equation_selection: Some(true),
+            intermediate_quantity,
+            calculation,
+            conservation,
+            verification: Some(false),
+            transfer: None,
+        })
+    }
+}
+
 /// Mathematical semantic comparator for lightweight, bounded algebraic and numeric equivalence.
 pub struct MathSemanticComparator;
 

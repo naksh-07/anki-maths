@@ -205,7 +205,7 @@ fn create_evidence(is_correct: bool, hints: u32, latency_ms: u64, is_transfer: b
         transfer_evidence: is_transfer && is_correct,
         domain_competence_verified: Some(is_correct),
         latency_evidence: latency_ms,
-        diagnostic_errors: if is_correct { vec![] } else { vec![ErrorCategory::Calculation] },
+        diagnostic_errors: if is_correct { vec![] } else { vec![ErrorCategory::Calculation] }, domain_evidence: None,
     }
 }
 

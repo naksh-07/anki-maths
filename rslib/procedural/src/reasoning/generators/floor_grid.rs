@@ -66,12 +66,40 @@ impl FloorGridGenerator {
             format!("**{} people** ({}) live in an apartment building with floors numbered 1 (ground floor) to {} (top floor).", puzzle.total_slots, puzzle.entities.join(", "), puzzle.total_slots)
         };
 
+        let scaffold = match difficulty_level {
+            1 => {
+                if !puzzle.is_2d_grid {
+                    let mut floors_scaffold = Vec::new();
+                    for fl in (1..=puzzle.total_slots).rev() {
+                        if fl == 1 {
+                            floors_scaffold.push(format!("Floor {}: [ {} (Fixed Anchor) ]", fl, anchor_entity));
+                        } else {
+                            floors_scaffold.push(format!("Floor {}: [ ___ ]", fl));
+                        }
+                    }
+                    format!("\n\n**Floor Layout (Explicit Scaffold):**\n{}", floors_scaffold.join("\n"))
+                } else {
+                    format!("\n\n**Grid Layout (Explicit Scaffold):**\n{} rows × {} columns matrix", puzzle.grid_rows, puzzle.grid_cols)
+                }
+            }
+            2 => {
+                if !puzzle.is_2d_grid {
+                    let slots: Vec<String> = (1..=puzzle.total_slots).map(|fl| format!("Floor {}: [___]", fl)).collect();
+                    format!("\n\n**Floor Layout (Partial Scaffold):**\n{}", slots.join(" | "))
+                } else {
+                    format!("\n\n**Grid Dimensions:** {}×{}", puzzle.grid_rows, puzzle.grid_cols)
+                }
+            }
+            _ => String::new(),
+        };
+
         let prompt = format!(
             "{}\n\n\
-            **Conditions:**\n{}\n\n\
+            **Conditions:**\n{}{}\n\n\
             **Question:**\n{}",
             structure_desc,
             conditions_formatted.join("\n"),
+            scaffold,
             puzzle.target_question
         );
 
@@ -101,7 +129,11 @@ impl FloorGridGenerator {
 
         let mut meta = ReasoningProblemMetadata::new(SchemaKind::FloorGridCsp, StrategyKind::AnchorFixed)
             .with_decision_point(dp)
-            .with_constraint_count(puzzle.conditions_text.len());
+            .with_constraint_count(puzzle.conditions_text.len())
+            .with_scaffolding_level(if difficulty_level <= 2 { 3 - difficulty_level } else { 0 })
+            .with_constraint_density(puzzle.conditions_text.len() as f64 / puzzle.total_slots.max(1) as f64)
+            .with_branching_factor(if difficulty_level >= 3 { 2 } else { 1 })
+            .with_search_depth(difficulty_level as usize);
 
         if is_strategy_drill {
             meta = meta.as_strategy_drill();

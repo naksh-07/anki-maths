@@ -128,7 +128,7 @@ fn setup_full_30_family_environment() -> (
                 independence: Some(IndependenceLevel::Independent),
                 solution_graph_fingerprint: Some("sg-init".into()),
                 cognitive_decision_correct: Some(true),
-                timestamp: 1000,
+                timestamp: 1000, domain_evidence: None,
             },
         ];
 
@@ -257,7 +257,7 @@ fn test_g3_90_day_multi_domain_anti_starvation_and_capacity() {
                         independence: Some(IndependenceLevel::Independent),
                         solution_graph_fingerprint: Some(format!("sg-d{}", day)),
                         cognitive_decision_correct: Some(true),
-                        timestamp: 1000 + day as i64 * 86400,
+                        timestamp: 1000 + day as i64 * 86400, domain_evidence: None,
                     });
                     if state.recent_attempts.len() > 10 {
                         state.recent_attempts.remove(0);
@@ -405,7 +405,7 @@ fn test_g3_180_day_longitudinal_transfer_and_retention() {
                         independence: Some(IndependenceLevel::Independent),
                         solution_graph_fingerprint: Some(format!("sg_{}", generated_instances)),
                         cognitive_decision_correct: Some(true),
-                        timestamp: 1000 + day as i64 * 86400,
+                        timestamp: 1000 + day as i64 * 86400, domain_evidence: None,
                     });
                     if state.recent_attempts.len() > 10 {
                         state.recent_attempts.remove(0);

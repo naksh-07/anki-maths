@@ -101,7 +101,7 @@ fn test_adaptive_difficulty_hysteresis_and_bounded_transitions() {
     assert!(dec3.reason.contains("fluency_hold"));
 
     // Step 4: Concept breakdown failure on Level 3 -> Fast demotion drops to Level 2
-    let ev4 = MasteryEvidence { final_correctness: false, latency_evidence: 30000, variant_exposure: Some("standard".to_string()), diagnostic_errors: vec![ErrorCategory::Concept], ..Default::default() };
+    let ev4 = MasteryEvidence { final_correctness: false, latency_evidence: 30000, variant_exposure: Some("standard".to_string()), diagnostic_errors: vec![ErrorCategory::Concept], domain_evidence: None, ..Default::default() };
     state.record_attempt_outcome(&ev4, 0.0, 50000, 1150);
     let dec4 = AdaptiveDifficultyEngine::evaluate_difficulty(Some(&state), None, None);
     assert_eq!(dec4.level, 2);

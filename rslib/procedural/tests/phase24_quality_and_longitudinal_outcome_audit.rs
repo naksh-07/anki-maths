@@ -829,7 +829,7 @@ fn test_audit_section10_difficulty_response_and_hysteresis() {
     let ev_slip = MasteryEvidence {
         final_correctness: false,
         latency_evidence: 20_000,
-        diagnostic_errors: vec![ErrorCategory::Calculation],
+        diagnostic_errors: vec![ErrorCategory::Calculation], domain_evidence: None,
         ..Default::default()
     };
     state_slip.record_attempt_outcome(&ev_slip, 0.0, 50_000, 1000);
@@ -843,7 +843,7 @@ fn test_audit_section10_difficulty_response_and_hysteresis() {
     let ev_concept = MasteryEvidence {
         final_correctness: false,
         latency_evidence: 45_000,
-        diagnostic_errors: vec![ErrorCategory::Concept],
+        diagnostic_errors: vec![ErrorCategory::Concept], domain_evidence: None,
         ..Default::default()
     };
     state_concept.record_attempt_outcome(&ev_concept, 0.0, 50_000, 1000);
@@ -876,7 +876,7 @@ fn test_audit_section15_over_adaptation_risk_audit() {
         final_correctness: false,
         latency_evidence: 55_000,
         variant_category: VariantCategory::Transfer,
-        diagnostic_errors: vec![ErrorCategory::DomainSpecific("transfer".to_string())],
+        diagnostic_errors: vec![ErrorCategory::DomainSpecific("transfer".to_string())], domain_evidence: None,
         ..Default::default()
     };
     state.record_attempt_outcome(&ev_trans_fail, 0.0, 65_000, 1000);
@@ -890,4 +890,3 @@ fn test_audit_section15_over_adaptation_risk_audit() {
     assert!(dec.level >= 3, "Difficulty collapsed too aggressively!");
     assert_eq!(state.practice_state, PracticeProgressionState::Transfer, "Practice state dropped prematurely!");
 }
-

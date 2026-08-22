@@ -89,6 +89,7 @@ fn test_adversarial_hint_dependent_learner_avoids_false_mastery() {
             domain_competence_verified: Some(true),
             latency_evidence: 45000,
             diagnostic_errors: vec![],
+            domain_evidence: None,
         };
         state.record_attempt_outcome(&ev, 0.7, 35000, 1000 * i);
     }

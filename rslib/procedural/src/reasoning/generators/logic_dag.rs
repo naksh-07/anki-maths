@@ -53,11 +53,25 @@ impl LogicDagGenerator {
             .map(|(i, opt)| format!("({}) {}", (b'A' + i as u8) as char, opt))
             .collect();
 
+        let scaffold = match difficulty_level {
+            1 => format!(
+                "\n\n**Premise Structure (Explicit Scaffold):**\n- Formal Implications: {}\n- Known Ground Assertion: {}",
+                puzzle.premises_formal[..puzzle.premises_formal.len().saturating_sub(1)].join(", "),
+                puzzle.premises_formal.last().cloned().unwrap_or_default()
+            ),
+            2 => format!(
+                "\n\n**Deduction Guidance (Partial Scaffold):**\n- Premise Relations: {}",
+                puzzle.premises_formal.join(" | ")
+            ),
+            _ => String::new(),
+        };
+
         let prompt = format!(
-            "**Logical Premises:**\n{}\n\n\
+            "**Logical Premises:**\n{}{}\n\n\
             **Question:**\n{}\n\n\
             **Options:**\n{}",
             premises_formatted.join("\n"),
+            scaffold,
             puzzle.target_query,
             options_formatted.join("\n")
         );
@@ -88,7 +102,11 @@ impl LogicDagGenerator {
 
         let mut meta = ReasoningProblemMetadata::new(SchemaKind::LogicDag, StrategyKind::DirectSyllogisticDeduction)
             .with_decision_point(dp)
-            .with_constraint_count(puzzle.premises_text.len());
+            .with_constraint_count(puzzle.premises_text.len())
+            .with_scaffolding_level(if difficulty_level <= 2 { 3 - difficulty_level } else { 0 })
+            .with_constraint_density(puzzle.premises_text.len() as f64 / puzzle.propositions.len().max(1) as f64)
+            .with_branching_factor(if difficulty_level >= 3 { 2 } else { 1 })
+            .with_search_depth(difficulty_level as usize);
 
         if is_strategy_drill {
             meta = meta.as_strategy_drill();

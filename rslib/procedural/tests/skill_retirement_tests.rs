@@ -43,6 +43,7 @@ fn test_retirement_eligibility_evaluation() {
             solution_graph_fingerprint: None,
             cognitive_decision_correct: Some(true),
             timestamp: 100,
+            domain_evidence: None,
         });
     }
 

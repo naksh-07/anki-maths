@@ -6,6 +6,7 @@ use crate::diagnostics::ErrorCategory;
 use crate::problems::steps::StepErrorType;
 use crate::remediation::actions::{RemediationAction, RemediationActionKind, RemediationUrgency};
 use crate::skills::signals::{IndependenceLevel, PracticeProgressionState, RecentAttemptRecord};
+use crate::skills::domain_evidence::{ChemistryEvidence, DomainEvidencePayload};
 
 /// Context provided to the RemediationPolicy to evaluate the optimal next remediation action.
 #[derive(Debug, Clone)]
@@ -112,7 +113,227 @@ impl RemediationPolicy {
             return action;
         }
 
-        // 4. STEP-LEVEL ERROR TYPE SPECIFIC MAPPINGS
+        // 4. DOMAIN EVIDENCE MAPPINGS
+        if let Some(last_attempt) = ctx.recent_attempts.last() {
+            if let Some(domain_ev) = &last_attempt.domain_evidence {
+                match &domain_ev.payload {
+                    DomainEvidencePayload::Math(m) => {
+                        if m.execution == Some(false) {
+                            return RemediationAction::new(
+                                action_id,
+                                RemediationActionKind::ProceduralVariant,
+                                ctx.skill_id,
+                                ctx.schema_id,
+                                ctx.domain.clone(),
+                                ctx.primary_error.clone(),
+                                ctx.source_attempt_id,
+                                "Domain Evidence: Execution error. Practicing controlled calculation variation.",
+                            )
+                            .with_variant(Some("simpler_numbers".to_string()))
+                            .with_difficulty(1)
+                            .with_recurrence(rec);
+                        }
+                        if m.method_selection == Some(false) {
+                            return RemediationAction::new(
+                                action_id,
+                                RemediationActionKind::StrategyDrill,
+                                ctx.skill_id,
+                                ctx.schema_id,
+                                ctx.domain.clone(),
+                                ctx.primary_error.clone(),
+                                ctx.source_attempt_id,
+                                "Domain Evidence: Method selection failure. Strategy drill required.",
+                            ).with_recurrence(rec);
+                        }
+                        if m.pattern_recognition == Some(false) {
+                            return RemediationAction::new(
+                                action_id,
+                                RemediationActionKind::ConceptCheck,
+                                ctx.skill_id,
+                                ctx.schema_id,
+                                ctx.domain.clone(),
+                                ctx.primary_error.clone(),
+                                ctx.source_attempt_id,
+                                "Domain Evidence: Pattern recognition failure. Triggering concept check.",
+                            ).with_recurrence(rec);
+                        }
+                    },
+                    DomainEvidencePayload::Reasoning(r) => {
+                        if r.deduction == Some(false) || r.decision_path == Some(false) {
+                            return RemediationAction::new(
+                                action_id,
+                                RemediationActionKind::StrategyDrill,
+                                ctx.skill_id,
+                                ctx.schema_id,
+                                ctx.domain.clone(),
+                                ctx.primary_error.clone(),
+                                ctx.source_attempt_id,
+                                "Domain Evidence: Logic flaw. Strategy/deduction-focused intervention.",
+                            ).with_recurrence(rec);
+                        }
+                        if r.representation == Some(false) || r.constraint_extraction == Some(false) {
+                            return RemediationAction::new(
+                                action_id,
+                                RemediationActionKind::RepresentationDrill,
+                                ctx.skill_id,
+                                ctx.schema_id,
+                                ctx.domain.clone(),
+                                ctx.primary_error.clone(),
+                                ctx.source_attempt_id,
+                                "Domain Evidence: Representation/constraint extraction failure. Targeted representation scaffolding.",
+                            )
+                            .with_difficulty(1)
+                            .with_recurrence(rec);
+                        }
+                        if r.trap_checking == Some(false) {
+                            return RemediationAction::new(
+                                action_id,
+                                RemediationActionKind::StrategyDrill,
+                                ctx.skill_id,
+                                ctx.schema_id,
+                                ctx.domain.clone(),
+                                ctx.primary_error.clone(),
+                                ctx.source_attempt_id,
+                                "Domain Evidence: Data sufficiency trap. Sufficiency-specific strategy practice.",
+                            ).with_recurrence(rec);
+                        }
+                    },
+                    DomainEvidencePayload::Physics(p) => {
+                        if p.unit_validity == Some(false) {
+                            let mut repeated = false;
+                            if ctx.recent_attempts.len() >= 2 {
+                                let prev = &ctx.recent_attempts[ctx.recent_attempts.len() - 2];
+                                if let Some(prev_ev) = &prev.domain_evidence {
+                                    if let DomainEvidencePayload::Physics(prev_p) = &prev_ev.payload {
+                                        if prev_p.unit_validity == Some(false) {
+                                            repeated = true;
+                                        }
+                                    }
+                                }
+                            }
+                            return RemediationAction::new(
+                                action_id,
+                                if repeated { RemediationActionKind::DeclarativeRecall } else { RemediationActionKind::ProceduralVariant },
+                                ctx.skill_id,
+                                ctx.schema_id,
+                                ctx.domain.clone(),
+                                ctx.primary_error.clone(),
+                                ctx.source_attempt_id,
+                                "Domain Evidence: Unit conversion error.",
+                            )
+                            .with_variant(Some("unit_conversion".to_string()))
+                            .with_difficulty(1)
+                            .with_recurrence(rec);
+                        }
+                        if p.representation == Some(false) {
+                            return RemediationAction::new(
+                                action_id,
+                                RemediationActionKind::RepresentationDrill,
+                                ctx.skill_id,
+                                ctx.schema_id,
+                                ctx.domain.clone(),
+                                ctx.primary_error.clone(),
+                                ctx.source_attempt_id,
+                                "Domain Evidence: Free body diagram / representation flaw.",
+                            ).with_recurrence(rec);
+                        }
+                        if p.calculation == Some(false) {
+                            return RemediationAction::new(
+                                action_id,
+                                RemediationActionKind::ProceduralVariant,
+                                ctx.skill_id,
+                                ctx.schema_id,
+                                ctx.domain.clone(),
+                                ctx.primary_error.clone(),
+                                ctx.source_attempt_id,
+                                "Domain Evidence: Physics calculation slip. Practicing controlled calculation variation.",
+                            )
+                            .with_variant(Some("simpler_numbers".to_string()))
+                            .with_difficulty(1)
+                            .with_recurrence(rec);
+                        }
+                    },
+                    DomainEvidencePayload::Chemistry(c) => {
+                        match c {
+                            ChemistryEvidence::Physical {
+                                model_setup,
+                                equation_selection,
+                                conservation,
+                                intermediate_quantity,
+                                calculation,
+                                ..
+                            } => {
+                                // 1. Setup / Conservation / Model breakdown
+                                if *model_setup == Some(false)
+                                    || *equation_selection == Some(false)
+                                    || *conservation == Some(false)
+                                {
+                                    return RemediationAction::new(
+                                        action_id,
+                                        if rec >= 2 { RemediationActionKind::ConceptCheck } else { RemediationActionKind::StrategyDrill },
+                                        ctx.skill_id,
+                                        ctx.schema_id,
+                                        ctx.domain.clone(),
+                                        ctx.primary_error.clone(),
+                                        ctx.source_attempt_id,
+                                        "Domain Evidence: Chemistry reaction model / conservation setup failure.",
+                                    ).with_recurrence(rec);
+                                }
+
+                                // 2. Intermediate calculation / conversion failure
+                                if *intermediate_quantity == Some(false) {
+                                    return RemediationAction::new(
+                                        action_id,
+                                        RemediationActionKind::ProceduralVariant,
+                                        ctx.skill_id,
+                                        ctx.schema_id,
+                                        ctx.domain.clone(),
+                                        ctx.primary_error.clone(),
+                                        ctx.source_attempt_id,
+                                        "Domain Evidence: Intermediate quantity/conversion error. Guided intermediate practice.",
+                                    )
+                                    .with_variant(Some("guided_steps".to_string()))
+                                    .with_difficulty(1)
+                                    .with_recurrence(rec);
+                                }
+
+                                // 3. Surface calculation slip on final step (intermediate was correct)
+                                if *intermediate_quantity == Some(true) && *calculation == Some(false) {
+                                    return RemediationAction::new(
+                                        action_id,
+                                        RemediationActionKind::ProceduralVariant,
+                                        ctx.skill_id,
+                                        ctx.schema_id,
+                                        ctx.domain.clone(),
+                                        ctx.primary_error.clone(),
+                                        ctx.source_attempt_id,
+                                        "Domain Evidence: Correct intermediate setup, final arithmetic slip. Simpler numbers variant.",
+                                    )
+                                    .with_variant(Some("simpler_numbers".to_string()))
+                                    .with_difficulty(1)
+                                    .with_recurrence(rec);
+                                }
+                            },
+                            ChemistryEvidence::Inorganic { qualitative_reasoning: Some(false), .. } => {
+                                return RemediationAction::new(
+                                    action_id,
+                                    RemediationActionKind::ConceptCheck,
+                                    ctx.skill_id,
+                                    ctx.schema_id,
+                                    ctx.domain.clone(),
+                                    ctx.primary_error.clone(),
+                                    ctx.source_attempt_id,
+                                    "Domain Evidence: Qualitative reasoning (valency/trend) error.",
+                                ).with_recurrence(rec);
+                            },
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. STEP-LEVEL ERROR TYPE SPECIFIC MAPPINGS
         if let Some(step_err) = ctx.step_error {
             match step_err {
                 // Concept / Schema Recognition

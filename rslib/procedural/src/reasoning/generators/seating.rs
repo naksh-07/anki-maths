@@ -62,14 +62,37 @@ impl SeatingGenerator {
             .map(|(i, c)| format!("{}. {}", i + 1, c))
             .collect();
 
+        let scaffold = match difficulty_level {
+            1 => {
+                let slots: Vec<String> = (1..=puzzle.total_slots)
+                    .map(|pos| {
+                        if pos == 1 {
+                            format!("Pos {}: {} (Anchor)", pos, anchor_person)
+                        } else {
+                            format!("Pos {}: ___", pos)
+                        }
+                    })
+                    .collect();
+                format!("\n\n**Arrangement (Explicit Scaffold):**\n[ {} ]", slots.join(" | "))
+            }
+            2 => {
+                let slots: Vec<String> = (1..=puzzle.total_slots)
+                    .map(|pos| format!("Pos {}: ___", pos))
+                    .collect();
+                format!("\n\n**Arrangement (Partial Scaffold):**\n[ {} ]", slots.join(" | "))
+            }
+            _ => String::new(),
+        };
+
         let prompt = format!(
             "**{} people** ({}) sit in a single row facing North (positions 1 to {} from left to right).\n\n\
-            **Conditions:**\n{}\n\n\
+            **Conditions:**\n{}{}\n\n\
             **Question:**\n{}",
             puzzle.total_slots,
             puzzle.people.join(", "),
             puzzle.total_slots,
             conditions_formatted.join("\n"),
+            scaffold,
             puzzle.target_question
         );
 
@@ -99,7 +122,11 @@ impl SeatingGenerator {
 
         let mut meta = ReasoningProblemMetadata::new(SchemaKind::LinearSeating, StrategyKind::AnchorFixed)
             .with_decision_point(dp)
-            .with_constraint_count(puzzle.conditions_text.len());
+            .with_constraint_count(puzzle.conditions_text.len())
+            .with_scaffolding_level(if difficulty_level <= 2 { 3 - difficulty_level } else { 0 })
+            .with_constraint_density(puzzle.conditions_text.len() as f64 / puzzle.total_slots.max(1) as f64)
+            .with_branching_factor(if difficulty_level >= 3 { 2 } else { 1 })
+            .with_search_depth(difficulty_level as usize);
 
         if is_strategy_drill {
             meta = meta.as_strategy_drill();

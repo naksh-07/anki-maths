@@ -47,7 +47,7 @@ fn test_simulation_learner_a_new_slow_correct() {
         transfer_evidence: false,
         domain_competence_verified: Some(true),
         latency_evidence: 75_000,
-        diagnostic_errors: vec![],
+        diagnostic_errors: vec![], domain_evidence: None,
     };
 
     state.total_attempts = 1;
@@ -95,7 +95,7 @@ fn test_simulation_learner_b_fluent_fast_correct() {
         transfer_evidence: false,
         domain_competence_verified: Some(true),
         latency_evidence: 26_000,
-        diagnostic_errors: vec![],
+        diagnostic_errors: vec![], domain_evidence: None,
     };
 
     ProgressionPolicy::evaluate(&mut state, &evidence);
@@ -134,7 +134,7 @@ fn test_simulation_learner_c_heavy_hints() {
         transfer_evidence: true,
         domain_competence_verified: Some(true),
         latency_evidence: 30_000,
-        diagnostic_errors: vec![],
+        diagnostic_errors: vec![], domain_evidence: None,
     };
 
     ProgressionPolicy::evaluate(&mut state, &evidence);
@@ -165,7 +165,7 @@ fn test_simulation_learner_d_strong_standard_weak_transfer() {
             independence: Some(procedural::IndependenceLevel::Independent),
             solution_graph_fingerprint: None,
             cognitive_decision_correct: Some(true),
-            timestamp: 100,
+            timestamp: 100, domain_evidence: None,
         });
     }
     state.record_variant_exposure("standard_moles", true, 20_000, None, 100);
@@ -213,7 +213,7 @@ fn test_simulation_learner_e_long_break_mastered_retirement_and_reactivation() {
             independence: Some(procedural::IndependenceLevel::Independent),
             solution_graph_fingerprint: None,
             cognitive_decision_correct: Some(true),
-            timestamp: 100,
+            timestamp: 100, domain_evidence: None,
         });
     }
 

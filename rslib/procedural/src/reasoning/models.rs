@@ -113,6 +113,14 @@ pub struct ReasoningProblemMetadata {
     pub search_depth: usize,
     pub is_unambiguous: bool,
     pub is_strategy_drill: bool,
+    #[serde(default)]
+    pub scaffolding_level: u32,
+    #[serde(default)]
+    pub constraint_density: f64,
+    #[serde(default)]
+    pub branching_factor: usize,
+    #[serde(default)]
+    pub trap_density: f64,
 }
 
 impl ReasoningProblemMetadata {
@@ -125,6 +133,10 @@ impl ReasoningProblemMetadata {
             search_depth: 0,
             is_unambiguous: true,
             is_strategy_drill: false,
+            scaffolding_level: 0,
+            constraint_density: 0.0,
+            branching_factor: 1,
+            trap_density: 0.0,
         }
     }
 
@@ -140,6 +152,26 @@ impl ReasoningProblemMetadata {
 
     pub fn with_search_depth(mut self, depth: usize) -> Self {
         self.search_depth = depth;
+        self
+    }
+
+    pub fn with_scaffolding_level(mut self, level: u32) -> Self {
+        self.scaffolding_level = level;
+        self
+    }
+
+    pub fn with_constraint_density(mut self, density: f64) -> Self {
+        self.constraint_density = density;
+        self
+    }
+
+    pub fn with_branching_factor(mut self, factor: usize) -> Self {
+        self.branching_factor = factor;
+        self
+    }
+
+    pub fn with_trap_density(mut self, trap_density: f64) -> Self {
+        self.trap_density = trap_density;
         self
     }
 

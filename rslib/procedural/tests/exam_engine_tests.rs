@@ -97,7 +97,7 @@ fn test_exam_relevance_scorer_and_topic_weighting() {
     let ev_struggling = MasteryEvidence {
         final_correctness: false,
         latency_evidence: 50_000,
-        diagnostic_errors: vec![ErrorCategory::Concept],
+        diagnostic_errors: vec![ErrorCategory::Concept], domain_evidence: None,
         ..Default::default()
     };
     state_struggling.record_attempt_outcome(&ev_struggling, 0.0, 35_000, 1000);

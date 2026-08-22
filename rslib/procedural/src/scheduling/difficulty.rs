@@ -117,16 +117,30 @@ impl AdaptiveDifficultyEngine {
 
         // 1. CRITICAL DEMOTION ON CONCEPT / STRATEGY BREAKDOWN (Fast Demotion)
         if last_failed {
+            let mut is_concept_breakdown = false;
+
             if let Some(err_cat) = last_attempt.and_then(|a| a.error_category.as_ref()) {
                 if matches!(err_cat, ErrorCategory::Concept | ErrorCategory::Conceptual | ErrorCategory::Strategy) {
-                    let new_level = (curr_level.saturating_sub(1)).max(1);
-                    let target = latency_override.unwrap_or_else(|| Self::default_target_latency_for_level(new_level));
-                    return DifficultyDecision::new(
-                        new_level,
-                        target,
-                        format!("demoted_on_concept_breakdown:L{}->L{}", curr_level, new_level),
-                    );
+                    is_concept_breakdown = true;
                 }
+            }
+
+            if let Some(domain_ev) = last_attempt.and_then(|a| a.domain_evidence.as_ref()) {
+                if domain_ev.is_execution_error() {
+                    is_concept_breakdown = false;
+                } else if domain_ev.is_conceptual_error() {
+                    is_concept_breakdown = true;
+                }
+            }
+
+            if is_concept_breakdown {
+                let new_level = (curr_level.saturating_sub(1)).max(1);
+                let target = latency_override.unwrap_or_else(|| Self::default_target_latency_for_level(new_level));
+                return DifficultyDecision::new(
+                    new_level,
+                    target,
+                    format!("demoted_on_concept_breakdown:L{}->L{}", curr_level, new_level),
+                );
             }
         }
 

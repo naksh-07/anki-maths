@@ -36,7 +36,7 @@ fn test_adversarial_pattern_matcher_familiarity_ceiling() {
             transfer_evidence: false, // No transfer evidence
             domain_competence_verified: Some(true),
             latency_evidence: 12_000,
-            diagnostic_errors: Vec::new(),
+            diagnostic_errors: Vec::new(), domain_evidence: None,
         };
 
         state.record_attempt_outcome(&evidence, 1.0, 30_000, timestamp_base + i * 60);
@@ -103,7 +103,7 @@ fn test_adversarial_chronic_hint_dependent_learner() {
             transfer_evidence: false,
             domain_competence_verified: Some(true),
             latency_evidence: 25_000,
-            diagnostic_errors: Vec::new(),
+            diagnostic_errors: Vec::new(), domain_evidence: None,
         };
         state.record_attempt_outcome(&evidence, 0.7, 30_000, timestamp_base + i * 60);
     }
@@ -126,7 +126,7 @@ fn test_adversarial_chronic_hint_dependent_learner() {
             transfer_evidence: true,
             domain_competence_verified: Some(true),
             latency_evidence: 18_000,
-            diagnostic_errors: Vec::new(),
+            diagnostic_errors: Vec::new(), domain_evidence: None,
         };
         state.record_attempt_outcome(&evidence, 1.0, 30_000, timestamp_base + i * 60);
     }
@@ -170,7 +170,7 @@ fn test_adversarial_fast_wrong_impulsive_learner() {
         transfer_evidence: false,
         domain_competence_verified: Some(false),
         latency_evidence: 4_000, // 4s on 30s target -> impulsive fast wrong
-        diagnostic_errors: vec![ErrorCategory::Strategy],
+        diagnostic_errors: vec![ErrorCategory::Strategy], domain_evidence: None,
     };
     state.record_attempt_outcome(&evidence, 0.0, 30_000, 1_000_000);
 
@@ -228,7 +228,7 @@ fn test_adversarial_slow_accurate_conceptual_learner() {
             transfer_evidence: false,
             domain_competence_verified: Some(true),
             latency_evidence: 48_000, // slow but clean
-            diagnostic_errors: Vec::new(),
+            diagnostic_errors: Vec::new(), domain_evidence: None,
         };
         // Verify rating policy: In Learning stage, slow clean solves receive Good (not Hard)
         let outcome = ProceduralReviewOutcome::new(
@@ -291,7 +291,7 @@ fn test_adversarial_long_break_retention_verification() {
             transfer_evidence: i >= 3,
             domain_competence_verified: Some(true),
             latency_evidence: 20_000,
-            diagnostic_errors: Vec::new(),
+            diagnostic_errors: Vec::new(), domain_evidence: None,
         };
         state.record_attempt_outcome(&evidence, 1.0, 30_000, timestamp_base + i * 60);
     }
@@ -314,7 +314,7 @@ fn test_adversarial_long_break_retention_verification() {
         transfer_evidence: true,
         domain_competence_verified: Some(true),
         latency_evidence: 18_000,
-        diagnostic_errors: Vec::new(),
+        diagnostic_errors: Vec::new(), domain_evidence: None,
     };
     state.record_attempt_outcome(&delay_evidence, 1.0, 30_000, timestamp_base + 172_800);
 
@@ -505,7 +505,7 @@ fn test_simulation_30_day_cohort_progression() {
                 transfer_evidence: false,
                 domain_competence_verified: Some(true),
                 latency_evidence: 12_000,
-                diagnostic_errors: Vec::new(),
+                diagnostic_errors: Vec::new(), domain_evidence: None,
             };
             pm_state.record_attempt_outcome(&ev, 1.0, 30_000, day_ts + a * 300);
         }
@@ -529,7 +529,7 @@ fn test_simulation_30_day_cohort_progression() {
                 transfer_evidence: false,
                 domain_competence_verified: Some(is_corr),
                 latency_evidence: 5_000,
-                diagnostic_errors: if is_corr { Vec::new() } else { vec![ErrorCategory::Strategy] },
+                diagnostic_errors: if is_corr { Vec::new() } else { vec![ErrorCategory::Strategy] }, domain_evidence: None,
             };
             imp_state.record_attempt_outcome(&ev, if is_corr { 1.0 } else { 0.0 }, 30_000, day_ts + a * 300);
         }
@@ -553,7 +553,7 @@ fn test_simulation_30_day_cohort_progression() {
                 transfer_evidence: form_id == 4,
                 domain_competence_verified: Some(true),
                 latency_evidence: 45_000, // slow but thorough
-                diagnostic_errors: Vec::new(),
+                diagnostic_errors: Vec::new(), domain_evidence: None,
             };
             delib_state.record_attempt_outcome(&ev, 1.0, 30_000, day_ts + a * 300);
         }
@@ -577,7 +577,7 @@ fn test_simulation_30_day_cohort_progression() {
                 transfer_evidence: form_id == 4,
                 domain_competence_verified: Some(true),
                 latency_evidence: 18_000,
-                diagnostic_errors: Vec::new(),
+                diagnostic_errors: Vec::new(), domain_evidence: None,
             };
             bal_state.record_attempt_outcome(&ev, 1.0, 30_000, day_ts + a * 300);
         }
@@ -625,7 +625,7 @@ fn test_simulation_90_day_curriculum_transfer_and_retention() {
             transfer_evidence: false,
             domain_competence_verified: Some(true),
             latency_evidence: 28_000,
-            diagnostic_errors: Vec::new(),
+            diagnostic_errors: Vec::new(), domain_evidence: None,
         };
         state.record_attempt_outcome(&ev, 1.0, 30_000, day_ts);
     }
@@ -651,7 +651,7 @@ fn test_simulation_90_day_curriculum_transfer_and_retention() {
             transfer_evidence: false,
             domain_competence_verified: Some(true),
             latency_evidence: 25_000,
-            diagnostic_errors: Vec::new(),
+            diagnostic_errors: Vec::new(), domain_evidence: None,
         };
         state.record_attempt_outcome(&ev, 1.0, 30_000, day_ts);
     }
@@ -677,7 +677,7 @@ fn test_simulation_90_day_curriculum_transfer_and_retention() {
             transfer_evidence: is_transfer_day,
             domain_competence_verified: Some(true),
             latency_evidence: 22_000,
-            diagnostic_errors: Vec::new(),
+            diagnostic_errors: Vec::new(), domain_evidence: None,
         };
         state.record_attempt_outcome(&ev, 1.0, 30_000, day_ts);
     }
@@ -703,7 +703,7 @@ fn test_simulation_90_day_curriculum_transfer_and_retention() {
         transfer_evidence: true,
         domain_competence_verified: Some(true),
         latency_evidence: 20_000,
-        diagnostic_errors: Vec::new(),
+        diagnostic_errors: Vec::new(), domain_evidence: None,
     };
     state.record_attempt_outcome(&maint_ev, 1.0, 30_000, maint_day_ts);
 

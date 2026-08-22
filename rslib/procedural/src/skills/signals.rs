@@ -117,6 +117,8 @@ pub struct RecentAttemptRecord {
     pub solution_graph_fingerprint: Option<String>,
     #[serde(default)]
     pub cognitive_decision_correct: Option<bool>,
+    #[serde(default)]
+    pub domain_evidence: Option<crate::skills::domain_evidence::VersionedDomainEvidence>,
     pub timestamp: i64,
 }
 
@@ -356,6 +358,9 @@ pub struct MasteryEvidence {
     pub domain_competence_verified: Option<bool>,
     /// List of diagnostic errors encountered during the attempt.
     pub diagnostic_errors: Vec<ErrorCategory>,
+    /// Domain-specific diagnostic evidence extensions.
+    #[serde(default)]
+    pub domain_evidence: Option<crate::skills::domain_evidence::VersionedDomainEvidence>,
 }
 
 impl Default for MasteryEvidence {
@@ -377,6 +382,7 @@ impl Default for MasteryEvidence {
             time_since_last_ms: None,
             domain_competence_verified: None,
             diagnostic_errors: vec![],
+            domain_evidence: None,
         }
     }
 }

@@ -168,6 +168,7 @@ fn test_readiness_evaluation_states_and_accuracy_signals() {
         solution_graph_fingerprint: None,
         cognitive_decision_correct: Some(false),
         timestamp: 1000,
+        domain_evidence: None,
     });
     states.insert(prereq_2.clone(), state_2_weak);
 
@@ -195,6 +196,7 @@ fn test_readiness_evaluation_states_and_accuracy_signals() {
             solution_graph_fingerprint: None,
             cognitive_decision_correct: Some(true),
             timestamp: 2000,
+            domain_evidence: None,
         });
     }
     states.insert(prereq_2.clone(), state_2_improving);

@@ -507,7 +507,7 @@ fn test_phase22_fluency_vs_difficulty_separation_audit() {
         final_correctness: false,
         latency_evidence: 45_000,
         variant_exposure: Some("standard".into()),
-        diagnostic_errors: vec![ErrorCategory::Concept],
+        diagnostic_errors: vec![ErrorCategory::Concept], domain_evidence: None,
         ..Default::default()
     };
     state_e.record_attempt_outcome(&ev_e, 0.0, 50_000, 1000);
@@ -523,7 +523,7 @@ fn test_phase22_fluency_vs_difficulty_separation_audit() {
         final_correctness: false,
         latency_evidence: 20_000,
         variant_exposure: Some("standard".into()),
-        diagnostic_errors: vec![ErrorCategory::Calculation],
+        diagnostic_errors: vec![ErrorCategory::Calculation], domain_evidence: None,
         ..Default::default()
     };
     state_c.record_attempt_outcome(&ev_c, 0.0, 50_000, 1000);
@@ -796,4 +796,3 @@ fn test_phase22_source_pyq_vs_generated_comparison() {
     let time_diff_ratio = (pyq_avg_time as f64 - gen_avg_time as f64).abs() / pyq_avg_time as f64;
     assert!(time_diff_ratio < 0.15, "Generated and PYQ items must have aligned time profiles, diff={:.2}%", time_diff_ratio * 100.0);
 }
-

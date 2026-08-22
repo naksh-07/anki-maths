@@ -290,7 +290,7 @@ fn test_section3_and_4_lcm_hcf_adaptive_flows_learners_a_to_d() {
         final_correctness: false,
         latency_evidence: 25000,
         independence: IndependenceLevel::Independent,
-        diagnostic_errors: vec![ErrorCategory::Concept],
+        diagnostic_errors: vec![ErrorCategory::Concept], domain_evidence: None,
         ..Default::default()
     };
     state_b.record_attempt_outcome(&ev_failure, 0.0, 30000, 2000);
@@ -572,7 +572,7 @@ fn test_section15_mini_longitudinal_simulation_40_events() {
             final_correctness: is_correct,
             latency_evidence: 14000,
             independence: IndependenceLevel::Independent,
-            diagnostic_errors: errors,
+            diagnostic_errors: errors, domain_evidence: None,
             variant_exposure: Some(item_variant_key),
             ..Default::default()
         };

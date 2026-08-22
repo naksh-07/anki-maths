@@ -46,6 +46,21 @@ impl RemediationActionKind {
             RemediationActionKind::CircuitBreaker => "circuit_breaker",
         }
     }
+
+    /// Numerical precedence for compaction ranking: higher number = stronger / higher intervention tier.
+    pub fn precedence_tier(&self) -> u32 {
+        match self {
+            RemediationActionKind::CircuitBreaker => 90,
+            RemediationActionKind::PrerequisiteReview => 80,
+            RemediationActionKind::WorkedExample => 70,
+            RemediationActionKind::StrategyDrill => 60,
+            RemediationActionKind::ConceptCheck => 50,
+            RemediationActionKind::RepresentationDrill => 40,
+            RemediationActionKind::DeclarativeRecall => 30,
+            RemediationActionKind::ProceduralVariant => 20,
+            RemediationActionKind::TransferRetry => 10,
+        }
+    }
 }
 
 /// Urgency level of the remediation intervention.

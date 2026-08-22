@@ -22,7 +22,7 @@ fn ev_fail(latency: u64, variant: Option<&str>, error: Option<ErrorCategory>) ->
         final_correctness: false,
         latency_evidence: latency,
         variant_exposure: variant.map(|s| s.to_string()),
-        diagnostic_errors: error.map(|e| vec![e]).unwrap_or_default(),
+        diagnostic_errors: error.map(|e| vec![e]).unwrap_or_default(), domain_evidence: None,
         ..Default::default()
     }
 }

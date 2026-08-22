@@ -118,9 +118,17 @@ impl BloodRelationsGenerator {
 
         let target_time_ms = Self::target_latency(difficulty_level);
         let stmts_text: Vec<String> = puzzle.statements.iter().map(|s| s.text()).collect();
+
+        let scaffold = match difficulty_level {
+            1 => "\n\n**Kinship Graph (Explicit Scaffold):**\n- Generation +1 (Parents/Aunts/Uncles): [___]\n- Generation 0 (Siblings/Reference): [___]\n- Generation -1 (Children/Nephews/Nieces): [___]".to_string(),
+            2 => format!("\n\n**Relational Bridge (Partial Scaffold):**\n[ {} -> Intermediate Link -> {} ]", puzzle.query_from, puzzle.query_to),
+            _ => String::new(),
+        };
+
         let prompt = format!(
-            "{}\n\n**Question:** How is **{}** related to **{}**?",
+            "{}{}\n\n**Question:** How is **{}** related to **{}**?",
             stmts_text.join(" "),
+            scaffold,
             puzzle.query_from,
             puzzle.query_to
         );
@@ -151,7 +159,11 @@ impl BloodRelationsGenerator {
 
         let mut meta = ReasoningProblemMetadata::new(SchemaKind::BloodRelations, StrategyKind::ConstructKinshipGraph)
             .with_decision_point(dp)
-            .with_constraint_count(puzzle.statements.len());
+            .with_constraint_count(puzzle.statements.len())
+            .with_scaffolding_level(if difficulty_level <= 2 { 3 - difficulty_level } else { 0 })
+            .with_constraint_density(puzzle.statements.len() as f64 / 3.0)
+            .with_branching_factor(if difficulty_level >= 4 { 2 } else { 1 })
+            .with_search_depth(difficulty_level as usize);
 
         if is_strategy_drill {
             meta = meta.as_strategy_drill();

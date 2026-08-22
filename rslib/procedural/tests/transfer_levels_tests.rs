@@ -35,6 +35,7 @@ fn test_transfer_level_eligibility_progression() {
             solution_graph_fingerprint: None,
             cognitive_decision_correct: Some(true),
             timestamp: 100,
+            domain_evidence: None,
         });
     }
 

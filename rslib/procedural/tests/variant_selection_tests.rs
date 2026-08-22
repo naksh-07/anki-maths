@@ -22,7 +22,7 @@ fn ev_fail(latency: u64, variant: &str, error: ErrorCategory) -> MasteryEvidence
         final_correctness: false,
         latency_evidence: latency,
         variant_exposure: Some(variant.to_string()),
-        diagnostic_errors: vec![error],
+        diagnostic_errors: vec![error], domain_evidence: None,
         ..Default::default()
     }
 }

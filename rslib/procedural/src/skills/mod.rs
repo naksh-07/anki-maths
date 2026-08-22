@@ -5,6 +5,7 @@ pub mod signals;
 pub mod progression;
 pub mod prerequisites;
 pub mod lifecycle;
+pub mod domain_evidence;
 
 use std::collections::HashMap;
 use chrono::Utc;
@@ -22,6 +23,10 @@ pub use prerequisites::{
     PrerequisitePolicy, PrerequisiteReadiness,
 };
 pub use lifecycle::{MaintenanceReviewOutcome, RetirementEvaluation, RetirementPolicy};
+pub use domain_evidence::{
+    ChemistryEvidence, DomainEvidencePayload, MathEvidence, PhysicsEvidence, ReasoningEvidence,
+    VersionedDomainEvidence,
+};
 
 /// Discrete skill node representing a specific concept or operational competency.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -273,6 +278,7 @@ impl SkillState {
             independence: Some(evidence.independence),
             solution_graph_fingerprint: evidence.solution_graph_fingerprint.clone(),
             cognitive_decision_correct: evidence.cognitive_decision_correct,
+            domain_evidence: evidence.domain_evidence.clone(),
             timestamp,
         });
         if self.recent_attempts.len() > self.window_size {

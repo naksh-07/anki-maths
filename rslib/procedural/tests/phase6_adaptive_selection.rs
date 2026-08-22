@@ -148,7 +148,7 @@ fn test_adaptive_selection_longitudinal_simulations() {
         final_correctness: false,
         latency_evidence: 20000,
         independence: IndependenceLevel::Independent,
-        diagnostic_errors: vec![procedural::diagnostics::ErrorCategory::Concept],
+        diagnostic_errors: vec![procedural::diagnostics::ErrorCategory::Concept], domain_evidence: None,
         ..Default::default()
     };
     state.record_attempt_outcome(&ev_failure, 0.0, 30000, 2000);

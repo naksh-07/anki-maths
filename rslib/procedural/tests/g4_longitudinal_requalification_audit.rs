@@ -467,7 +467,7 @@ fn test_g4_two_year_730_day_longitudinal_master_simulation() {
                             transfer_evidence: is_transfer && ok && hints == 0,
                             domain_competence_verified: Some(ok && decision_ok),
                             latency_evidence: latency_ms,
-                            diagnostic_errors: diag_errs,
+                            diagnostic_errors: diag_errs, domain_evidence: None,
                         };
 
                         let score = if ok { 1.0 } else { 0.0 };

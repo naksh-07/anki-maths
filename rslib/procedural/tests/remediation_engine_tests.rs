@@ -95,7 +95,7 @@ fn test_remediation_maths_end_to_end_flow() {
                 transfer_evidence: false,
                 domain_competence_verified: Some(true),
                 latency_evidence: 18000,
-                diagnostic_errors: vec![],
+                diagnostic_errors: vec![], domain_evidence: None,
             };
             service
                 .record_remediation_response(&selected_act, true, &ev, 1.0, 30000)

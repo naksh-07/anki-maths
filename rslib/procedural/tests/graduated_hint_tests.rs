@@ -68,6 +68,7 @@ fn test_occasional_level1_hint_does_not_block_progression() {
             solution_graph_fingerprint: None,
             cognitive_decision_correct: Some(true),
             timestamp: 100,
+            domain_evidence: None,
         });
     }
 
@@ -88,6 +89,7 @@ fn test_occasional_level1_hint_does_not_block_progression() {
         domain_competence_verified: Some(true),
         latency_evidence: 25_000,
         diagnostic_errors: vec![],
+        domain_evidence: None,
     };
 
     ProgressionPolicy::evaluate(&mut state, &evidence);
@@ -118,6 +120,7 @@ fn test_chronic_level3_hints_prevent_false_mastery() {
             solution_graph_fingerprint: None,
             cognitive_decision_correct: Some(true),
             timestamp: 100,
+            domain_evidence: None,
         });
     }
 
@@ -138,6 +141,7 @@ fn test_chronic_level3_hints_prevent_false_mastery() {
         domain_competence_verified: Some(true),
         latency_evidence: 25_000,
         diagnostic_errors: vec![],
+        domain_evidence: None,
     };
 
     ProgressionPolicy::evaluate(&mut state, &evidence);

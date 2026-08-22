@@ -98,7 +98,7 @@ fn setup_test_environment() -> (
                     independence: Some(IndependenceLevel::Independent),
                     solution_graph_fingerprint: Some("sg-1".into()),
                     cognitive_decision_correct: Some(true),
-                    timestamp: 1000,
+                    timestamp: 1000, domain_evidence: None,
                 },
             ];
 
@@ -327,7 +327,7 @@ fn test_gate_5_procedural_instance_queue_control() {
             transfer_evidence: false,
             domain_competence_verified: Some(true),
             latency_evidence: 25_000,
-            diagnostic_errors: Vec::new(),
+            diagnostic_errors: Vec::new(), domain_evidence: None,
         };
         state.record_attempt_outcome(&evidence, 1.0, 30_000, 1000 + i * 60);
     }
@@ -729,7 +729,7 @@ fn test_simulation_30_day_multi_domain_cohort() {
                     transfer_evidence: false,
                     domain_competence_verified: Some(true),
                     latency_evidence: latency_ms,
-                    diagnostic_errors: if is_correct { vec![] } else { vec![ErrorCategory::Calculation] },
+                    diagnostic_errors: if is_correct { vec![] } else { vec![ErrorCategory::Calculation] }, domain_evidence: None,
                 };
                 state.record_attempt_outcome(&evidence, if is_correct { 1.0 } else { 0.0 }, latency_ms, (day * 86_400) as i64);
             } else {
@@ -840,7 +840,7 @@ fn test_simulation_90_day_exam_crammer_anti_starvation() {
                     transfer_evidence: false,
                     domain_competence_verified: Some(true),
                     latency_evidence: latency_ms,
-                    diagnostic_errors: vec![],
+                    diagnostic_errors: vec![], domain_evidence: None,
                 };
                 state.record_attempt_outcome(&evidence, 1.0, latency_ms, (day * 86_400) as i64);
             } else {
@@ -914,4 +914,3 @@ fn test_simulation_180_day_long_break_and_maintenance_cohort() {
         assert_eq!(plan.domain_allocations.len(), 4);
     }
 }
-

@@ -393,4 +393,3 @@ fn test_reasoning_transfer_eligibility_gating() {
     let elig_after = TransferEligibilityEngine::evaluate_eligibility(Some(&state));
     assert!(elig_after.is_eligible);
 }
-
