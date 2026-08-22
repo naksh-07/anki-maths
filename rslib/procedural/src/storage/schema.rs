@@ -244,4 +244,40 @@ CREATE INDEX IF NOT EXISTS idx_practice_items_family ON practice_items(problem_f
 CREATE INDEX IF NOT EXISTS idx_practice_items_chapter ON practice_items(chapter);
 "#,
     },
+    Migration {
+        version: 5,
+        description: "Durable Remediation Queue and Recurrence Tracker persistence",
+        sql: r#"
+CREATE TABLE IF NOT EXISTS remediation_queue_items (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    skill_id TEXT NOT NULL,
+    schema_id TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    primary_error TEXT NOT NULL,
+    step_error TEXT,
+    preferred_difficulty INTEGER NOT NULL,
+    preferred_variant TEXT,
+    source_attempt_id TEXT NOT NULL,
+    urgency TEXT NOT NULL,
+    requires_acknowledgement INTEGER NOT NULL,
+    recurrence_count INTEGER NOT NULL,
+    rationale TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE,
+    FOREIGN KEY(schema_id) REFERENCES schemas(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS remediation_recurrence (
+    skill_id TEXT NOT NULL,
+    error_category TEXT NOT NULL,
+    count INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY(skill_id, error_category)
+);
+
+CREATE INDEX IF NOT EXISTS idx_remediation_queue_skill ON remediation_queue_items(skill_id);
+CREATE INDEX IF NOT EXISTS idx_remediation_queue_urgency ON remediation_queue_items(urgency);
+"#,
+    },
 ];

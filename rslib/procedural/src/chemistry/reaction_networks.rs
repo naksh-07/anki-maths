@@ -98,9 +98,9 @@ impl ReactionNetworkPuzzle {
     /// Stage 2: CaO + 3C -> CaC2 + CO (yield eta2 = 75%)
     /// Net yield = eta1 * eta2 = 0.80 * 0.75 = 0.60 (60%)
     fn generate_two_stage_fractional_yield<R: Rng>(rng: &mut R) -> Self {
-        let mass_caco3 = (rng.random_range(200..1500) as f64); // 200 to 1499 g
-        let eta1 = (rng.random_range(70..95) as f64) / 100.0; // 70% to 94%
-        let eta2 = (rng.random_range(60..90) as f64) / 100.0; // 60% to 89%
+        let mass_caco3 = rng.random_range(200..1500) as f64; // 200 to 1499 g
+        let eta1 = rng.random_range(70..95) as f64 / 100.0; // 70% to 94%
+        let eta2 = rng.random_range(60..90) as f64 / 100.0; // 60% to 89%
         let eta_net = eta1 * eta2;
 
         let m_caco3 = 100.09;

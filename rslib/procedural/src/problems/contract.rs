@@ -823,6 +823,79 @@ impl DeclarativeFamilyContract {
                 if p.name.trim().is_empty() || p.name.len() > 64 {
                     return Err(ProceduralError::Validation("ParameterSpec has empty or oversized parameter name".into()));
                 }
+                match &p.domain {
+                    ParameterDomain::IntegerRange { min, max, step, .. } => {
+                        if min > max {
+                            return Err(ProceduralError::Validation(format!(
+                                "Parameter '{}' has min ({}) > max ({})", p.name, min, max
+                            )));
+                        }
+                        if let Some(s) = step {
+                            if *s <= 0 {
+                                return Err(ProceduralError::Validation(format!(
+                                    "Parameter '{}' has non-positive step ({})", p.name, s
+                                )));
+                            }
+                        }
+                        if max.checked_sub(*min).is_none() {
+                            return Err(ProceduralError::Validation(format!(
+                                "Parameter '{}' range [{}, {}] overflows i64", p.name, min, max
+                            )));
+                        }
+                    }
+                    ParameterDomain::FloatRange { min, max, .. } => {
+                        if min > max || min.is_nan() || max.is_nan() || min.is_infinite() || max.is_infinite() {
+                            return Err(ProceduralError::Validation(format!(
+                                "Parameter '{}' has invalid float range [{}, {}]", p.name, min, max
+                            )));
+                        }
+                    }
+                    ParameterDomain::DiscreteChoice { values } => {
+                        if values.is_empty() {
+                            return Err(ProceduralError::Validation(format!(
+                                "Parameter '{}' has empty discrete choice values", p.name
+                            )));
+                        }
+                    }
+                    ParameterDomain::PermutationChoice { pool, count } => {
+                        if pool.is_empty() || *count == 0 || *count > pool.len() {
+                            return Err(ProceduralError::Validation(format!(
+                                "Parameter '{}' has invalid PermutationChoice (pool len {}, count {})",
+                                p.name, pool.len(), count
+                            )));
+                        }
+                    }
+                    ParameterDomain::PrimeFactorGrid { base_primes, min_exponents, max_exponents } => {
+                        if base_primes.is_empty() {
+                            return Err(ProceduralError::Validation(format!(
+                                "Parameter '{}' has empty base_primes", p.name
+                            )));
+                        }
+                        for (i, &p_val) in base_primes.iter().enumerate() {
+                            if p_val == 0 {
+                                return Err(ProceduralError::Validation(format!(
+                                    "Parameter '{}' has zero prime base", p.name
+                                )));
+                            }
+                            let min_e = min_exponents.get(i).copied().unwrap_or(1);
+                            let max_e = max_exponents.get(i).copied().unwrap_or(min_e);
+                            if min_e > max_e || max_e > 63 {
+                                return Err(ProceduralError::Validation(format!(
+                                    "Parameter '{}' has invalid exponent range [{}, {}]", p.name, min_e, max_e
+                                )));
+                            }
+                        }
+                    }
+                    ParameterDomain::CoprimePair { min, max } => {
+                        if min > max || max.checked_sub(*min).is_none() {
+                            return Err(ProceduralError::Validation(format!(
+                                "Parameter '{}' CoprimePair has min ({}) > max ({}) or overflows",
+                                p.name, min, max
+                            )));
+                        }
+                    }
+                    _ => {}
+                }
             }
             if arch.constraints.len() > 50 {
                 return Err(ProceduralError::Validation("DeclarativeArchetype contains too many constraints (>50)".into()));

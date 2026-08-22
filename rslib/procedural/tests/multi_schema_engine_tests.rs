@@ -32,7 +32,7 @@ fn test_catalog_expansion_all_seven_topics_registered() {
     }
 
     let all_schemas = service.store().list_all_schemas().unwrap();
-    assert_eq!(all_schemas.len(), 30, "All 30 schemas (14 Maths + 2 Physics + 6 Chemistry + 8 Reasoning) should be present in catalog");
+    assert_eq!(all_schemas.len(), 32, "All 32 schemas (14 Maths + 2 Physics + 6 Chemistry + 10 Reasoning) should be present in catalog");
 }
 
 #[test]

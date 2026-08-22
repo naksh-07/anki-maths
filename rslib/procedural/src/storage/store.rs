@@ -19,7 +19,10 @@ use crate::exam::{
 use crate::practice::{ErrorEvent, PracticeAttempt, SchemaPracticeObject};
 use crate::problems::{ProblemFamily, ProblemInstance};
 use crate::skills::{Skill, SkillState};
-use crate::content::{ChapterPracticeProfile, PracticeItem, Origin, QuestionType};
+use crate::content::{ChapterPracticeProfile, PracticeItem};
+use crate::remediation::{RemediationAction, RemediationActionKind, RemediationQueue, RemediationUrgency};
+use crate::diagnostics::ErrorCategory;
+use crate::problems::steps::StepErrorType;
 
 #[derive(Clone)]
 pub struct ProceduralStore {
@@ -332,6 +335,102 @@ impl ProceduralStore {
         Ok(state)
     }
 
+    pub fn get_skill_states(&self, skill_ids: &[SkillId]) -> Result<HashMap<SkillId, SkillState>> {
+        if skill_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let conn = self.conn.lock().unwrap();
+        let placeholders: Vec<String> = (1..=skill_ids.len()).map(|i| format!("?{}", i)).collect();
+        let sql = format!(
+            r#"
+            SELECT skill_id, mastery, confidence, total_attempts,
+                   successful_attempts, last_practiced_at, custom_state, updated_at
+            FROM skill_states WHERE skill_id IN ({})
+            "#,
+            placeholders.join(", ")
+        );
+
+        let mut stmt = conn.prepare(&sql)?;
+        let params: Vec<&str> = skill_ids.iter().map(|s| s.as_str()).collect();
+        let rows = stmt.query_map(rusqlite::params_from_iter(params), |row| {
+            let id_str: String = row.get(0)?;
+            let mastery: f64 = row.get(1)?;
+            let confidence: f64 = row.get(2)?;
+            let total_attempts: u32 = row.get(3)?;
+            let successful_attempts: u32 = row.get(4)?;
+            let last_practiced_at: Option<i64> = row.get(5)?;
+            let custom_str: String = row.get(6)?;
+            let updated_at: i64 = row.get(7)?;
+
+            let custom_state: serde_json::Value =
+                serde_json::from_str(&custom_str).unwrap_or_default();
+
+            let mut state = SkillState::new(SkillId::new(id_str.clone()));
+            state.mastery = mastery;
+            state.confidence = confidence;
+            state.total_attempts = total_attempts;
+            state.successful_attempts = successful_attempts;
+            state.last_practiced_at = last_practiced_at;
+            state.custom_state = custom_state;
+            state.updated_at = updated_at;
+            state.restore_from_custom_state();
+
+            Ok((SkillId::new(id_str), state))
+        })?;
+
+        let mut states = HashMap::new();
+        for r in rows {
+            let (id, s) = r?;
+            states.insert(id, s);
+        }
+        Ok(states)
+    }
+
+    pub fn get_all_skill_states(&self) -> Result<HashMap<SkillId, SkillState>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT skill_id, mastery, confidence, total_attempts,
+                   successful_attempts, last_practiced_at, custom_state, updated_at
+            FROM skill_states
+            "#,
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            let id_str: String = row.get(0)?;
+            let mastery: f64 = row.get(1)?;
+            let confidence: f64 = row.get(2)?;
+            let total_attempts: u32 = row.get(3)?;
+            let successful_attempts: u32 = row.get(4)?;
+            let last_practiced_at: Option<i64> = row.get(5)?;
+            let custom_str: String = row.get(6)?;
+            let updated_at: i64 = row.get(7)?;
+
+            let custom_state: serde_json::Value =
+                serde_json::from_str(&custom_str).unwrap_or_default();
+
+            let mut state = SkillState::new(SkillId::new(id_str.clone()));
+            state.mastery = mastery;
+            state.confidence = confidence;
+            state.total_attempts = total_attempts;
+            state.successful_attempts = successful_attempts;
+            state.last_practiced_at = last_practiced_at;
+            state.custom_state = custom_state;
+            state.updated_at = updated_at;
+            state.restore_from_custom_state();
+
+            Ok((SkillId::new(id_str), state))
+        })?;
+
+        let mut states = HashMap::new();
+        for r in rows {
+            let (id, s) = r?;
+            states.insert(id, s);
+        }
+        Ok(states)
+    }
+
     pub fn insert_problem_family(&self, family: &ProblemFamily) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let schema_json = serde_json::to_string(&family.parameters_schema)?;
@@ -637,6 +736,219 @@ impl ProceduralStore {
             ],
         )?;
         Ok(())
+    }
+
+    /// Atomically reads existing SkillState, applies attempt outcome, inserts practice attempt,
+    /// inserts error events, and updates SkillState in a single SQLite transaction boundary.
+    pub fn record_practice_attempt_atomic(
+        &self,
+        attempt: &PracticeAttempt,
+        errors: &[ErrorEvent],
+        variant: Option<&str>,
+        target_latency_ms: u64,
+    ) -> Result<SkillState> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        // 1. Transactional read of existing skill state
+        let mut state = {
+            let mut stmt = tx.prepare(
+                r#"
+                SELECT skill_id, mastery, confidence, total_attempts,
+                       successful_attempts, last_practiced_at, custom_state, updated_at
+                FROM skill_states WHERE skill_id = ?1
+                "#,
+            )?;
+
+            let state_opt = stmt
+                .query_row(params![attempt.skill_id.as_str()], |row| {
+                    let id_str: String = row.get(0)?;
+                    let mastery: f64 = row.get(1)?;
+                    let confidence: f64 = row.get(2)?;
+                    let total_attempts: u32 = row.get(3)?;
+                    let successful_attempts: u32 = row.get(4)?;
+                    let last_practiced_at: Option<i64> = row.get(5)?;
+                    let custom_str: String = row.get(6)?;
+                    let updated_at: i64 = row.get(7)?;
+
+                    let custom_state: serde_json::Value =
+                        serde_json::from_str(&custom_str).unwrap_or_default();
+
+                    let mut s = SkillState::new(SkillId::new(id_str));
+                    s.mastery = mastery;
+                    s.confidence = confidence;
+                    s.total_attempts = total_attempts;
+                    s.successful_attempts = successful_attempts;
+                    s.last_practiced_at = last_practiced_at;
+                    s.custom_state = custom_state;
+                    s.updated_at = updated_at;
+                    s.restore_from_custom_state();
+
+                    Ok(s)
+                })
+                .optional()?;
+
+            state_opt.unwrap_or_else(|| SkillState::new(attempt.skill_id.clone()))
+        };
+
+        // 2. Build MasteryEvidence including domain_evidence
+        let err_cat = attempt
+            .metadata
+            .get("error_category")
+            .and_then(|v| serde_json::from_value(v.clone()).ok());
+
+        let mut diagnostic_errors = Vec::new();
+        if let Some(cat) = err_cat {
+            diagnostic_errors.push(cat);
+        }
+        for err in errors {
+            let cat_parsed = match err.error_category.as_str() {
+                "concept" | "conceptual" => ErrorCategory::Concept,
+                "strategy" => ErrorCategory::Strategy,
+                "calculation" => ErrorCategory::Calculation,
+                "careless" => ErrorCategory::Careless,
+                "time" => ErrorCategory::Time,
+                "unknown" => ErrorCategory::Unknown,
+                other => ErrorCategory::DomainSpecific(other.to_string()),
+            };
+            if !diagnostic_errors.contains(&cat_parsed) {
+                diagnostic_errors.push(cat_parsed);
+            }
+        }
+
+        let hints_used = attempt
+            .metadata
+            .get("hints_used")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0) as u32;
+
+        let attempt_count = attempt
+            .metadata
+            .get("attempt_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(1) as u32;
+
+        let independence = if hints_used == 0 && attempt_count <= 1 {
+            crate::skills::IndependenceLevel::Independent
+        } else if hints_used <= 1 && attempt_count <= 1 {
+            crate::skills::IndependenceLevel::LightSupport
+        } else if hints_used <= 2 || attempt_count <= 2 {
+            crate::skills::IndependenceLevel::SignificantSupport
+        } else {
+            crate::skills::IndependenceLevel::NonIndependent
+        };
+
+        let variant_category = attempt
+            .metadata
+            .get("variant_category")
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_default();
+
+        let domain_evidence = attempt
+            .metadata
+            .get("domain_evidence")
+            .and_then(|v| serde_json::from_value(v.clone()).ok());
+
+        let evidence = crate::skills::signals::MasteryEvidence {
+            final_correctness: attempt.is_correct,
+            latency_evidence: attempt.time_taken_ms,
+            independence,
+            hint_dependence: hints_used,
+            retry_dependence: attempt_count.saturating_sub(1),
+            variant_exposure: variant.map(|s| s.to_string()),
+            variant_category,
+            diagnostic_errors,
+            domain_evidence,
+            ..Default::default()
+        };
+
+        // 3. Update in-memory state
+        state.record_attempt_outcome(
+            &evidence,
+            attempt.score,
+            target_latency_ms,
+            attempt.attempted_at,
+        );
+
+        // 4. Insert practice attempt
+        let user_ans_json = serde_json::to_string(&attempt.user_answer)?;
+        let metadata_json = serde_json::to_string(&attempt.metadata)?;
+
+        tx.execute(
+            r#"
+            INSERT INTO practice_attempts (
+                id, instance_id, schema_id, skill_id, card_id,
+                user_answer, is_correct, score, time_taken_ms, attempted_at, metadata
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11);
+            "#,
+            params![
+                attempt.id.as_str(),
+                attempt.instance_id.as_str(),
+                attempt.schema_id.as_str(),
+                attempt.skill_id.as_str(),
+                attempt.card_id,
+                user_ans_json,
+                if attempt.is_correct { 1 } else { 0 },
+                attempt.score,
+                attempt.time_taken_ms as i64,
+                attempt.attempted_at,
+                metadata_json,
+            ],
+        )?;
+
+        // 5. Insert error events
+        for error in errors {
+            let details_json = serde_json::to_string(&error.details)?;
+            tx.execute(
+                r#"
+                INSERT INTO error_events (id, attempt_id, error_category, details, occurred_at)
+                VALUES (?1, ?2, ?3, ?4, ?5);
+                "#,
+                params![
+                    error.id.as_str(),
+                    error.attempt_id.as_str(),
+                    error.error_category,
+                    details_json,
+                    error.occurred_at,
+                ],
+            )?;
+        }
+
+        // 6. Upsert updated skill state
+        state.sync_custom_state();
+        let custom_state_json = serde_json::to_string(&state.custom_state)?;
+
+        tx.execute(
+            r#"
+            INSERT INTO skill_states (
+                skill_id, mastery, confidence, total_attempts,
+                successful_attempts, last_practiced_at, custom_state, updated_at
+            )
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            ON CONFLICT(skill_id) DO UPDATE SET
+                mastery = excluded.mastery,
+                confidence = excluded.confidence,
+                total_attempts = excluded.total_attempts,
+                successful_attempts = excluded.successful_attempts,
+                last_practiced_at = excluded.last_practiced_at,
+                custom_state = excluded.custom_state,
+                updated_at = excluded.updated_at;
+            "#,
+            params![
+                state.skill_id.as_str(),
+                state.mastery,
+                state.confidence,
+                state.total_attempts,
+                state.successful_attempts,
+                state.last_practiced_at,
+                custom_state_json,
+                state.updated_at,
+            ],
+        )?;
+
+        tx.commit()?;
+        Ok(state)
     }
 
     /// Atomically records a practice attempt, associated error events, and updated skill state.
@@ -2067,6 +2379,199 @@ impl ProceduralStore {
             })
             .optional()?;
         Ok(prof)
+    }
+
+    pub fn save_remediation_queue(&self, queue: &RemediationQueue) -> Result<()> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        tx.execute("DELETE FROM remediation_queue_items", [])?;
+        for action in &queue.pending_actions {
+            let step_err_str = action.step_error.as_ref().map(|e| e.as_str());
+            tx.execute(
+                r#"
+                INSERT INTO remediation_queue_items (
+                    id, kind, skill_id, schema_id, domain, primary_error,
+                    step_error, preferred_difficulty, preferred_variant,
+                    source_attempt_id, urgency, requires_acknowledgement,
+                    recurrence_count, rationale, created_at
+                )
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15);
+                "#,
+                params![
+                    action.id,
+                    action.kind.as_str(),
+                    action.skill_id.as_str(),
+                    action.schema_id.as_str(),
+                    action.domain.as_str(),
+                    action.primary_error.as_str(),
+                    step_err_str,
+                    action.preferred_difficulty as i64,
+                    action.preferred_variant,
+                    action.source_attempt_id.as_str(),
+                    action.urgency.as_str(),
+                    if action.requires_acknowledgement { 1 } else { 0 },
+                    action.recurrence_count as i64,
+                    action.rationale,
+                    action.created_at,
+                ],
+            )?;
+        }
+
+        tx.execute("DELETE FROM remediation_recurrence", [])?;
+        for ((skill_id, error_cat), &count) in &queue.recurrence_tracker {
+            tx.execute(
+                r#"
+                INSERT INTO remediation_recurrence (skill_id, error_category, count, updated_at)
+                VALUES (?1, ?2, ?3, ?4);
+                "#,
+                params![
+                    skill_id.as_str(),
+                    error_cat.as_str(),
+                    count as i64,
+                    chrono::Utc::now().timestamp(),
+                ],
+            )?;
+        }
+
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn load_remediation_queue(&self) -> Result<RemediationQueue> {
+        let conn = self.conn.lock().unwrap();
+
+        let table_exists: bool = conn.query_row(
+            "SELECT COUNT(*) > 0 FROM sqlite_master WHERE type='table' AND name='remediation_queue_items'",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(false);
+
+        if !table_exists {
+            return Ok(RemediationQueue::new());
+        }
+
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT id, kind, skill_id, schema_id, domain, primary_error,
+                   step_error, preferred_difficulty, preferred_variant,
+                   source_attempt_id, urgency, requires_acknowledgement,
+                   recurrence_count, rationale, created_at
+            FROM remediation_queue_items
+            ORDER BY created_at ASC
+            "#,
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            let id: String = row.get(0)?;
+            let kind_str: String = row.get(1)?;
+            let skill_id_str: String = row.get(2)?;
+            let schema_id_str: String = row.get(3)?;
+            let domain_str: String = row.get(4)?;
+            let primary_error_str: String = row.get(5)?;
+            let step_error_str: Option<String> = row.get(6)?;
+            let preferred_diff: i64 = row.get(7)?;
+            let preferred_variant: Option<String> = row.get(8)?;
+            let source_attempt_id_str: String = row.get(9)?;
+            let urgency_str: String = row.get(10)?;
+            let req_ack_int: i32 = row.get(11)?;
+            let recurrence_count: i64 = row.get(12)?;
+            let rationale: String = row.get(13)?;
+            let created_at: i64 = row.get(14)?;
+
+            let kind = match kind_str.as_str() {
+                "procedural_variant" => RemediationActionKind::ProceduralVariant,
+                "strategy_drill" => RemediationActionKind::StrategyDrill,
+                "concept_check" => RemediationActionKind::ConceptCheck,
+                "worked_example" => RemediationActionKind::WorkedExample,
+                "prerequisite_review" => RemediationActionKind::PrerequisiteReview,
+                "transfer_retry" => RemediationActionKind::TransferRetry,
+                "circuit_breaker" => RemediationActionKind::CircuitBreaker,
+                _ => RemediationActionKind::ProceduralVariant,
+            };
+
+            let domain: Domain = domain_str.parse().unwrap_or(Domain::Mathematics);
+            let primary_error = match primary_error_str.as_str() {
+                "concept" | "conceptual" => ErrorCategory::Concept,
+                "strategy" => ErrorCategory::Strategy,
+                "calculation" => ErrorCategory::Calculation,
+                "careless" => ErrorCategory::Careless,
+                "time" => ErrorCategory::Time,
+                "unknown" => ErrorCategory::Unknown,
+                other => ErrorCategory::DomainSpecific(other.to_string()),
+            };
+
+            let step_error: Option<StepErrorType> = step_error_str.and_then(|s| {
+                serde_json::from_value(serde_json::Value::String(s)).ok()
+            });
+
+            let urgency = match urgency_str.as_str() {
+                "critical" => RemediationUrgency::Critical,
+                "normal" => RemediationUrgency::Normal,
+                "advisory" => RemediationUrgency::Advisory,
+                _ => RemediationUrgency::Normal,
+            };
+
+            Ok(RemediationAction {
+                id,
+                kind,
+                skill_id: SkillId::new(skill_id_str),
+                schema_id: SchemaId::new(schema_id_str),
+                domain,
+                primary_error,
+                step_error,
+                preferred_difficulty: preferred_diff as u32,
+                preferred_variant,
+                source_attempt_id: AttemptId::new(source_attempt_id_str),
+                urgency,
+                requires_acknowledgement: req_ack_int != 0,
+                recurrence_count: recurrence_count as u32,
+                rationale,
+                created_at,
+            })
+        })?;
+
+        let mut pending_actions = Vec::new();
+        for a in rows {
+            pending_actions.push(a?);
+        }
+
+        let mut recurrence_stmt = conn.prepare(
+            "SELECT skill_id, error_category, count FROM remediation_recurrence",
+        )?;
+
+        let rec_rows = recurrence_stmt.query_map([], |row| {
+            let skill_id_str: String = row.get(0)?;
+            let cat_str: String = row.get(1)?;
+            let count: i64 = row.get(2)?;
+
+            let cat = match cat_str.as_str() {
+                "concept" | "conceptual" => ErrorCategory::Concept,
+                "strategy" => ErrorCategory::Strategy,
+                "calculation" => ErrorCategory::Calculation,
+                "careless" => ErrorCategory::Careless,
+                "time" => ErrorCategory::Time,
+                "unknown" => ErrorCategory::Unknown,
+                other => ErrorCategory::DomainSpecific(other.to_string()),
+            };
+
+            Ok(((SkillId::new(skill_id_str), cat), count as u32))
+        })?;
+
+        let mut recurrence_tracker = HashMap::new();
+        for r in rec_rows {
+            let (k, v) = r?;
+            recurrence_tracker.insert(k, v);
+        }
+
+        let mut queue = RemediationQueue {
+            pending_actions,
+            recurrence_tracker,
+            max_loop_limit: 4,
+        };
+        queue.compact();
+
+        Ok(queue)
     }
 }
 

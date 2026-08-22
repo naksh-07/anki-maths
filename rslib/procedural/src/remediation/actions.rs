@@ -75,6 +75,16 @@ pub enum RemediationUrgency {
     Critical = 3,
 }
 
+impl RemediationUrgency {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            RemediationUrgency::Advisory => "advisory",
+            RemediationUrgency::Normal => "normal",
+            RemediationUrgency::Critical => "critical",
+        }
+    }
+}
+
 impl Default for RemediationUrgency {
     fn default() -> Self {
         Self::Normal

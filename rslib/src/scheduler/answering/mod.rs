@@ -386,6 +386,22 @@ impl Collection {
                                             time_taken_ms,
                                         ).with_card_id(answer.card_id.0);
 
+                                        let domain_ev_val = studylab.get("domainEvidence")
+                                            .or_else(|| studylab.get("domain_evidence"))
+                                            .or_else(|| attempt_res.get("domainEvidence"))
+                                            .or_else(|| attempt_res.get("domain_evidence"));
+
+                                        let domain_evidence: Option<procedural::skills::domain_evidence::VersionedDomainEvidence> = domain_ev_val.and_then(|val| {
+                                            serde_json::from_value(val.clone()).ok().or_else(|| {
+                                                serde_json::from_value::<procedural::skills::domain_evidence::DomainEvidencePayload>(val.clone()).ok().map(|p| {
+                                                    procedural::skills::domain_evidence::VersionedDomainEvidence {
+                                                        version: 1,
+                                                        payload: p,
+                                                    }
+                                                })
+                                            })
+                                        });
+
                                         let mut metadata = serde_json::json!({
                                             "hints_used": hints_used,
                                             "target_time_ms": target_time_ms,
@@ -395,6 +411,11 @@ impl Collection {
                                         }
                                         if let Some(v) = variant {
                                             metadata["variant"] = serde_json::json!(v);
+                                        }
+                                        if let Some(ref dev) = domain_evidence {
+                                            if let Ok(dev_json) = serde_json::to_value(dev) {
+                                                metadata["domain_evidence"] = dev_json;
+                                            }
                                         }
                                         attempt = attempt.with_metadata(metadata);
 
@@ -446,7 +467,13 @@ impl Collection {
                                         let state = service.load_skill_state(&skill_id).unwrap_or(None);
                                         let recent_attempts = state.as_ref().map(|s| s.recent_attempts.as_slice()).unwrap_or(&[]);
                                         let progression_state = state.as_ref().map(|s| s.practice_state).unwrap_or(procedural::skills::signals::PracticeProgressionState::New);
-                                        let recurrence_count = remediation.get("recurrence").and_then(|v| v.as_u64()).map(|v| v as u32).unwrap_or(1);
+                                        
+                                        // Derive authoritative recurrence from backend state rather than untrusted telemetry
+                                        let recurrence_count = {
+                                            let q_arc = service.remediation_queue();
+                                            let q_lock = q_arc.lock().unwrap();
+                                            q_lock.get_recurrence_count(&skill_id, &err_cat) + 1
+                                        };
                                         let is_transfer = studylab.get("mode").and_then(|v| v.as_str()).map_or(false, |m| m.contains("transfer"));
                                         
                                         let ctx = procedural::remediation::policy::RemediationContext {

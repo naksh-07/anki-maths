@@ -332,7 +332,7 @@ impl MacroBudgetPlanner {
         active_domains: &[Domain],
         allocations: &HashMap<Domain, DomainBudget>,
         total_time_ms: u64,
-        floor_per_domain: f64,
+        _floor_per_domain: f64,
     ) -> Vec<DomainBlock> {
         let mut sorted_domains = active_domains.to_vec();
         // Sort domains by allocated time descending (largest block first)

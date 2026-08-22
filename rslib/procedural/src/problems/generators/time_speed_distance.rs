@@ -302,14 +302,13 @@ impl TimeSpeedDistanceGenerator {
     fn generate_level_4(rng: &mut StdRng, seed: u64) -> ProblemInstance {
         let same_direction = rng.random_bool(0.5);
         let s1_kmh = rng.random_range(60..=120);
-        let mut s2_kmh = rng.random_range(20..=50);
-        if same_direction {
+        let s2_kmh = if same_direction {
             // make sure they have a clean difference in m/s
-            s2_kmh = s1_kmh - rng.random_range(1..=3) * 18;
+            s1_kmh - rng.random_range(1..=3) * 18
         } else {
             // make sure they have a clean sum in m/s
-            s2_kmh = 180 - s1_kmh + rng.random_range(0..=2) * 18;
-        }
+            180 - s1_kmh + rng.random_range(0..=2) * 18
+        };
         
         let rel_speed_kmh = if same_direction { s1_kmh - s2_kmh } else { s1_kmh + s2_kmh };
         let rel_speed_ms = rel_speed_kmh * 5 / 18;

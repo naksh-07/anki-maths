@@ -29,7 +29,8 @@ fn lcm_u64(a: u64, b: u64) -> u64 {
     if a == 0 || b == 0 {
         0
     } else {
-        (a / gcd_u64(a, b)) * b
+        let gcd = gcd_u64(a, b);
+        (a / gcd).checked_mul(b).unwrap_or(u64::MAX)
     }
 }
 
@@ -111,23 +112,35 @@ impl DeclarativeProblemGenerator {
         for spec in &archetype.parameters {
             match &spec.domain {
                 ParameterDomain::IntegerRange { min, max, step, non_zero } => {
-                    let mut val = if let Some(s) = step {
-                        let steps_count = ((max - min) / s).max(0);
+                    let mut val = if min > max {
+                        *min
+                    } else if let Some(s) = step {
+                        let step_val = (*s).max(1);
+                        let span = max.saturating_sub(*min);
+                        let steps_count = span / step_val;
                         let step_idx = rng.random_range(0..=steps_count);
-                        min + step_idx * s
+                        min.saturating_add(step_idx.saturating_mul(step_val)).min(*max)
                     } else {
                         rng.random_range(*min..=*max)
                     };
 
                     if non_zero.unwrap_or(false) && val == 0 {
-                        val = if rng.random_bool(0.5) { 1 } else { -1 };
+                        val = if rng.random_bool(0.5) {
+                            if *max >= 1 { 1 } else { -1 }
+                        } else {
+                            if *min <= -1 { -1 } else { 1 }
+                        };
                     }
 
                     raw_params.insert(spec.name.clone(), Value::from(val));
                     str_params.insert(spec.name.clone(), format!("{}", val));
                 }
                 ParameterDomain::FloatRange { min, max, precision } => {
-                    let val = rng.random_range(*min..=*max);
+                    let val = if min.is_nan() || max.is_nan() || min.is_infinite() || max.is_infinite() || min >= max {
+                        if min.is_nan() || min.is_infinite() { 0.0 } else { *min }
+                    } else {
+                        rng.random_range(*min..=*max)
+                    };
                     let formatted = format!("{:.1$}", val, precision);
                     raw_params.insert(spec.name.clone(), Value::from(val));
                     str_params.insert(spec.name.clone(), formatted);
@@ -168,15 +181,15 @@ impl DeclarativeProblemGenerator {
                 } => {
                     let mut composite = 1u64;
                     for (i, &p) in base_primes.iter().enumerate() {
-                        let min_e = min_exponents.get(i).copied().unwrap_or(1);
-                        let max_e = max_exponents.get(i).copied().unwrap_or(min_e);
+                        let min_e = min_exponents.get(i).copied().unwrap_or(1).min(63);
+                        let max_e = max_exponents.get(i).copied().unwrap_or(min_e).min(63);
                         let exp = if max_e > min_e {
                             rng.random_range(min_e..=max_e)
                         } else {
                             min_e
                         };
-                        let term = p.pow(exp);
-                        composite *= term;
+                        let term = p.checked_pow(exp).unwrap_or(u64::MAX);
+                        composite = composite.saturating_mul(term);
                     }
                     raw_params.insert(spec.name.clone(), Value::from(composite));
                     str_params.insert(spec.name.clone(), composite.to_string());
@@ -184,13 +197,15 @@ impl DeclarativeProblemGenerator {
                 ParameterDomain::CoprimePair { min, max } => {
                     let mut a_val = *min;
                     let mut b_val = *max;
-                    for _ in 0..50 {
-                        let a = rng.random_range(*min..=*max);
-                        let b = rng.random_range(*min..=*max);
-                        if a != b && gcd_u64(a.unsigned_abs(), b.unsigned_abs()) == 1 {
-                            a_val = a;
-                            b_val = b;
-                            break;
+                    if min < max {
+                        for _ in 0..50 {
+                            let a = rng.random_range(*min..=*max);
+                            let b = rng.random_range(*min..=*max);
+                            if a != b && gcd_u64(a.unsigned_abs(), b.unsigned_abs()) == 1 {
+                                a_val = a;
+                                b_val = b;
+                                break;
+                            }
                         }
                     }
                     raw_params.insert(format!("{}_a", spec.name), Value::from(a_val));
@@ -211,7 +226,7 @@ impl DeclarativeProblemGenerator {
                     let a = raw_params.get(a_param).and_then(|v| v.as_i64()).unwrap_or(1);
                     let x = raw_params.get(x_param).and_then(|v| v.as_i64()).unwrap_or(0);
                     let b = raw_params.get(b_param).and_then(|v| v.as_i64()).unwrap_or(0);
-                    let c = a * x + b;
+                    let c = a.saturating_mul(x).saturating_add(b);
                     raw_params.insert(spec.name.clone(), Value::from(c));
                     str_params.insert(spec.name.clone(), format!("{}", c));
                 }
@@ -225,14 +240,14 @@ impl DeclarativeProblemGenerator {
                 ParameterDomain::DerivedSum { a_param, b_param } => {
                     let a = raw_params.get(a_param).and_then(|v| v.as_i64()).unwrap_or(0);
                     let b = raw_params.get(b_param).and_then(|v| v.as_i64()).unwrap_or(0);
-                    let res = a + b;
+                    let res = a.saturating_add(b);
                     raw_params.insert(spec.name.clone(), Value::from(res));
                     str_params.insert(spec.name.clone(), format!("{}", res));
                 }
                 ParameterDomain::DerivedDifference { a_param, b_param } => {
                     let a = raw_params.get(a_param).and_then(|v| v.as_i64()).unwrap_or(0);
                     let b = raw_params.get(b_param).and_then(|v| v.as_i64()).unwrap_or(0);
-                    let res = a - b;
+                    let res = a.saturating_sub(b);
                     raw_params.insert(spec.name.clone(), Value::from(res));
                     str_params.insert(spec.name.clone(), format!("{}", res));
                 }
@@ -250,7 +265,7 @@ impl DeclarativeProblemGenerator {
                     let formatted = if b >= 0 {
                         format!("+ {}", b)
                     } else {
-                        format!("- {}", b.abs())
+                        format!("- {}", b.unsigned_abs())
                     };
                     raw_params.insert(spec.name.clone(), Value::from(formatted.clone()));
                     str_params.insert(spec.name.clone(), formatted);
@@ -467,8 +482,8 @@ impl DeclarativeProblemGenerator {
             AnswerDerivation::Remainder { dividend_param, divisor_param } => {
                 let num = raw_params.get(dividend_param).and_then(|v| v.as_i64()).unwrap_or(0);
                 let den = raw_params.get(divisor_param).and_then(|v| v.as_i64()).unwrap_or(1);
-                if den == 0 {
-                    return Err(ProceduralError::Validation("Divisor cannot be zero".to_string()));
+                if den == 0 || (num == i64::MIN && den == -1) {
+                    return Err(ProceduralError::Validation("Invalid divisor or arithmetic overflow".to_string()));
                 }
                 Ok(CanonicalAnswerValue::Numeric((num % den) as f64))
             }

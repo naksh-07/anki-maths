@@ -68,11 +68,11 @@ impl FloorGridPuzzle {
             let mut conditions = Vec::new();
 
             // 1. Anchor condition (Fixed position or parity)
-            let anchor_idx = rng.gen_range(0..names.len());
+            let anchor_idx = rng.random_range(0..names.len());
             let anchor_name = names[anchor_idx].clone();
             let anchor_slot = ground_truth[&anchor_name];
 
-            if difficulty_level <= 2 || rng.gen_bool(0.6) {
+            if difficulty_level <= 2 || rng.random_bool(0.6) {
                 // Fixed floor anchor
                 problem.add_constraint(CspConstraint::Fixed {
                     var: anchor_name.clone(),
@@ -203,7 +203,7 @@ impl FloorGridPuzzle {
             let solutions = solver.solve_all(&problem);
             if solutions.len() == 1 {
                 let sol = &solutions[0];
-                let query_entity = names[rng.gen_range(0..names.len())].clone();
+                let query_entity = names[rng.random_range(0..names.len())].clone();
                 let query_slot = sol[&query_entity];
 
                 let question = if is_2d {

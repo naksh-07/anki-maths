@@ -62,7 +62,7 @@ impl ElectrochemistryPuzzle {
             ("O₂", 1.23_f64), ("Cl₂", 1.36_f64), ("Au", 1.50_f64), ("F₂", 2.87_f64),
         ];
 
-        let mut idx1 = rng.random_range(0..half_cells.len());
+        let idx1 = rng.random_range(0..half_cells.len());
         let mut idx2 = rng.random_range(0..half_cells.len());
         while idx1 == idx2 {
             idx2 = rng.random_range(0..half_cells.len());

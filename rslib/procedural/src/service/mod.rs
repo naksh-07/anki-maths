@@ -71,10 +71,11 @@ impl ProceduralService {
     pub fn new(store: ProceduralStore) -> Self {
         let prereq_service = Arc::new(PrerequisiteGraphService::new());
         let _ = prereq_service.sync_from_store(&store);
+        let queue = store.load_remediation_queue().unwrap_or_default();
         Self {
             store,
             registry: ProblemRegistry::default_maths_registry(),
-            remediation_queue: Arc::new(Mutex::new(RemediationQueue::new())),
+            remediation_queue: Arc::new(Mutex::new(queue)),
             audit_log: Arc::new(Mutex::new(RemediationAuditLog::new())),
             prerequisite_service: prereq_service,
         }
@@ -83,10 +84,11 @@ impl ProceduralService {
     pub fn with_registry(store: ProceduralStore, registry: ProblemRegistry) -> Self {
         let prereq_service = Arc::new(PrerequisiteGraphService::new());
         let _ = prereq_service.sync_from_store(&store);
+        let queue = store.load_remediation_queue().unwrap_or_default();
         Self {
             store,
             registry,
-            remediation_queue: Arc::new(Mutex::new(RemediationQueue::new())),
+            remediation_queue: Arc::new(Mutex::new(queue)),
             audit_log: Arc::new(Mutex::new(RemediationAuditLog::new())),
             prerequisite_service: prereq_service,
         }
@@ -137,21 +139,36 @@ impl ProceduralService {
     }
 
     /// Evaluate prerequisite readiness and dependency chains for a given skill.
+    /// Performs localized batched lookups for required dependencies without N+1 full-catalog scans.
     pub fn evaluate_prerequisites(&self, skill_id: &SkillId) -> Result<PrerequisiteEvaluation> {
-        let skills = self.store.list_all_skills()?;
-        let mut states = HashMap::new();
-        for s in skills {
-            if let Some(state) = self.store.get_skill_state(&s.id)? {
-                states.insert(s.id, state);
+        let direct = self.prerequisite_service.get_direct_prerequisites(skill_id);
+        let (transitive, _) = self.prerequisite_service.get_transitive_prerequisites(skill_id);
+        if direct.is_empty() && transitive.is_empty() {
+            return Ok(self.prerequisite_service.evaluate_readiness(skill_id, &HashMap::new()));
+        }
+
+        let mut needed = direct;
+        for t in transitive {
+            if !needed.contains(&t) {
+                needed.push(t);
             }
         }
+        let states = self.store.get_skill_states(&needed)?;
         Ok(self.prerequisite_service.evaluate_readiness(skill_id, &states))
     }
 
-    /// Enqueue a structured remediation action into the priority queue.
+    /// Enqueue a structured remediation action into the priority queue and persist to store.
     pub fn enqueue_remediation_action(&self, action: RemediationAction) -> Result<()> {
         let mut q = self.remediation_queue.lock().unwrap();
         q.enqueue(action);
+        self.store.save_remediation_queue(&q)?;
+        Ok(())
+    }
+
+    /// Persist current remediation queue state to SQLite storage.
+    pub fn persist_remediation_queue(&self) -> Result<()> {
+        let q = self.remediation_queue.lock().unwrap();
+        self.store.save_remediation_queue(&q)?;
         Ok(())
     }
 
@@ -337,6 +354,7 @@ impl ProceduralService {
     }
 
     /// Record a practice attempt with explicit variant and target latency overrides.
+    /// Uses a single SQLite transaction boundary to read, compute, and persist state atomically.
     pub fn record_practice_attempt_with_variant(
         &self,
         attempt: PracticeAttempt,
@@ -344,71 +362,12 @@ impl ProceduralService {
         variant: Option<&str>,
         target_latency_ms: u64,
     ) -> Result<()> {
-        // Load skill state with rich learning signals
-        let mut state = self
-            .store
-            .get_skill_state(&attempt.skill_id)?
-            .unwrap_or_else(|| SkillState::new(attempt.skill_id.clone()));
-
-        let err_cat = attempt
-            .metadata
-            .get("error_category")
-            .and_then(|v| serde_json::from_value(v.clone()).ok());
-
-        let mut diagnostic_errors = Vec::new();
-        if let Some(cat) = err_cat {
-            diagnostic_errors.push(cat);
-        }
-
-        let hints_used = attempt
-            .metadata
-            .get("hints_used")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0) as u32;
-
-        let attempt_count = attempt
-            .metadata
-            .get("attempt_count")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(1) as u32;
-
-        let independence = if hints_used == 0 && attempt_count <= 1 {
-            crate::skills::IndependenceLevel::Independent
-        } else if hints_used <= 1 && attempt_count <= 1 {
-            crate::skills::IndependenceLevel::LightSupport
-        } else if hints_used <= 2 || attempt_count <= 2 {
-            crate::skills::IndependenceLevel::SignificantSupport
-        } else {
-            crate::skills::IndependenceLevel::NonIndependent
-        };
-
-        let variant_category = attempt
-            .metadata
-            .get("variant_category")
-            .and_then(|v| serde_json::from_value(v.clone()).ok())
-            .unwrap_or_default();
-
-        let evidence = crate::skills::signals::MasteryEvidence {
-            final_correctness: attempt.is_correct,
-            latency_evidence: attempt.time_taken_ms,
-            independence,
-            hint_dependence: hints_used,
-            retry_dependence: attempt_count.saturating_sub(1),
-            variant_exposure: variant.map(|s| s.to_string()),
-            variant_category,
-            diagnostic_errors,
-            ..Default::default()
-        };
-
-        state.record_attempt_outcome(
-            &evidence,
-            attempt.score,
+        let _state = self.store.record_practice_attempt_atomic(
+            &attempt,
+            &errors,
+            variant,
             target_latency_ms,
-            attempt.attempted_at,
-        );
-
-        // Atomically commit attempt, error events, and skill state in a single SQLite transaction
-        self.store.record_attempt_atomic(&attempt, &errors, &state)?;
+        )?;
         Ok(())
     }
 
@@ -646,8 +605,8 @@ impl ProceduralService {
         }
 
         let mut schema_domains = HashMap::new();
-        let mut skill_states = HashMap::new();
         let mut eligible_pyqs = HashMap::new();
+        let all_eligible_map = self.store.list_all_eligible_pyqs_map()?;
 
         for s in &all_schemas {
             let domain = if s.id.as_str().contains("physics") {
@@ -661,16 +620,15 @@ impl ProceduralService {
             };
             schema_domains.insert(s.id.clone(), domain);
 
-            if let Some(state) = self.load_skill_state(&s.skill_id)? {
-                skill_states.insert(s.skill_id.clone(), state);
-            }
-
-            let pyq_list = self.store.list_eligible_pyqs_for_schema(&s.id)?;
-            if !pyq_list.is_empty() {
-                let pyq_sources = pyq_list.into_iter().map(|(source, _mapping)| source).collect();
-                eligible_pyqs.insert(s.id.clone(), pyq_sources);
+            if let Some(pyq_list) = all_eligible_map.get(&s.id) {
+                if !pyq_list.is_empty() {
+                    let pyq_sources = pyq_list.iter().map(|(source, _mapping)| source.clone()).collect();
+                    eligible_pyqs.insert(s.id.clone(), pyq_sources);
+                }
             }
         }
+
+        let skill_states = self.store.get_all_skill_states()?;
 
         let exam_profile = if let Some(ref profile_id) = request.exam_profile {
             self.store.get_exam_profile(profile_id)?.or_else(|| {
@@ -705,6 +663,7 @@ impl ProceduralService {
         )
         .ok_or_else(|| ProceduralError::NotFound("No eligible learning object selected for practice request".to_string()))?;
 
+        let _ = self.store.save_remediation_queue(&queue_lock);
         drop(queue_lock);
 
         // If a generated problem was produced, persist it to the store
@@ -977,7 +936,11 @@ impl ProceduralService {
             crate::problems::steps::StepErrorType::Unknown => ErrorCategory::Unknown,
         });
 
-        let metadata = serde_json::json!({
+        let domain_ev_opt = step_eval.to_chemistry_physical_evidence().map(|c| {
+            crate::skills::domain_evidence::VersionedDomainEvidence::new_chemistry(c)
+        });
+
+        let mut metadata = serde_json::json!({
             "hints_used": submission.hints_used,
             "attempt_count": 1,
             "target_time_ms": target_time_ms,
@@ -993,6 +956,12 @@ impl ProceduralService {
             "first_action_latency_ms": step_eval.first_action_latency_ms,
             "step_latencies_ms": step_eval.step_latencies_ms,
         });
+
+        if let Some(dev) = domain_ev_opt {
+            if let Ok(dev_json) = serde_json::to_value(dev) {
+                metadata["domain_evidence"] = dev_json;
+            }
+        }
 
         let student_val = serde_json::json!({
             "mode": submission.mode,
@@ -1141,6 +1110,7 @@ impl ProceduralService {
 
             let mut queue_lock = self.remediation_queue.lock().unwrap();
             queue_lock.enqueue(action.clone());
+            let _ = self.store.save_remediation_queue(&queue_lock);
 
             let mut audit_lock = self.audit_log.lock().unwrap();
             let audit_rec = RemediationAuditRecord::new(
@@ -1220,6 +1190,7 @@ impl ProceduralService {
 
             let mut queue_lock = self.remediation_queue.lock().unwrap();
             queue_lock.enqueue(action.clone());
+            let _ = self.store.save_remediation_queue(&queue_lock);
 
             let mut audit_lock = self.audit_log.lock().unwrap();
             let audit_rec = RemediationAuditRecord::new(
@@ -1248,6 +1219,7 @@ impl ProceduralService {
     ) -> Result<Option<(RemediationAction, RemediationIntervention)>> {
         let mut queue_lock = self.remediation_queue.lock().unwrap();
         if let Some(action) = queue_lock.select_next_remediation(mode) {
+            let _ = self.store.save_remediation_queue(&queue_lock);
             drop(queue_lock);
             let intervention = RemediationSelector::select_intervention(
                 &action,
@@ -1288,6 +1260,7 @@ impl ProceduralService {
         if is_correct {
             queue_lock.record_resolution(&action.skill_id, &action.primary_error);
         }
+        let _ = self.store.save_remediation_queue(&queue_lock);
 
         let mut audit_lock = self.audit_log.lock().unwrap();
         let audit_id = format!("audit-{}", action.id);
@@ -1322,6 +1295,7 @@ impl ProceduralService {
     pub fn clear_remediation_queue(&self) {
         let mut queue_lock = self.remediation_queue.lock().unwrap();
         queue_lock.clear();
+        let _ = self.store.save_remediation_queue(&queue_lock);
     }
 
     // =========================================================================
