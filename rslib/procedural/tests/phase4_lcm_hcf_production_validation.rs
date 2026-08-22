@@ -18,7 +18,9 @@ use std::fs;
 use tempfile::tempdir;
 
 use procedural::anchor::ProceduralCardAnchor;
-use procedural::core::{Domain, Result, SkillId};
+use procedural::content::{Origin, PracticeItem, QuestionType};
+use procedural::core::{Domain, PracticeItemId, ProblemFamilyId, PyqId, Result, SchemaId, SkillId};
+use procedural::exam::pyq::ContentProvenance;
 use procedural::diagnostics::ErrorCategory;
 use procedural::problems::generators::*;
 use procedural::remediation::{
@@ -132,6 +134,40 @@ fn test_phase4_anchor_extraction_and_resolution() -> Result<()> {
     assert!(session.instance.correct_answer.is_object());
 
     println!("✅ ProceduralCardAnchor extracted and resolved to runtime practice session!");
+    Ok(())
+}
+
+#[test]
+fn test_phase26b_content_ref_resolution() -> Result<()> {
+    println!("\n=== PHASE 26B: CONTENT REF RESOLUTION ===");
+    let service = ProceduralService::open_in_memory()?;
+
+    let item = procedural::content::PracticeItem::new(
+        "item-math-test-123",
+        Origin::SyntheticSchema { generator_version: 1, seed: 1 },
+        Domain::Mathematics,
+        "dummy_chapter",
+        "number_system.remainders_modular",
+        "number_system_remainders_modular",
+        "family.math.number_system.remainders_modular",
+        QuestionType::Numerical { answer: 0.0, tolerance: None },
+        "dummy prompt",
+        ContentProvenance::new_direct_procedural(1, 1, 1, "synthetic", 1)
+    );
+    service.store().insert_practice_item(&item)?;
+
+    // Create an anchor that relies strictly on the content_ref
+    let mut anchor = ProceduralCardAnchor::new("some_legacy_schema_that_should_be_ignored");
+    anchor.content_ref = Some("item-math-test-123".to_string());
+    
+    // Attempt resolution
+    let session = service.resolve_procedural_target(&anchor, None)?;
+    
+    // Verify it ignored the legacy schema and used the one from the content_ref
+    assert_eq!(session.schema.id.as_str(), "number_system_remainders_modular");
+    assert_eq!(session.instance.seed, 1);
+    
+    println!("✅ ProceduralCardAnchor successfully resolved using content_ref!");
     Ok(())
 }
 

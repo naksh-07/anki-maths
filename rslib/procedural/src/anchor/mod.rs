@@ -28,6 +28,10 @@ pub struct ProceduralCardAnchor {
     /// Schema ID of the target practice object (e.g., "math.algebra.monic_quadratic")
     pub proc_schema: SchemaId,
 
+    /// Optional reference to the static source content (e.g., StudyLab PracticeItem ID)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_ref: Option<String>,
+
     /// Optional fixed difficulty override
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub difficulty_override: Option<f64>,
@@ -45,6 +49,7 @@ impl ProceduralCardAnchor {
     pub fn new(proc_schema: impl Into<SchemaId>) -> Self {
         Self {
             proc_schema: proc_schema.into(),
+            content_ref: None,
             difficulty_override: None,
             seed_mode: SeedMode::Random,
             custom_params: serde_json::Value::Null,
@@ -70,7 +75,7 @@ impl ProceduralCardAnchor {
     /// to guarantee safe fallback to standard Anki card review without crashing the reviewer.
     pub fn from_json_str(s: &str) -> Result<Option<Self>> {
         let trimmed = s.trim();
-        if !trimmed.starts_with('{') || !trimmed.contains("proc_schema") {
+        if !trimmed.starts_with('{') || (!trimmed.contains("proc_schema") && !trimmed.contains("content_ref")) {
             return Ok(None);
         }
 
@@ -86,7 +91,7 @@ impl ProceduralCardAnchor {
     /// Strict parser for programmatic validation where explicit error reporting is required.
     pub fn from_json_str_strict(s: &str) -> Result<Option<Self>> {
         let trimmed = s.trim();
-        if !trimmed.starts_with('{') || !trimmed.contains("proc_schema") {
+        if !trimmed.starts_with('{') || (!trimmed.contains("proc_schema") && !trimmed.contains("content_ref")) {
             return Ok(None);
         }
 

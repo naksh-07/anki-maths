@@ -1,4 +1,4 @@
-﻿"""
+"""
 generate_procedural_apkg.py — StudyLab Phase 12 Fixture Generator
 
 Generates a deterministic Anki package (Procedural_StudyLab_Fixture.apkg)
@@ -8,6 +8,12 @@ The notetype MUST be named exactly "StudyLab Procedural Anchor" — this is
 the string checked in rslib/src/notetype/render.rs:122 to intercept the card
 and route it through render_procedural_anchor() -> ProceduralService ->
 ProceduralReviewer.
+
+Phase 26B Note:
+This generator now supports `content_ref`. In production, APKGs must NOT embed 
+massive payloads. Instead, they embed `content_ref` (e.g. `item-math-001`). 
+Before reviewing such an APKG, the user MUST sync/import the associated StudyLab JSON 
+content into the local Procedural Database. Otherwise, the engine will fail to resolve.
 
 Schema IDs used are the production constants from
 rslib/procedural/src/problems/catalog.rs:
@@ -57,13 +63,15 @@ def _field_checksum(s: str) -> int:
     clean = re.sub(r"<[^>]+>", "", s).strip()
     return int(hashlib.sha1(clean.encode("utf-8")).hexdigest()[:8], 16)
 
-def _make_anchor_json(schema_id: str, seed: int | None = None) -> str:
+def _make_anchor_json(schema_id: str, seed: int | None = None, content_ref: str | None = None) -> str:
     """Return the JSON string for the ProceduralPayload field.
 
     ProceduralCardAnchor::extract_from_card_fields() scans each field for a
-    JSON object containing key "proc_schema".
+    JSON object containing key "proc_schema" (or "content_ref" in Phase 26B).
     """
     anchor: dict = {"proc_schema": schema_id}
+    if content_ref is not None:
+        anchor["content_ref"] = content_ref
     if seed is not None:
         anchor["seed_mode"] = {"fixed": seed}
     return json.dumps(anchor)
@@ -170,11 +178,12 @@ def create_procedural_apkg(output_path: str) -> None:
         "addToCur": True, "curDeck": 1, "curModel": str(model_id), "collapseTime": 1200,
     }
 
-    # Card definitions: (label, schema_id, seed, tags)
+    # Card definitions: (label, schema_id, seed, content_ref, tags)
     cards_data = [
-        ("Math: Successive Percentage (seed 42, for correct-answer test)", SCHEMA_MATH, 42, "StudyLab Math Fixture"),
-        ("Math: Successive Percentage (seed 99, for wrong-answer test)", SCHEMA_MATH, 99, "StudyLab Math Fixture Incorrect"),
-        ("Reasoning: Linear Seating Arrangement", SCHEMA_REASONING, None, "StudyLab Reasoning Fixture"),
+        ("Math: Successive Percentage (seed 42, for correct-answer test)", SCHEMA_MATH, 42, None, "StudyLab Math Fixture"),
+        ("Math: Successive Percentage (seed 99, for wrong-answer test)", SCHEMA_MATH, 99, None, "StudyLab Math Fixture Incorrect"),
+        ("Reasoning: Linear Seating Arrangement", SCHEMA_REASONING, None, None, "StudyLab Reasoning Fixture"),
+        ("Math: Phase 26B content_ref explicit failure test", SCHEMA_MATH, None, "missing-item-xyz", "StudyLab Math Fixture ContentRef"),
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -218,8 +227,8 @@ CREATE INDEX ix_notes_csum on notes (csum);
         card_id = now_ms + 2000
         due = 1
 
-        for label, schema_id, seed, tags_str in cards_data:
-            payload = _make_anchor_json(schema_id, seed)
+        for label, schema_id, seed, content_ref, tags_str in cards_data:
+            payload = _make_anchor_json(schema_id, seed, content_ref)
             nid = note_id; note_id += 1
             guid = _gen_guid()
             flds = payload

@@ -487,6 +487,67 @@ impl ProceduralService {
         Ok(session)
     }
 
+    /// Resolves a procedural anchor directly into a hydrated PracticeSessionObject.
+    /// In Phase 26B, this prefers a static StudyLab `content_ref` and hydrates exactly
+    /// using the ContentProvenance seed and ProblemFamily.
+    /// Falls back to the legacy unified practice engine if no `content_ref` is present.
+    pub fn resolve_procedural_target(
+        &self,
+        anchor: &ProceduralCardAnchor,
+        card_id: Option<i64>,
+    ) -> Result<PracticeSessionObject> {
+        if let Some(content_ref) = &anchor.content_ref {
+            let item_id = crate::core::PracticeItemId::new(content_ref);
+            let item = self.store.get_practice_item(&item_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Content Reference '{}' not found. Please sync/import the associated StudyLab content.", content_ref)))?;
+            
+            let family = self.store.get_problem_family(&item.problem_family_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Problem family not found: {}", item.problem_family_id)))?;
+                
+            let seed = item.provenance.seed.unwrap_or(0);
+            
+            let instance = self.registry.generate(
+                &family.id,
+                &family.template_ref,
+                seed,
+                2, // Default difficulty
+                Some(&item.provenance.variant_type),
+            )?;
+            
+            self.store.insert_problem_instance(&instance)?;
+            
+            let schema = self.resolve_schema(&item.schema_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Schema not found: {}", item.schema_id)))?;
+                
+            let skill_state = self.load_skill_state(&schema.skill_id)?;
+            
+            let mut session = PracticeSessionObject::new(schema, instance.clone(), card_id, skill_state);
+            session.readiness = SessionReadiness::Ready;
+            session.selected_variant = Some(item.provenance.variant_type.clone());
+            session.target_latency_ms = Some(45_000);
+            session.selection_reason = Some("StudyLab Hydration".to_string());
+            session.difficulty_level = Some(2);
+            
+            return Ok(session);
+        }
+
+        // Legacy branch
+        let request = PracticeRequest::new(
+            crate::practice::PracticeScope::SingleSchema(anchor.proc_schema.clone()),
+            crate::practice::PracticeObjective::Practice,
+        ).with_remediation_policy(crate::practice::RemediationPrecedence::AllEligible);
+
+        let seed = match anchor.seed_mode {
+            SeedMode::Random => rand::rng().random::<u64>(),
+            SeedMode::Fixed(s) => s,
+            SeedMode::Daily => (Utc::now().timestamp() / 86400) as u64,
+        };
+
+        let mut session = self.prepare_unified_practice_session(&request, None, None, Some(seed))?;
+        session.card_id = card_id;
+        Ok(session)
+    }
+
     /// Prepare a unified practice session driven by a composable `PracticeRequest`.
     pub fn prepare_unified_practice_session(
         &self,
