@@ -63,18 +63,92 @@ def _field_checksum(s: str) -> int:
     clean = re.sub(r"<[^>]+>", "", s).strip()
     return int(hashlib.sha1(clean.encode("utf-8")).hexdigest()[:8], 16)
 
-def _make_anchor_json(schema_id: str, seed: int | None = None, content_ref: str | None = None) -> str:
+def _make_anchor_json(
+    schema_id: str,
+    seed: int | None = None,
+    content_ref: str | None = None,
+    difficulty_override: float | None = None,
+    inline_contract: dict | None = None,
+) -> str:
     """Return the JSON string for the ProceduralPayload field.
 
     ProceduralCardAnchor::extract_from_card_fields() scans each field for a
-    JSON object containing key "proc_schema" (or "content_ref" in Phase 26B).
+    JSON object containing key "proc_schema", "content_ref", or "inline_contract".
     """
     anchor: dict = {"proc_schema": schema_id}
     if content_ref is not None:
         anchor["content_ref"] = content_ref
     if seed is not None:
         anchor["seed_mode"] = {"fixed": seed}
+    if difficulty_override is not None:
+        anchor["difficulty_override"] = difficulty_override
+    if inline_contract is not None:
+        anchor["inline_contract"] = inline_contract
     return json.dumps(anchor)
+
+# ---------------------------------------------------------------------------
+# Sample Rich Declarative Contracts (Phase 36B Content Factory)
+# ---------------------------------------------------------------------------
+
+def make_math_linear_eq_contract() -> dict:
+    return {
+        "contract": {
+            "family_id": "family.math.algebra.linear_equations",
+            "skill_id": "algebra.linear_equations",
+            "domain": "mathematics",
+            "default_schema": "schema.algebra.linear_equations.v1",
+            "capability": "declarative",
+            "min_difficulty": 1.0,
+            "max_difficulty": 5.0,
+            "supported_variants": ["two_step_basic"],
+            "variant_categories": ["parameter"],
+            "target_latency_model": {1: 25000, 2: 35000, 3: 50000},
+            "structural_tags": ["algebra", "linear"],
+            "decision_points": ["isolate_variable"],
+            "error_categories": ["sign_error"],
+            "prerequisites": [],
+            "provenance": None,
+            "metadata": {},
+        },
+        "archetypes": [
+            {
+                "archetype_id": "linear_eq.two_step_basic",
+                "difficulty_level": 1,
+                "variant_category": "parameter",
+                "variant_name": "two_step_basic",
+                "parameters": [
+                    {"name": "a", "domain": {"type": "integer_range", "min": 2, "max": 8, "step": None, "non_zero": None}},
+                    {"name": "x", "domain": {"type": "integer_range", "min": 1, "max": 12, "step": None, "non_zero": None}},
+                    {"name": "b", "domain": {"type": "integer_range", "min": 1, "max": 15, "step": None, "non_zero": None}},
+                    {"name": "c", "domain": {"type": "derived_linear", "a_param": "a", "x_param": "x", "b_param": "b"}},
+                ],
+                "constraints": [],
+                "prompt_template": "Solve for \\(x\\):\n\n\\[ {a}x + {b} = {c} \\]",
+                "answer_derivation": {
+                    "type": "linear_two_step",
+                    "c_param": "c",
+                    "b_param": "b",
+                    "a_param": "a",
+                },
+                "answer_formatted_template": "{answer}",
+                "solution_template": "Subtract {b} from both sides: {a}x = {c_minus_b}, then divide by {a}: x = {answer}.",
+                "step_nodes": [
+                    {
+                        "id": "step_isolate",
+                        "step_type": "equation_rearrangement",
+                        "label": "Isolate term",
+                        "description_template": "Subtract {b} from both sides",
+                        "expected_expression_template": "{a}x = {c_minus_b}",
+                        "alternate_templates": [],
+                        "hint_principle": "Inverse operation",
+                        "hint_operation": "Subtract {b}",
+                        "hint_intermediate": "{a}x = {c_minus_b}",
+                    }
+                ],
+                "target_time_ms": 25000,
+            }
+        ],
+    }
 
 # ---------------------------------------------------------------------------
 # Main builder
@@ -155,7 +229,7 @@ def create_procedural_apkg(output_path: str) -> None:
         str(deck_id): {
             "id": deck_id, "mod": now_s, "name": DECK_NAME, "usn": -1,
             "collapsed": False, "browserCollapsed": False,
-            "desc": "Phase 12 fixture: real StudyLab Procedural Anchor cards.",
+            "desc": "Phase 36B fixture: StudyLab Universal Content Factory Procedural Anchor cards.",
             "dyn": 0, "conf": 1, "extendNew": 0, "extendRev": 0,
             "lrnToday": [0, 0], "revToday": [0, 0], "newToday": [0, 0], "timeToday": [0, 0],
         },
@@ -178,12 +252,12 @@ def create_procedural_apkg(output_path: str) -> None:
         "addToCur": True, "curDeck": 1, "curModel": str(model_id), "collapseTime": 1200,
     }
 
-    # Card definitions: (label, schema_id, seed, content_ref, tags)
+    # Card definitions: (label, schema_id, seed, content_ref, diff_override, inline_contract, tags)
     cards_data = [
-        ("Math: Successive Percentage (seed 42, for correct-answer test)", SCHEMA_MATH, 42, None, "StudyLab Math Fixture"),
-        ("Math: Successive Percentage (seed 99, for wrong-answer test)", SCHEMA_MATH, 99, None, "StudyLab Math Fixture Incorrect"),
-        ("Reasoning: Linear Seating Arrangement", SCHEMA_REASONING, None, None, "StudyLab Reasoning Fixture"),
-        ("Math: Phase 26B content_ref explicit failure test", SCHEMA_MATH, None, "missing-item-xyz", "StudyLab Math Fixture ContentRef"),
+        ("Math: Successive Percentage (Legacy proc_schema)", SCHEMA_MATH, 42, None, None, None, "StudyLab Math Fixture"),
+        ("Reasoning: Linear Seating Arrangement (Legacy proc_schema)", SCHEMA_REASONING, None, None, None, None, "StudyLab Reasoning Fixture"),
+        ("Math: Content Ref Path", SCHEMA_MATH, None, "missing-item-xyz", 2.0, None, "StudyLab Math Fixture ContentRef"),
+        ("Math: Rich Declarative Contract (Linear Equations)", "schema.algebra.linear_equations.v1", 101, None, 1.0, make_math_linear_eq_contract(), "StudyLab Rich Contract Math"),
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -227,8 +301,14 @@ CREATE INDEX ix_notes_csum on notes (csum);
         card_id = now_ms + 2000
         due = 1
 
-        for label, schema_id, seed, content_ref, tags_str in cards_data:
-            payload = _make_anchor_json(schema_id, seed, content_ref)
+        for label, schema_id, seed, content_ref, diff_override, inline_contract, tags_str in cards_data:
+            payload = _make_anchor_json(
+                schema_id,
+                seed=seed,
+                content_ref=content_ref,
+                difficulty_override=diff_override,
+                inline_contract=inline_contract,
+            )
             nid = note_id; note_id += 1
             guid = _gen_guid()
             flds = payload

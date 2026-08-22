@@ -165,10 +165,22 @@ impl ProceduralService {
         Arc::clone(&self.remediation_queue)
     }
 
-    /// Resolve a schema reference by its ID. Supports canonical ID and standard aliases.
+    /// Resolve a schema reference by its ID. Supports canonical ID, dynamic registry contracts, and standard aliases.
     pub fn resolve_schema(&self, schema_id: &SchemaId) -> Result<Option<SchemaPracticeObject>> {
         if let Some(schema) = self.store.get_schema(schema_id)? {
             return Ok(Some(schema));
+        }
+
+        // Check if dynamically registered in registry contracts
+        if let Some(contract) = self.registry.get_family_contract(schema_id.as_str()) {
+            let schema_obj = SchemaPracticeObject::new(
+                contract.default_schema.clone(),
+                contract.skill_id.clone(),
+                contract.family_id.clone(),
+                format!("Dynamic Practice Schema for {}", contract.family_id.as_str()),
+                format!("Dynamic declarative schema for family {}", contract.family_id.as_str()),
+            );
+            return Ok(Some(schema_obj));
         }
 
         let alias = match schema_id.as_str() {
@@ -488,14 +500,67 @@ impl ProceduralService {
     }
 
     /// Resolves a procedural anchor directly into a hydrated PracticeSessionObject.
-    /// In Phase 26B, this prefers a static StudyLab `content_ref` and hydrates exactly
-    /// using the ContentProvenance seed and ProblemFamily.
-    /// Falls back to the legacy unified practice engine if no `content_ref` is present.
+    /// In Phase 35, this supports the complete contract source precedence:
+    /// 1. Modern Rich APKG Path: `inline_contract` carries complete declarative blueprint
+    /// 2. Hydrated Content Ref Path: `content_ref` loads static StudyLab PracticeItem
+    /// 3. Legacy Catalog Fallback Path: `proc_schema` dispatches unified practice engine
     pub fn resolve_procedural_target(
         &self,
         anchor: &ProceduralCardAnchor,
         card_id: Option<i64>,
     ) -> Result<PracticeSessionObject> {
+        // 1. Top Precedence: Modern Rich APKG Inline Contract
+        if let Some(inline_contract) = &anchor.inline_contract {
+            inline_contract.validate()?;
+
+            let family_id = inline_contract.contract.family_id.clone();
+            let template_ref = format!("{}.declarative.v1", family_id.as_str());
+
+            let mut reg = self.registry.clone();
+            reg.register_declarative_family(inline_contract.clone());
+
+            let seed = match anchor.seed_mode {
+                SeedMode::Random => rand::rng().random::<u64>(),
+                SeedMode::Fixed(s) => s,
+                SeedMode::Daily => (Utc::now().timestamp() / 86400) as u64,
+            };
+
+            let difficulty_level = anchor.difficulty_override.unwrap_or(2.0).clamp(1.0, 5.0) as u32;
+
+            let instance = reg.generate(
+                &family_id,
+                &template_ref,
+                seed,
+                difficulty_level,
+                None,
+            )?;
+
+            let schema = SchemaPracticeObject::new(
+                inline_contract.contract.default_schema.clone(),
+                inline_contract.contract.skill_id.clone(),
+                inline_contract.contract.family_id.clone(),
+                format!("Dynamic Practice Schema for {}", family_id.as_str()),
+                format!("Dynamic declarative schema for family {}", family_id.as_str()),
+            );
+
+            let skill_state = self.load_skill_state(&schema.skill_id)?;
+            let target_time = inline_contract.contract.target_latency(difficulty_level);
+
+            let mut session = PracticeSessionObject::new(schema, instance.clone(), card_id, skill_state);
+            session.readiness = SessionReadiness::Ready;
+            session.target_latency_ms = Some(target_time);
+            session.selection_reason = Some("Inline Declarative Contract".to_string());
+            session.difficulty_level = Some(difficulty_level);
+            if let Some(v) = instance.metadata.get("variant").and_then(|v| v.as_str()) {
+                session.selected_variant = Some(v.to_string());
+            }
+
+            let _ = self.store.insert_problem_instance(&instance);
+
+            return Ok(session);
+        }
+
+        // 2. Second Precedence: Hydrated Content Ref Path
         if let Some(content_ref) = &anchor.content_ref {
             let item_id = crate::core::PracticeItemId::new(content_ref);
             let item = self.store.get_practice_item(&item_id)?
@@ -505,12 +570,13 @@ impl ProceduralService {
                 .ok_or_else(|| ProceduralError::NotFound(format!("Problem family not found: {}", item.problem_family_id)))?;
                 
             let seed = item.provenance.seed.unwrap_or(0);
+            let difficulty_level = anchor.difficulty_override.unwrap_or(2.0).clamp(1.0, 5.0) as u32;
             
             let instance = self.registry.generate(
                 &family.id,
                 &family.template_ref,
                 seed,
-                2, // Default difficulty
+                difficulty_level,
                 Some(&item.provenance.variant_type),
             )?;
             
@@ -520,20 +586,27 @@ impl ProceduralService {
                 .ok_or_else(|| ProceduralError::NotFound(format!("Schema not found: {}", item.schema_id)))?;
                 
             let skill_state = self.load_skill_state(&schema.skill_id)?;
+            let target_time = self.registry.get_family_contract(family.id.as_str())
+                .map(|c| c.target_latency(difficulty_level))
+                .unwrap_or(45_000);
             
             let mut session = PracticeSessionObject::new(schema, instance.clone(), card_id, skill_state);
             session.readiness = SessionReadiness::Ready;
             session.selected_variant = Some(item.provenance.variant_type.clone());
-            session.target_latency_ms = Some(45_000);
+            session.target_latency_ms = Some(target_time);
             session.selection_reason = Some("StudyLab Hydration".to_string());
-            session.difficulty_level = Some(2);
+            session.difficulty_level = Some(difficulty_level);
             
             return Ok(session);
         }
 
-        // Legacy branch
+        // 3. Third Precedence: Legacy Fallback Branch
+        let resolved_schema_id = self.resolve_schema(&anchor.proc_schema)?
+            .map(|s| s.id)
+            .unwrap_or_else(|| anchor.proc_schema.clone());
+
         let request = PracticeRequest::new(
-            crate::practice::PracticeScope::SingleSchema(anchor.proc_schema.clone()),
+            crate::practice::PracticeScope::SingleSchema(resolved_schema_id),
             crate::practice::PracticeObjective::Practice,
         ).with_remediation_policy(crate::practice::RemediationPrecedence::AllEligible);
 

@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::core::{ProceduralError, Result, SchemaId};
+use crate::problems::contract::DeclarativeFamilyContract;
 
 /// Strategy for generating random seeds for ephemeral problem instances.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -43,6 +44,10 @@ pub struct ProceduralCardAnchor {
     /// Optional configuration overrides specific to this card
     #[serde(default, skip_serializing_if = "serde_json::Value::is_null")]
     pub custom_params: serde_json::Value,
+
+    /// Modern rich-content path: optional inline declarative contract bundled directly in the anchor
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inline_contract: Option<DeclarativeFamilyContract>,
 }
 
 impl ProceduralCardAnchor {
@@ -53,6 +58,7 @@ impl ProceduralCardAnchor {
             difficulty_override: None,
             seed_mode: SeedMode::Random,
             custom_params: serde_json::Value::Null,
+            inline_contract: None,
         }
     }
 
@@ -66,6 +72,11 @@ impl ProceduralCardAnchor {
         self
     }
 
+    pub fn with_inline_contract(mut self, contract: DeclarativeFamilyContract) -> Self {
+        self.inline_contract = Some(contract);
+        self
+    }
+
     pub fn to_json_string(&self) -> Result<String> {
         serde_json::to_string(self).map_err(ProceduralError::from)
     }
@@ -75,7 +86,11 @@ impl ProceduralCardAnchor {
     /// to guarantee safe fallback to standard Anki card review without crashing the reviewer.
     pub fn from_json_str(s: &str) -> Result<Option<Self>> {
         let trimmed = s.trim();
-        if !trimmed.starts_with('{') || (!trimmed.contains("proc_schema") && !trimmed.contains("content_ref")) {
+        if !trimmed.starts_with('{')
+            || (!trimmed.contains("proc_schema")
+                && !trimmed.contains("content_ref")
+                && !trimmed.contains("inline_contract"))
+        {
             return Ok(None);
         }
 
@@ -91,7 +106,11 @@ impl ProceduralCardAnchor {
     /// Strict parser for programmatic validation where explicit error reporting is required.
     pub fn from_json_str_strict(s: &str) -> Result<Option<Self>> {
         let trimmed = s.trim();
-        if !trimmed.starts_with('{') || (!trimmed.contains("proc_schema") && !trimmed.contains("content_ref")) {
+        if !trimmed.starts_with('{')
+            || (!trimmed.contains("proc_schema")
+                && !trimmed.contains("content_ref")
+                && !trimmed.contains("inline_contract"))
+        {
             return Ok(None);
         }
 

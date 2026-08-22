@@ -1,12 +1,10 @@
-// Copyright: Ankitects Pty Ltd and contributors
-// License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
-
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use rand::rngs::StdRng;
+use rand::seq::SliceRandom;
 use rand::{Rng, SeedableRng};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::core::{Domain, ProblemFamilyId, ProceduralError, Result};
 use crate::problems::contract::{
@@ -17,6 +15,52 @@ use crate::problems::generator::ProblemGenerator;
 use crate::problems::steps::{SolutionGraph, StepHint, StepNode, StepType};
 use crate::problems::ProblemInstance;
 use crate::skills::signals::VariantCategory;
+
+fn gcd_u64(mut a: u64, mut b: u64) -> u64 {
+    while b != 0 {
+        let t = b;
+        b = a % b;
+        a = t;
+    }
+    a
+}
+
+fn lcm_u64(a: u64, b: u64) -> u64 {
+    if a == 0 || b == 0 {
+        0
+    } else {
+        (a / gcd_u64(a, b)) * b
+    }
+}
+
+/// Canonical answer result value supporting both numeric and text forms.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CanonicalAnswerValue {
+    Numeric(f64),
+    Text(String),
+}
+
+impl CanonicalAnswerValue {
+    pub fn to_json_value(&self) -> Value {
+        match self {
+            CanonicalAnswerValue::Numeric(n) => json!(n),
+            CanonicalAnswerValue::Text(t) => json!(t),
+        }
+    }
+
+    pub fn format_default(&self) -> String {
+        match self {
+            CanonicalAnswerValue::Numeric(n) => {
+                if n.fract() == 0.0 {
+                    format!("{:.0}", n)
+                } else {
+                    format!("{:.2}", n)
+                }
+            }
+            CanonicalAnswerValue::Text(t) => t.clone(),
+        }
+    }
+}
 
 /// Dynamic problem generator driven by a declarative contract and archetype specifications.
 #[derive(Debug, Clone)]
@@ -102,6 +146,60 @@ impl DeclarativeProblemGenerator {
                         str_params.insert(spec.name.clone(), s);
                     }
                 }
+                ParameterDomain::PermutationChoice { pool, count } => {
+                    let mut pool_clone = pool.clone();
+                    pool_clone.shuffle(rng);
+                    let selected: Vec<String> = pool_clone.into_iter().take(*count).collect();
+                    for (idx, item) in selected.iter().enumerate() {
+                        let sub_key = format!("{}_{}", spec.name, idx);
+                        raw_params.insert(sub_key.clone(), Value::String(item.clone()));
+                        str_params.insert(sub_key, item.clone());
+                    }
+                    raw_params.insert(
+                        spec.name.clone(),
+                        Value::Array(selected.iter().map(|s| Value::String(s.clone())).collect()),
+                    );
+                    str_params.insert(spec.name.clone(), selected.join(", "));
+                }
+                ParameterDomain::PrimeFactorGrid {
+                    base_primes,
+                    min_exponents,
+                    max_exponents,
+                } => {
+                    let mut composite = 1u64;
+                    for (i, &p) in base_primes.iter().enumerate() {
+                        let min_e = min_exponents.get(i).copied().unwrap_or(1);
+                        let max_e = max_exponents.get(i).copied().unwrap_or(min_e);
+                        let exp = if max_e > min_e {
+                            rng.random_range(min_e..=max_e)
+                        } else {
+                            min_e
+                        };
+                        let term = p.pow(exp);
+                        composite *= term;
+                    }
+                    raw_params.insert(spec.name.clone(), Value::from(composite));
+                    str_params.insert(spec.name.clone(), composite.to_string());
+                }
+                ParameterDomain::CoprimePair { min, max } => {
+                    let mut a_val = *min;
+                    let mut b_val = *max;
+                    for _ in 0..50 {
+                        let a = rng.random_range(*min..=*max);
+                        let b = rng.random_range(*min..=*max);
+                        if a != b && gcd_u64(a.unsigned_abs(), b.unsigned_abs()) == 1 {
+                            a_val = a;
+                            b_val = b;
+                            break;
+                        }
+                    }
+                    raw_params.insert(format!("{}_a", spec.name), Value::from(a_val));
+                    str_params.insert(format!("{}_a", spec.name), a_val.to_string());
+                    raw_params.insert(format!("{}_b", spec.name), Value::from(b_val));
+                    str_params.insert(format!("{}_b", spec.name), b_val.to_string());
+                    raw_params.insert(spec.name.clone(), Value::from(a_val));
+                    str_params.insert(spec.name.clone(), a_val.to_string());
+                }
                 _ => {}
             }
         }
@@ -138,6 +236,15 @@ impl DeclarativeProblemGenerator {
                     raw_params.insert(spec.name.clone(), Value::from(res));
                     str_params.insert(spec.name.clone(), format!("{}", res));
                 }
+                ParameterDomain::DerivedQuotient { a_param, b_param, precision } => {
+                    let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                    let b = raw_params.get(b_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                    let res = if b.abs() < 1e-9 { 0.0 } else { a / b };
+                    raw_params.insert(spec.name.clone(), Value::from(res));
+                    let prec = precision.unwrap_or(2);
+                    let formatted = if res.fract() == 0.0 { format!("{:.0}", res) } else { format!("{:.1$}", res, prec) };
+                    str_params.insert(spec.name.clone(), formatted);
+                }
                 ParameterDomain::DerivedSignedString { param } => {
                     let b = raw_params.get(param).and_then(|v| v.as_i64()).unwrap_or(0);
                     let formatted = if b >= 0 {
@@ -147,6 +254,34 @@ impl DeclarativeProblemGenerator {
                     };
                     raw_params.insert(spec.name.clone(), Value::from(formatted.clone()));
                     str_params.insert(spec.name.clone(), formatted);
+                }
+                ParameterDomain::DerivedPower { base_param, exponent } => {
+                    let base = raw_params.get(base_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                    let res = base.powi(*exponent as i32);
+                    raw_params.insert(spec.name.clone(), Value::from(res));
+                    str_params.insert(spec.name.clone(), if res.fract() == 0.0 { format!("{:.0}", res) } else { format!("{:.2}", res) });
+                }
+                ParameterDomain::DerivedPercentage { base_param, rate_param } => {
+                    let base = raw_params.get(base_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                    let rate = raw_params.get(rate_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                    let res = (base * rate) / 100.0;
+                    raw_params.insert(spec.name.clone(), Value::from(res));
+                    str_params.insert(spec.name.clone(), if res.fract() == 0.0 { format!("{:.0}", res) } else { format!("{:.2}", res) });
+                }
+                ParameterDomain::DerivedHypotenuse { a_param, b_param } => {
+                    let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                    let b = raw_params.get(b_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                    let res = (a * a + b * b).sqrt();
+                    raw_params.insert(spec.name.clone(), Value::from(res));
+                    str_params.insert(spec.name.clone(), if res.fract() == 0.0 { format!("{:.0}", res) } else { format!("{:.2}", res) });
+                }
+                ParameterDomain::DerivedPythagoreanLeg { c_param, a_param } => {
+                    let c = raw_params.get(c_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                    let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                    let diff = (c * c - a * a).max(0.0);
+                    let res = diff.sqrt();
+                    raw_params.insert(spec.name.clone(), Value::from(res));
+                    str_params.insert(spec.name.clone(), if res.fract() == 0.0 { format!("{:.0}", res) } else { format!("{:.2}", res) });
                 }
                 _ => {}
             }
@@ -195,17 +330,35 @@ impl DeclarativeProblemGenerator {
                         }
                     }
                 }
+                ConstraintSpec::LessThan { param_a, param_b } => {
+                    let val_a = raw_params.get(param_a).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64)));
+                    let val_b = raw_params.get(param_b).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64)));
+                    if let (Some(a), Some(b)) = (val_a, val_b) {
+                        if a >= b {
+                            return false;
+                        }
+                    }
+                }
+                ConstraintSpec::SumEquals { param_a, param_b, target } => {
+                    let val_a = raw_params.get(param_a).and_then(|v| v.as_i64());
+                    let val_b = raw_params.get(param_b).and_then(|v| v.as_i64());
+                    if let (Some(a), Some(b)) = (val_a, val_b) {
+                        if a + b != *target {
+                            return false;
+                        }
+                    }
+                }
                 ConstraintSpec::Predicate { .. } => {}
             }
         }
         true
     }
 
-    /// Compute canonical numerical answer according to derivation specification.
+    /// Compute canonical answer (numeric or text) according to derivation specification.
     fn compute_answer(
         derivation: &AnswerDerivation,
         raw_params: &HashMap<String, Value>,
-    ) -> Result<f64> {
+    ) -> Result<CanonicalAnswerValue> {
         match derivation {
             AnswerDerivation::DirectParam { param_name } => {
                 let val = raw_params
@@ -217,7 +370,22 @@ impl DeclarativeProblemGenerator {
                             param_name
                         ))
                     })?;
-                Ok(val)
+                Ok(CanonicalAnswerValue::Numeric(val))
+            }
+            AnswerDerivation::DirectStringParam { param_name } => {
+                let s = raw_params
+                    .get(param_name)
+                    .map(|v| match v {
+                        Value::String(s) => s.clone(),
+                        _ => v.to_string(),
+                    })
+                    .ok_or_else(|| {
+                        ProceduralError::Validation(format!(
+                            "Missing parameter {} for string answer derivation",
+                            param_name
+                        ))
+                    })?;
+                Ok(CanonicalAnswerValue::Text(s))
             }
             AnswerDerivation::LinearTwoStep { c_param, b_param, a_param } => {
                 let c = raw_params.get(c_param).and_then(|v| v.as_i64()).unwrap_or(0);
@@ -226,7 +394,7 @@ impl DeclarativeProblemGenerator {
                 if a == 0 {
                     return Err(ProceduralError::Validation("Divisor 'a' cannot be zero".to_string()));
                 }
-                Ok((c - b) as f64 / a as f64)
+                Ok(CanonicalAnswerValue::Numeric((c - b) as f64 / a as f64))
             }
             AnswerDerivation::LinearVariablesBothSides { d_param, b_param, a_param, c_param } => {
                 let d = raw_params.get(d_param).and_then(|v| v.as_i64()).unwrap_or(0);
@@ -237,7 +405,7 @@ impl DeclarativeProblemGenerator {
                 if diff_a == 0 {
                     return Err(ProceduralError::Validation("Denominator (a - c) cannot be zero".to_string()));
                 }
-                Ok((d - b) as f64 / diff_a as f64)
+                Ok(CanonicalAnswerValue::Numeric((d - b) as f64 / diff_a as f64))
             }
             AnswerDerivation::LinearDistributive { d_param, a_param, c_param, b_param } => {
                 let d = raw_params.get(d_param).and_then(|v| v.as_i64()).unwrap_or(0);
@@ -248,13 +416,13 @@ impl DeclarativeProblemGenerator {
                     return Err(ProceduralError::Validation("Distributive divisors cannot be zero".to_string()));
                 }
                 let inner = (d as f64 / a as f64) - c as f64;
-                Ok(inner / b as f64)
+                Ok(CanonicalAnswerValue::Numeric(inner / b as f64))
             }
             AnswerDerivation::LinearFractional { c_param, b_param, a_param } => {
                 let c = raw_params.get(c_param).and_then(|v| v.as_i64()).unwrap_or(0);
                 let b = raw_params.get(b_param).and_then(|v| v.as_i64()).unwrap_or(0);
                 let a = raw_params.get(a_param).and_then(|v| v.as_i64()).unwrap_or(1);
-                Ok((a * (c - b)) as f64)
+                Ok(CanonicalAnswerValue::Numeric((a * (c - b)) as f64))
             }
             AnswerDerivation::Quotient { numerator_param, denominator_param } => {
                 let num = raw_params.get(numerator_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
@@ -262,12 +430,190 @@ impl DeclarativeProblemGenerator {
                 if den.abs() < 1e-9 {
                     return Err(ProceduralError::Validation("Denominator cannot be zero".to_string()));
                 }
-                Ok(num / den)
+                Ok(CanonicalAnswerValue::Numeric(num / den))
             }
             AnswerDerivation::Product { a_param, b_param } => {
                 let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
                 let b = raw_params.get(b_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
-                Ok(a * b)
+                Ok(CanonicalAnswerValue::Numeric(a * b))
+            }
+            AnswerDerivation::PercentageAmount { base_param, percent_param } => {
+                let base = raw_params.get(base_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let pct = raw_params.get(percent_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                Ok(CanonicalAnswerValue::Numeric((base * pct) / 100.0))
+            }
+            AnswerDerivation::LcmArray { params } => {
+                if params.is_empty() {
+                    return Err(ProceduralError::Validation("LcmArray requires at least 1 parameter".to_string()));
+                }
+                let mut current_lcm = raw_params.get(&params[0]).and_then(|v| v.as_i64()).unwrap_or(1).unsigned_abs();
+                for p in &params[1..] {
+                    let next_val = raw_params.get(p).and_then(|v| v.as_i64()).unwrap_or(1).unsigned_abs();
+                    current_lcm = lcm_u64(current_lcm, next_val);
+                }
+                Ok(CanonicalAnswerValue::Numeric(current_lcm as f64))
+            }
+            AnswerDerivation::GcdArray { params } => {
+                if params.is_empty() {
+                    return Err(ProceduralError::Validation("GcdArray requires at least 1 parameter".to_string()));
+                }
+                let mut current_gcd = raw_params.get(&params[0]).and_then(|v| v.as_i64()).unwrap_or(1).unsigned_abs();
+                for p in &params[1..] {
+                    let next_val = raw_params.get(p).and_then(|v| v.as_i64()).unwrap_or(1).unsigned_abs();
+                    current_gcd = gcd_u64(current_gcd, next_val);
+                }
+                Ok(CanonicalAnswerValue::Numeric(current_gcd as f64))
+            }
+            AnswerDerivation::Remainder { dividend_param, divisor_param } => {
+                let num = raw_params.get(dividend_param).and_then(|v| v.as_i64()).unwrap_or(0);
+                let den = raw_params.get(divisor_param).and_then(|v| v.as_i64()).unwrap_or(1);
+                if den == 0 {
+                    return Err(ProceduralError::Validation("Divisor cannot be zero".to_string()));
+                }
+                Ok(CanonicalAnswerValue::Numeric((num % den) as f64))
+            }
+            AnswerDerivation::PythagorasHypotenuse { a_param, b_param } => {
+                let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let b = raw_params.get(b_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                Ok(CanonicalAnswerValue::Numeric((a * a + b * b).sqrt()))
+            }
+            AnswerDerivation::PythagorasLeg { c_param, a_param } => {
+                let c = raw_params.get(c_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let diff = (c * c - a * a).max(0.0);
+                Ok(CanonicalAnswerValue::Numeric(diff.sqrt()))
+            }
+            AnswerDerivation::TriangleArea { base_param, height_param } => {
+                let b = raw_params.get(base_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let h = raw_params.get(height_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                Ok(CanonicalAnswerValue::Numeric(0.5 * b * h))
+            }
+            AnswerDerivation::CircleArea { radius_param, pi_approx } => {
+                let r = raw_params.get(radius_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let pi = pi_approx.unwrap_or(std::f64::consts::PI);
+                Ok(CanonicalAnswerValue::Numeric(pi * r * r))
+            }
+            AnswerDerivation::ArithmeticSeriesSum { n_param, a_param, d_param } => {
+                let n = raw_params.get(n_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let d = raw_params.get(d_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let s_n = (n / 2.0) * (2.0 * a + (n - 1.0) * d);
+                Ok(CanonicalAnswerValue::Numeric(s_n))
+            }
+            AnswerDerivation::KinematicVelocity { u_param, a_param, t_param } => {
+                let u = raw_params.get(u_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let t = raw_params.get(t_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                Ok(CanonicalAnswerValue::Numeric(u + a * t))
+            }
+            AnswerDerivation::KinematicDisplacement { u_param, a_param, t_param } => {
+                let u = raw_params.get(u_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let t = raw_params.get(t_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                Ok(CanonicalAnswerValue::Numeric(u * t + 0.5 * a * t * t))
+            }
+            AnswerDerivation::KinematicStoppingDistance { u_param, a_param } => {
+                let u = raw_params.get(u_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                if a.abs() < 1e-9 {
+                    return Err(ProceduralError::Validation("Acceleration cannot be zero for stopping distance".to_string()));
+                }
+                Ok(CanonicalAnswerValue::Numeric((u * u) / (2.0 * a)))
+            }
+            AnswerDerivation::KinematicTime { u_param, v_param, a_param } => {
+                let u = raw_params.get(u_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let v = raw_params.get(v_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let a = raw_params.get(a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                if a.abs() < 1e-9 {
+                    return Err(ProceduralError::Validation("Acceleration cannot be zero for kinematic time".to_string()));
+                }
+                Ok(CanonicalAnswerValue::Numeric((v - u) / a))
+            }
+            AnswerDerivation::KinematicWorkEnergy { mass_param, velocity_param } => {
+                let m = raw_params.get(mass_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let v = raw_params.get(velocity_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                Ok(CanonicalAnswerValue::Numeric(0.5 * m * v * v))
+            }
+            AnswerDerivation::StoichiometricMolesToMass { moles_param, molar_mass_param } => {
+                let n = raw_params.get(moles_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let m_mol = raw_params.get(molar_mass_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                Ok(CanonicalAnswerValue::Numeric(n * m_mol))
+            }
+            AnswerDerivation::StoichiometricMassToMoles { mass_param, molar_mass_param } => {
+                let m = raw_params.get(mass_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let m_mol = raw_params.get(molar_mass_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                if m_mol.abs() < 1e-9 {
+                    return Err(ProceduralError::Validation("Molar mass cannot be zero".to_string()));
+                }
+                Ok(CanonicalAnswerValue::Numeric(m / m_mol))
+            }
+            AnswerDerivation::StoichiometricMoleRatio { moles_a_param, coeff_a, coeff_b } => {
+                let n_a = raw_params.get(moles_a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                if coeff_a.abs() < 1e-9 {
+                    return Err(ProceduralError::Validation("Coefficient A cannot be zero".to_string()));
+                }
+                Ok(CanonicalAnswerValue::Numeric(n_a * (*coeff_b / *coeff_a)))
+            }
+            AnswerDerivation::StoichiometricMassToMass { mass_a_param, molar_mass_a, coeff_a, coeff_b, molar_mass_b } => {
+                let m_a = raw_params.get(mass_a_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let mm_a = raw_params.get(molar_mass_a).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                let mm_b = raw_params.get(molar_mass_b).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                if mm_a.abs() < 1e-9 || coeff_a.abs() < 1e-9 {
+                    return Err(ProceduralError::Validation("Divisors cannot be zero in stoichiometric mass-to-mass".to_string()));
+                }
+                let moles_a = m_a / mm_a;
+                let moles_b = moles_a * (*coeff_b / *coeff_a);
+                Ok(CanonicalAnswerValue::Numeric(moles_b * mm_b))
+            }
+            AnswerDerivation::EquilibriumKc { conc_products, conc_reactants } => {
+                let mut prod_num = 1.0;
+                for (p_name, exp) in conc_products {
+                    let val = raw_params.get(p_name).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                    prod_num *= val.powf(*exp);
+                }
+                let mut react_den = 1.0;
+                for (r_name, exp) in conc_reactants {
+                    let val = raw_params.get(r_name).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                    react_den *= val.powf(*exp);
+                }
+                if react_den.abs() < 1e-9 {
+                    return Err(ProceduralError::Validation("Reactants concentration denominator cannot be zero".to_string()));
+                }
+                Ok(CanonicalAnswerValue::Numeric(prod_num / react_den))
+            }
+            AnswerDerivation::IdealGasLawPressure { moles_param, temp_param, vol_param, r_const } => {
+                let n = raw_params.get(moles_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let t = raw_params.get(temp_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(273.0);
+                let v = raw_params.get(vol_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                let r = r_const.unwrap_or(8.314);
+                if v.abs() < 1e-9 {
+                    return Err(ProceduralError::Validation("Volume cannot be zero in ideal gas law".to_string()));
+                }
+                Ok(CanonicalAnswerValue::Numeric((n * r * t) / v))
+            }
+            AnswerDerivation::IdealGasLawVolume { moles_param, temp_param, press_param, r_const } => {
+                let n = raw_params.get(moles_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(0.0);
+                let t = raw_params.get(temp_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(273.0);
+                let p = raw_params.get(press_param).and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64))).unwrap_or(1.0);
+                let r = r_const.unwrap_or(8.314);
+                if p.abs() < 1e-9 {
+                    return Err(ProceduralError::Validation("Pressure cannot be zero in ideal gas law".to_string()));
+                }
+                Ok(CanonicalAnswerValue::Numeric((n * r * t) / p))
+            }
+            AnswerDerivation::SymbolicLogicEvaluation { p_param, q_param, operator } => {
+                let p = raw_params.get(p_param).and_then(|v| v.as_bool().or_else(|| v.as_i64().map(|i| i != 0))).unwrap_or(true);
+                let q = raw_params.get(q_param).and_then(|v| v.as_bool().or_else(|| v.as_i64().map(|i| i != 0))).unwrap_or(true);
+                let res = match operator.to_uppercase().as_str() {
+                    "AND" | "&&" | "CONJUNCTION" => p && q,
+                    "OR" | "||" | "DISJUNCTION" => p || q,
+                    "IMPLIES" | "->" | "CONDITIONAL" => !p || q,
+                    "EQUIV" | "<->" | "BICONDITIONAL" => p == q,
+                    "XOR" => p ^ q,
+                    "NOT_P" | "!P" => !p,
+                    _ => p && q,
+                };
+                Ok(CanonicalAnswerValue::Text(if res { "True".to_string() } else { "False".to_string() }))
             }
         }
     }
@@ -402,11 +748,7 @@ impl ProblemGenerator for DeclarativeProblemGenerator {
         let canonical_answer = Self::compute_answer(&archetype.answer_derivation, &raw_params)?;
         
         // Add answer to string parameters for template interpolation
-        let formatted_val = if canonical_answer.fract() == 0.0 {
-            format!("{:.0}", canonical_answer)
-        } else {
-            format!("{:.2}", canonical_answer)
-        };
+        let formatted_val = canonical_answer.format_default();
         str_params.insert("answer".to_string(), formatted_val.clone());
         str_params.insert("target_val".to_string(), formatted_val.clone());
 
@@ -437,8 +779,8 @@ impl ProblemGenerator for DeclarativeProblemGenerator {
 
         // Correct answer JSON
         let correct_answer = serde_json::json!({
-            "value": canonical_answer,
-            "formatted": formatted_answer,
+            "value": canonical_answer.to_json_value(),
+            "formatted": if formatted_answer.is_empty() { formatted_val } else { formatted_answer },
             "solution": solution_text,
         });
 

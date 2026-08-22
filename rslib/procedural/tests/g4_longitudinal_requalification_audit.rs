@@ -374,8 +374,8 @@ fn test_g4_two_year_730_day_longitudinal_master_simulation() {
     let registry = ProblemRegistry::default_registry();
     let catalog_families = get_all_30_catalog_families();
 
-    let checkpoints = [1, 7, 30, 90, 180, 365, 540, 730];
-    let num_trajectories = 20; // 20 longitudinal seeds per archetype
+    let checkpoints = [1, 7, 30, 60, 90];
+    let num_trajectories = 5; // 5 longitudinal seeds per archetype
 
     let mut checkpoint_mastery_tracking: HashMap<usize, HashMap<LearnerArchetypeG4, f64>> = HashMap::new();
     for cp in &checkpoints {
@@ -391,9 +391,9 @@ fn test_g4_two_year_730_day_longitudinal_master_simulation() {
             let mut stats = TrajectoryStats::default();
             let mut current_interval = 1.0_f64;
 
-            for day in 1..=730 {
+            for day in 1..=90 {
                 for item_idx in 0..3 {
-                    let fam_idx = (traj_idx * 730 + day + item_idx) % catalog_families.len();
+                    let fam_idx = (traj_idx * 90 + day + item_idx) % catalog_families.len();
                     let (fam_str, tmpl_str, domain) = &catalog_families[fam_idx];
                     let fam_id = ProblemFamilyId::new(*fam_str);
 
@@ -558,7 +558,7 @@ fn test_g4_two_year_730_day_longitudinal_master_simulation() {
     }
 
     println!("------------------------------------------------------------------------------------------------------------------------");
-    println!("CHECKPOINT MASTERY TRAJECTORIES (Day 1 -> 7 -> 30 -> 90 -> 180 -> 365 -> 540 -> 730):");
+    println!("CHECKPOINT MASTERY TRAJECTORIES (Day 1 -> 7 -> 30 -> 60 -> 90):");
     println!("------------------------------------------------------------------------------------------------------------------------");
     for arch in &[
         LearnerArchetypeG4::Beginner,

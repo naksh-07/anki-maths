@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Domain, ProblemFamilyId, SchemaId, SkillId};
+use crate::core::{Domain, ProblemFamilyId, ProceduralError, Result, SchemaId, SkillId};
 use crate::exam::pyq::ContentProvenance;
 use crate::problems::steps::StepType;
 use crate::skills::signals::VariantCategory;
@@ -219,9 +219,51 @@ pub enum ParameterDomain {
         a_param: String,
         b_param: String,
     },
+    /// Derived quotient `target = a / b` with optional rounding precision.
+    DerivedQuotient {
+        a_param: String,
+        b_param: String,
+        precision: Option<usize>,
+    },
     /// Derived signed string formatting: "+ b" or "- |b|"
     DerivedSignedString {
         param: String,
+    },
+    /// Derived integer/float power `target = base ^ exponent`.
+    DerivedPower {
+        base_param: String,
+        exponent: u32,
+    },
+    /// Derived percentage `target = (base * rate) / 100.0`.
+    DerivedPercentage {
+        base_param: String,
+        rate_param: String,
+    },
+    /// Derived hypotenuse `target = sqrt(a^2 + b^2)` rounded to integer or 2 decimals.
+    DerivedHypotenuse {
+        a_param: String,
+        b_param: String,
+    },
+    /// Derived Pythagorean leg `target = sqrt(c^2 - a^2)` rounded to integer or 2 decimals.
+    DerivedPythagoreanLeg {
+        c_param: String,
+        a_param: String,
+    },
+    /// Permutation choice of `count` distinct items from a pool of strings.
+    PermutationChoice {
+        pool: Vec<String>,
+        count: usize,
+    },
+    /// Prime factor grid sampler: computes a composite number from product of prime powers.
+    PrimeFactorGrid {
+        base_primes: Vec<u64>,
+        min_exponents: Vec<u32>,
+        max_exponents: Vec<u32>,
+    },
+    /// Coprime pair sampler producing two coprime integers in [min, max].
+    CoprimePair {
+        min: i64,
+        max: i64,
     },
 }
 
@@ -266,6 +308,30 @@ impl ParameterSpec {
 
     pub fn discrete_choice(name: impl Into<String>, values: Vec<serde_json::Value>) -> Self {
         Self::new(name, ParameterDomain::DiscreteChoice { values })
+    }
+
+    pub fn permutation_choice(name: impl Into<String>, pool: Vec<String>, count: usize) -> Self {
+        Self::new(name, ParameterDomain::PermutationChoice { pool, count })
+    }
+
+    pub fn prime_factor_grid(
+        name: impl Into<String>,
+        base_primes: Vec<u64>,
+        min_exponents: Vec<u32>,
+        max_exponents: Vec<u32>,
+    ) -> Self {
+        Self::new(
+            name,
+            ParameterDomain::PrimeFactorGrid {
+                base_primes,
+                min_exponents,
+                max_exponents,
+            },
+        )
+    }
+
+    pub fn coprime_pair(name: impl Into<String>, min: i64, max: i64) -> Self {
+        Self::new(name, ParameterDomain::CoprimePair { min, max })
     }
 
     pub fn derived_linear(
@@ -326,11 +392,79 @@ impl ParameterSpec {
         )
     }
 
+    pub fn derived_quotient(
+        name: impl Into<String>,
+        a_param: impl Into<String>,
+        b_param: impl Into<String>,
+        precision: Option<usize>,
+    ) -> Self {
+        Self::new(
+            name,
+            ParameterDomain::DerivedQuotient {
+                a_param: a_param.into(),
+                b_param: b_param.into(),
+                precision,
+            },
+        )
+    }
+
     pub fn derived_signed(name: impl Into<String>, param: impl Into<String>) -> Self {
         Self::new(
             name,
             ParameterDomain::DerivedSignedString {
                 param: param.into(),
+            },
+        )
+    }
+
+    pub fn derived_power(name: impl Into<String>, base_param: impl Into<String>, exponent: u32) -> Self {
+        Self::new(
+            name,
+            ParameterDomain::DerivedPower {
+                base_param: base_param.into(),
+                exponent,
+            },
+        )
+    }
+
+    pub fn derived_percentage(
+        name: impl Into<String>,
+        base_param: impl Into<String>,
+        rate_param: impl Into<String>,
+    ) -> Self {
+        Self::new(
+            name,
+            ParameterDomain::DerivedPercentage {
+                base_param: base_param.into(),
+                rate_param: rate_param.into(),
+            },
+        )
+    }
+
+    pub fn derived_hypotenuse(
+        name: impl Into<String>,
+        a_param: impl Into<String>,
+        b_param: impl Into<String>,
+    ) -> Self {
+        Self::new(
+            name,
+            ParameterDomain::DerivedHypotenuse {
+                a_param: a_param.into(),
+                b_param: b_param.into(),
+            },
+        )
+    }
+
+    pub fn derived_pythagorean_leg(
+        name: impl Into<String>,
+        c_param: impl Into<String>,
+        a_param: impl Into<String>,
+    ) -> Self {
+        Self::new(
+            name,
+            ParameterDomain::DerivedPythagoreanLeg {
+                c_param: c_param.into(),
+                a_param: a_param.into(),
             },
         )
     }
@@ -351,6 +485,10 @@ pub enum ConstraintSpec {
     },
     /// param_a > param_b
     GreaterThan { param_a: String, param_b: String },
+    /// param_a < param_b
+    LessThan { param_a: String, param_b: String },
+    /// param_a + param_b == target
+    SumEquals { param_a: String, param_b: String, target: i64 },
     /// custom predicate name
     Predicate { name: String },
 }
@@ -359,8 +497,10 @@ pub enum ConstraintSpec {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AnswerDerivation {
-    /// Direct parameter lookup.
+    /// Direct parameter lookup (numeric).
     DirectParam { param_name: String },
+    /// Direct string parameter lookup (e.g. for discrete text / option answers).
+    DirectStringParam { param_name: String },
     /// Solve ax + b = c -> x = (c - b) / a
     LinearTwoStep {
         c_param: String,
@@ -396,6 +536,127 @@ pub enum AnswerDerivation {
     Product {
         a_param: String,
         b_param: String,
+    },
+    /// Percentage calculation `target = (base * percent) / 100.0`
+    PercentageAmount {
+        base_param: String,
+        percent_param: String,
+    },
+    /// LCM of an array of integer parameters.
+    LcmArray {
+        params: Vec<String>,
+    },
+    /// GCD / HCF of an array of integer parameters.
+    GcdArray {
+        params: Vec<String>,
+    },
+    /// Remainder of dividend % divisor (e.g. for modular arithmetic & remainder theorems).
+    Remainder {
+        dividend_param: String,
+        divisor_param: String,
+    },
+    /// Geometry: Right triangle hypotenuse c = sqrt(a^2 + b^2).
+    PythagorasHypotenuse {
+        a_param: String,
+        b_param: String,
+    },
+    /// Geometry: Right triangle leg b = sqrt(c^2 - a^2).
+    PythagorasLeg {
+        c_param: String,
+        a_param: String,
+    },
+    /// Geometry: Triangle area A = 0.5 * base * height.
+    TriangleArea {
+        base_param: String,
+        height_param: String,
+    },
+    /// Geometry: Circle area A = pi * r^2.
+    CircleArea {
+        radius_param: String,
+        pi_approx: Option<f64>,
+    },
+    /// Arithmetic progression sum S_n = (n / 2) * (2a + (n - 1)d).
+    ArithmeticSeriesSum {
+        n_param: String,
+        a_param: String,
+        d_param: String,
+    },
+    /// Kinematics: Final velocity v = u + at.
+    KinematicVelocity {
+        u_param: String,
+        a_param: String,
+        t_param: String,
+    },
+    /// Kinematics: Displacement s = ut + 0.5 * a * t^2.
+    KinematicDisplacement {
+        u_param: String,
+        a_param: String,
+        t_param: String,
+    },
+    /// Kinematics: Stopping distance d = u^2 / (2 * a).
+    KinematicStoppingDistance {
+        u_param: String,
+        a_param: String,
+    },
+    /// Kinematics: Time t = (v - u) / a.
+    KinematicTime {
+        u_param: String,
+        v_param: String,
+        a_param: String,
+    },
+    /// Physics: Kinetic energy E_k = 0.5 * m * v^2.
+    KinematicWorkEnergy {
+        mass_param: String,
+        velocity_param: String,
+    },
+    /// Chemistry: Moles to Mass m = n * M.
+    StoichiometricMolesToMass {
+        moles_param: String,
+        molar_mass_param: String,
+    },
+    /// Chemistry: Mass to Moles n = m / M.
+    StoichiometricMassToMoles {
+        mass_param: String,
+        molar_mass_param: String,
+    },
+    /// Chemistry: Mole ratio conversion n_B = n_A * (coeff_b / coeff_a).
+    StoichiometricMoleRatio {
+        moles_a_param: String,
+        coeff_a: f64,
+        coeff_b: f64,
+    },
+    /// Chemistry: Full mass to mass conversion m_B = (m_A / M_A) * (coeff_b / coeff_a) * M_B.
+    StoichiometricMassToMass {
+        mass_a_param: String,
+        molar_mass_a: String,
+        coeff_a: f64,
+        coeff_b: f64,
+        molar_mass_b: String,
+    },
+    /// Chemistry: Equilibrium mass action quotient Kc = ([C]^c * [D]^d) / ([A]^a * [B]^b).
+    EquilibriumKc {
+        conc_products: Vec<(String, f64)>,
+        conc_reactants: Vec<(String, f64)>,
+    },
+    /// Chemistry / Physics: Ideal Gas Law Pressure P = (n * R * T) / V.
+    IdealGasLawPressure {
+        moles_param: String,
+        temp_param: String,
+        vol_param: String,
+        r_const: Option<f64>,
+    },
+    /// Chemistry / Physics: Ideal Gas Law Volume V = (n * R * T) / P.
+    IdealGasLawVolume {
+        moles_param: String,
+        temp_param: String,
+        press_param: String,
+        r_const: Option<f64>,
+    },
+    /// Reasoning / Symbolic Logic: Propositional logic truth evaluation (AND, OR, IMPLIES, EQUIV, XOR).
+    SymbolicLogicEvaluation {
+        p_param: String,
+        q_param: String,
+        operator: String,
     },
 }
 
@@ -524,5 +785,52 @@ impl DeclarativeFamilyContract {
             .iter()
             .find(|a| a.difficulty_level == difficulty_level)
             .or_else(|| self.archetypes.first())
+    }
+
+    /// Validate the structural integrity and security constraints of the declarative family contract.
+    pub fn validate(&self) -> Result<()> {
+        let fam = self.contract.family_id.as_str().trim();
+        if fam.is_empty() || fam.len() > 256 {
+            return Err(ProceduralError::Validation("ProblemFamilyContract has invalid family_id".into()));
+        }
+        let schema = self.contract.default_schema.as_str().trim();
+        if schema.is_empty() || schema.len() > 256 {
+            return Err(ProceduralError::Validation("ProblemFamilyContract has invalid default_schema".into()));
+        }
+        if self.contract.min_difficulty < 1.0 || self.contract.max_difficulty > 5.0 || self.contract.min_difficulty > self.contract.max_difficulty {
+            return Err(ProceduralError::Validation("ProblemFamilyContract difficulty range must be within [1.0, 5.0]".into()));
+        }
+        if self.archetypes.is_empty() || self.archetypes.len() > 50 {
+            return Err(ProceduralError::Validation("DeclarativeFamilyContract must contain between 1 and 50 archetypes".into()));
+        }
+        for arch in &self.archetypes {
+            if arch.archetype_id.trim().is_empty() || arch.archetype_id.len() > 256 {
+                return Err(ProceduralError::Validation("DeclarativeArchetype has empty or oversized archetype_id".into()));
+            }
+            if arch.prompt_template.trim().is_empty() || arch.prompt_template.len() > 10_000 {
+                return Err(ProceduralError::Validation("DeclarativeArchetype has invalid prompt_template length".into()));
+            }
+            if arch.solution_template.len() > 20_000 {
+                return Err(ProceduralError::Validation("DeclarativeArchetype solution_template exceeds max size".into()));
+            }
+            if arch.target_time_ms < 1_000 || arch.target_time_ms > 600_000 {
+                return Err(ProceduralError::Validation("DeclarativeArchetype target_time_ms must be in range [1000, 600000]".into()));
+            }
+            if arch.parameters.len() > 50 {
+                return Err(ProceduralError::Validation("DeclarativeArchetype contains too many parameters (>50)".into()));
+            }
+            for p in &arch.parameters {
+                if p.name.trim().is_empty() || p.name.len() > 64 {
+                    return Err(ProceduralError::Validation("ParameterSpec has empty or oversized parameter name".into()));
+                }
+            }
+            if arch.constraints.len() > 50 {
+                return Err(ProceduralError::Validation("DeclarativeArchetype contains too many constraints (>50)".into()));
+            }
+            if arch.step_nodes.len() > 20 {
+                return Err(ProceduralError::Validation("DeclarativeArchetype contains too many step nodes (>20)".into()));
+            }
+        }
+        Ok(())
     }
 }
