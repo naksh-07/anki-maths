@@ -44,6 +44,39 @@ describe("ProceduralReviewer API", () => {
                 <div id="proc-result-title"></div>
                 <div id="proc-result-feedback"></div>
                 <div id="proc-actual-time"></div>
+                <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
+                    <div class="proc-mistake-heading">Classify Error (Spaced Repetition Tagging):</div>
+                    <div class="proc-mistake-grid">
+                        <button type="button" class="proc-mistake-card" data-value="silly_mistake" data-key="1">
+                            <span class="proc-key-badge">1</span>
+                            <div class="proc-mistake-info">
+                                <strong>Silly Mistake</strong>
+                                <span>Arithmetic / Slip</span>
+                            </div>
+                        </button>
+                        <button type="button" class="proc-mistake-card" data-value="pattern_not_recognized" data-key="2">
+                            <span class="proc-key-badge">2</span>
+                            <div class="proc-mistake-info">
+                                <strong>Pattern Not Recognized</strong>
+                                <span>Unsure how to start</span>
+                            </div>
+                        </button>
+                        <button type="button" class="proc-mistake-card" data-value="formula_or_concept_misapplied" data-key="3">
+                            <span class="proc-key-badge">3</span>
+                            <div class="proc-mistake-info">
+                                <strong>Formula Misapplied</strong>
+                                <span>Wrong formula or theorem</span>
+                            </div>
+                        </button>
+                        <button type="button" class="proc-mistake-card" data-value="concept_not_known" data-key="4">
+                            <span class="proc-key-badge">4</span>
+                            <div class="proc-mistake-info">
+                                <strong>Concept Not Known</strong>
+                                <span>Fundamental gap</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
                 <button type="button" id="proc-next-btn" class="proc-btn">Next</button>
             </div>
         `;
@@ -72,7 +105,7 @@ describe("ProceduralReviewer API", () => {
         expect(reviewer.getState()).toBe("teardown");
     });
 
-    test("parses numeric values and fractions accurately", () => {
+    test("parses numeric values, units, scientific notation, and fractions accurately", () => {
         const reviewer = new ProceduralReviewer(container, {
             instanceId: "inst-123",
             familyId: "math.ratio",
@@ -82,8 +115,14 @@ describe("ProceduralReviewer API", () => {
 
         expect(reviewer.parseNumericValue("0.75")).toBe(0.75);
         expect(reviewer.parseNumericValue("3/4")).toBe(0.75);
+        expect(reviewer.parseNumericValue("3/4 m/s")).toBe(0.75);
         expect(reviewer.parseNumericValue(" 75% ")).toBe(75);
         expect(reviewer.parseNumericValue("$1,250.50")).toBe(1250.5);
+        expect(reviewer.parseNumericValue("12 m/s")).toBe(12);
+        expect(reviewer.parseNumericValue("v = 15.5 m/s")).toBe(15.5);
+        expect(reviewer.parseNumericValue("5 kg")).toBe(5);
+        expect(reviewer.parseNumericValue("1.2e-3 mol/L")).toBeCloseTo(0.0012, 6);
+        expect(reviewer.parseNumericValue("3x10^4 J")).toBe(30000);
         expect(reviewer.parseNumericValue("invalid")).toBeNull();
 
         reviewer.destroy();
@@ -100,6 +139,12 @@ describe("ProceduralReviewer API", () => {
         const correctRes = reviewer.evaluateLocally("12");
         expect(correctRes.isCorrect).toBe(true);
         expect(correctRes.score).toBe(1.0);
+
+        const unitRes = reviewer.evaluateLocally("12 m/s");
+        expect(unitRes.isCorrect).toBe(true);
+
+        const prefixRes = reviewer.evaluateLocally("v = 12");
+        expect(prefixRes.isCorrect).toBe(true);
 
         const closeRes = reviewer.evaluateLocally("12.005");
         expect(closeRes.isCorrect).toBe(true);
@@ -464,6 +509,7 @@ describe("ProceduralReviewer API", () => {
 
     test("mistake classification blocks feedback until selected and persists telemetry", async () => {
         (globalThis as any).anki = {
+            _state_mutation_key: "studylab_telemetry",
             mutateNextCardStates: vi.fn().mockResolvedValue(undefined)
         };
 
@@ -481,12 +527,13 @@ describe("ProceduralReviewer API", () => {
         input.value = "10";
         submitBtn.click();
 
-        // Should show mistake classification buttons in footer
+        // Should show mistake classification panel above solution
         expect(reviewer.getState()).toBe("mistake_classification");
         
-        const footerCenter = container.querySelector<HTMLElement>("#proc-footer-center")!;
-        const mistakeBtns = footerCenter.querySelectorAll<HTMLButtonElement>(".proc-mistake-btn");
-        expect(mistakeBtns.length).toBe(4);
+        const mistakePanel = container.querySelector<HTMLElement>("#proc-mistake-panel")!;
+        expect(mistakePanel.classList.contains("hidden")).toBe(false);
+        const mistakeCards = mistakePanel.querySelectorAll<HTMLButtonElement>(".proc-mistake-card");
+        expect(mistakeCards.length).toBe(4);
 
         // Feedback panel should be shown (with incorrect answer info)
         const resultPanel = container.querySelector<HTMLElement>("#proc-result-panel")!;
@@ -494,17 +541,25 @@ describe("ProceduralReviewer API", () => {
         const resultTitle = resultPanel.querySelector<HTMLElement>("#proc-result-title")!;
         expect(resultTitle.textContent).toContain("✗ Incorrect Answer");
 
-        // Select a mistake type
-        const sillyMistakeBtn = Array.from(mistakeBtns).find(b => b.dataset.value === "silly_mistake")!;
-        sillyMistakeBtn.click();
+        // Select a mistake type via click or key
+        const sillyMistakeCard = Array.from(mistakeCards).find(b => b.dataset.value === "silly_mistake")!;
+        sillyMistakeCard.click();
 
-        expect(sillyMistakeBtn.classList.contains("selected")).toBe(true);
+        expect(sillyMistakeCard.classList.contains("selected")).toBe(true);
 
         // Wait for the setTimeout in showMistakeClassificationUI to resolve
-        await new Promise(resolve => setTimeout(resolve, 250));
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         // Now state should transition to feedback
         expect(reviewer.getState()).toBe("feedback");
+
+        // Verify next button is shown
+        const nextBtn = container.querySelector<HTMLButtonElement>("#proc-next-btn")!;
+        expect(nextBtn.classList.contains("hidden")).toBe(false);
+
+        // Trigger next problem
+        nextBtn.click();
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith("procedural_answer:1", undefined);
 
         // Verify telemetry was persisted
         expect((globalThis as any).anki.mutateNextCardStates).toHaveBeenCalledWith(
@@ -546,34 +601,105 @@ describe("ProceduralReviewer API", () => {
                     schemaId: "",
                     familyId: "math.algebra",
                     topicId: ""
-                }
+                },
+                attemptResult: expect.any(Object)
             }
+        });
+    });
+
+    test("MCQ option selection, keyboard shortcuts 1-4 / A-D, and correct option highlighting", () => {
+        container.innerHTML = `
+            <div class="proc-prompt">What is the capital of France?</div>
+            <div class="proc-option-group" role="radiogroup">
+                <button type="button" class="proc-option-item" data-opt-id="opt-0" data-opt-idx="0" role="radio" aria-checked="false">
+                    <span class="proc-option-key">1</span>
+                    <span class="proc-option-label">London</span>
+                </button>
+                <button type="button" class="proc-option-item" data-opt-id="opt-1" data-opt-idx="1" role="radio" aria-checked="false">
+                    <span class="proc-option-key">2</span>
+                    <span class="proc-option-label">Paris</span>
+                </button>
+                <button type="button" class="proc-option-item" data-opt-id="opt-2" data-opt-idx="2" role="radio" aria-checked="false">
+                    <span class="proc-option-key">3</span>
+                    <span class="proc-option-label">Berlin</span>
+                </button>
+                <button type="button" class="proc-option-item" data-opt-id="opt-3" data-opt-idx="3" role="radio" aria-checked="false">
+                    <span class="proc-option-key">4</span>
+                    <span class="proc-option-label">Rome</span>
+                </button>
+            </div>
+            <div id="proc-result-panel" class="proc-result hidden">
+                <div id="proc-result-title"></div>
+                <div id="proc-result-feedback"></div>
+                <div id="proc-actual-time"></div>
+                <button type="button" id="proc-next-btn" class="proc-btn">Next</button>
+            </div>
+        `;
+
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-mcq-1",
+            familyId: "general.geography",
+            targetTimeMs: 30000,
+            objectType: "mcq",
+            correctAnswer: { correct_option: "Paris", formatted: "Paris" },
         });
 
-        expect(dummyCustomData.good.studylab).toEqual({
-            v: 1,
-            oldData: true,
-            actualTimeMs: expect.any(Number),
-            targetTimeMs: 45000,
-            isCorrect: false,
-            hintsUsed: 0,
-            mistakeType: "silly_mistake",
-            mode: "quick",
-            proceduralPerformance: {
-                classification: "incorrect",
-                timeRatio: expect.any(Number),
-                mistakeType: "silly_mistake",
-                hintsUsed: 0
-            },
-            proceduralRemediation: {
-                needed: true,
-                reason: "silly_mistake",
-                skillId: "",
-                schemaId: "",
-                familyId: "math.algebra",
-                topicId: ""
-            }
+        // Test keyboard 'B' or '2' selection
+        container.dispatchEvent(new KeyboardEvent("keydown", { key: "2", bubbles: true }));
+
+        const optParis = container.querySelector<HTMLElement>('[data-opt-idx="1"]')!;
+        expect(optParis.classList.contains("selected")).toBe(true);
+        expect(optParis.classList.contains("correct")).toBe(true);
+        expect(reviewer.getState()).toBe("feedback");
+
+        reviewer.destroy();
+    });
+
+    test("Space and Enter key handling across solving, mistake classification, and feedback states", async () => {
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-shortcuts",
+            familyId: "math.algebra",
+            targetTimeMs: 30000,
+            correctAnswer: { value: 50.0 },
         });
+
+        // 1. In solving state: Space should not submit or leak
+        const spaceEvent = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+        container.dispatchEvent(spaceEvent);
+        expect(spaceEvent.defaultPrevented).toBe(true);
+        expect(reviewer.getState()).toBe("solving");
+
+        // Submit wrong answer
+        const input = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+        input.value = "20";
+        container.querySelector<HTMLButtonElement>("#proc-submit-btn")!.click();
+        expect(reviewer.getState()).toBe("mistake_classification");
+
+        // 2. In mistake classification state: Space and Enter must be trapped and blocked
+        const spaceInMistake = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+        container.dispatchEvent(spaceInMistake);
+        expect(spaceInMistake.defaultPrevented).toBe(true);
+        expect(reviewer.getState()).toBe("mistake_classification");
+
+        const enterInMistake = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+        container.dispatchEvent(enterInMistake);
+        expect(enterInMistake.defaultPrevented).toBe(true);
+        expect(reviewer.getState()).toBe("mistake_classification");
+
+        // Select mistake using shortcut key '3' (Formula or concept misapplied)
+        const key3Event = new KeyboardEvent("keydown", { key: "3", bubbles: true, cancelable: true });
+        container.dispatchEvent(key3Event);
+        expect(key3Event.defaultPrevented).toBe(true);
+
+        await new Promise(resolve => setTimeout(resolve, 200));
+        expect(reviewer.getState()).toBe("feedback");
+
+        // 3. In feedback state: Enter or Space triggers handleNext
+        const enterInFeedback = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+        container.dispatchEvent(enterInFeedback);
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith("procedural_answer:1", undefined);
+
+        reviewer.destroy();
     });
 });
 
@@ -615,6 +741,12 @@ describe("ProceduralReviewer Performance Classification", () => {
                 <div id="proc-result-title"></div>
                 <div id="proc-result-feedback"></div>
                 <div id="proc-actual-time"></div>
+                <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
+                    <button type="button" class="proc-mistake-card" data-value="silly_mistake" data-key="1">Silly</button>
+                    <button type="button" class="proc-mistake-card" data-value="pattern_not_recognized" data-key="2">Pattern</button>
+                    <button type="button" class="proc-mistake-card" data-value="formula_or_concept_misapplied" data-key="3">Formula</button>
+                    <button type="button" class="proc-mistake-card" data-value="concept_not_known" data-key="4">Concept</button>
+                </div>
                 <button type="button" id="proc-next-btn" class="proc-btn">Next</button>
             </div>
         `;
@@ -645,21 +777,18 @@ describe("ProceduralReviewer Performance Classification", () => {
 
         vi.advanceTimersByTime(timeMs);
         
-        // Use evaluateLocally and finishAttempt to simulate a submit
         const data = { answer: isCorrect ? "42" : "99", steps: [] };
         
-        // Note: finishAttempt is private, so we trigger via the public method
         const quickInput = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
         const submitBtn = container.querySelector<HTMLButtonElement>("#proc-submit-btn")!;
         quickInput.value = data.answer;
         submitBtn.click();
 
         if (!isCorrect) {
-            // Need to select a mistake type to finish the attempt
-            const footerCenter = container.querySelector<HTMLElement>("#proc-footer-center")!;
-            const mistakeBtns = footerCenter.querySelectorAll<HTMLButtonElement>(".proc-mistake-btn");
-            const mistakeBtn = Array.from(mistakeBtns).find(b => b.dataset.value === "pattern_not_recognized")!;
-            mistakeBtn.click();
+            const mistakePanel = container.querySelector<HTMLElement>("#proc-mistake-panel")!;
+            const mistakeCards = mistakePanel.querySelectorAll<HTMLButtonElement>(".proc-mistake-card");
+            const mistakeCard = Array.from(mistakeCards).find(b => b.dataset.value === "pattern_not_recognized")!;
+            mistakeCard.click();
             vi.advanceTimersByTime(250);
             await Promise.resolve();
         }

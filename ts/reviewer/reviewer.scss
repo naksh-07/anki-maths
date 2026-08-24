@@ -164,10 +164,64 @@ button {
 .proc-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     border-bottom: 1px solid var(--border, #e5e7eb);
     padding-bottom: 12px;
     margin-bottom: 16px;
+    gap: 12px;
+}
+
+.proc-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.proc-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--fg-subtle, #6b7280);
+    flex-wrap: wrap;
+}
+
+.proc-crumb-domain {
+    font-weight: 600;
+    color: var(--fg-link, #4f46e5);
+}
+
+.proc-crumb-topic {
+    font-weight: 500;
+    color: var(--fg, #374151);
+}
+
+.proc-crumb-skill {
+    font-weight: 600;
+    color: var(--fg, #111827);
+}
+
+.proc-crumb-sep {
+    color: var(--border, #9ca3af);
+    font-size: 0.8rem;
+    user-select: none;
+}
+
+.nightMode .proc-crumb-domain {
+    color: #818cf8;
+}
+
+.nightMode .proc-crumb-topic {
+    color: #9ca3af;
+}
+
+.nightMode .proc-crumb-skill {
+    color: #f3f4f6;
+}
+
+.nightMode .proc-crumb-sep {
+    color: #6b7280;
 }
 
 .proc-badges {
@@ -187,6 +241,12 @@ button {
     border: 1px solid var(--border, rgba(59, 130, 246, 0.3));
     padding: 4px 10px;
     border-radius: 9999px;
+}
+
+.nightMode .proc-badge {
+    background: rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    border-color: rgba(99, 102, 241, 0.4);
 }
 
 .proc-diff-badge {
@@ -213,6 +273,12 @@ button {
     border: 1px solid var(--border, #d1d5db);
     padding: 3px 8px;
     border-radius: 6px;
+}
+
+.nightMode .proc-variant-tag {
+    background: var(--canvas-inset, #374151);
+    color: var(--fg, #d1d5db);
+    border-color: var(--border, #4b5563);
 }
 
 .proc-timer {
@@ -373,20 +439,20 @@ button {
     align-items: center;
     gap: 4px;
     padding: 3px 8px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-radius: 4px;
-    background: rgba(245, 158, 11, 0.14);
-    color: #b45309;
-    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 6px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #4338ca;
+    border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
 .nightMode .proc-pyq-badge {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fcd34d;
-    border-color: rgba(245, 158, 11, 0.4);
+    background: rgba(99, 102, 241, 0.22);
+    color: #a5b4fc;
+    border-color: rgba(99, 102, 241, 0.45);
 }
 
 .proc-option-group {
@@ -409,9 +475,20 @@ button {
     text-align: left;
 }
 
+.nightMode .proc-option-item {
+    background: var(--canvas-inset, #1f2937);
+    border-color: var(--border, #374151);
+    color: var(--fg, #e5e7eb);
+}
+
 .proc-option-item:hover:not(.disabled) {
     border-color: var(--border-focus, #3b82f6);
     background: rgba(59, 130, 246, 0.04);
+}
+
+.nightMode .proc-option-item:hover:not(.disabled) {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: #60a5fa;
 }
 
 .proc-option-item:focus-visible {
@@ -422,6 +499,11 @@ button {
 .proc-option-item.selected {
     border-color: var(--border-focus, #3b82f6);
     background: rgba(59, 130, 246, 0.08);
+}
+
+.nightMode .proc-option-item.selected {
+    border-color: #60a5fa;
+    background: rgba(59, 130, 246, 0.2);
 }
 
 .proc-option-item.correct {
@@ -454,6 +536,11 @@ button {
     color: var(--fg, #4b5563);
 }
 
+.nightMode .proc-option-key {
+    background: #374151;
+    color: #d1d5db;
+}
+
 .proc-option-feedback {
     margin-top: 8px;
     font-size: 0.85rem;
@@ -470,6 +557,12 @@ button {
     border-radius: var(--border-radius-default, 8px);
 }
 
+.nightMode .proc-worked-example-card {
+    background: var(--canvas-elevated, #1f2937);
+    border-color: var(--border, #374151);
+    color: var(--fg, #e5e7eb);
+}
+
 .proc-decision-highlight {
     margin: 12px 0;
     padding: 10px 14px;
@@ -482,22 +575,20 @@ button {
 
 .nightMode .proc-decision-highlight {
     background: rgba(99, 102, 241, 0.18);
-    color: #c7d2fe;
 }
 
 .proc-pitfall-box {
     margin-top: 12px;
     padding: 10px 14px;
-    background: rgba(245, 158, 11, 0.1);
-    border-left: 3px solid #f59e0b;
+    background: rgba(239, 68, 68, 0.06);
+    border-left: 3px solid #ef4444;
     border-radius: 4px;
-    font-size: 0.85rem;
-    line-height: 1.4;
+    font-size: 0.88rem;
+    line-height: 1.45;
 }
 
 .nightMode .proc-pitfall-box {
-    background: rgba(245, 158, 11, 0.18);
-    color: #fde68a;
+    background: rgba(239, 68, 68, 0.15);
 }
 
 .proc-speed-quadrant {
@@ -554,8 +645,8 @@ button {
 .proc-result {
     margin-top: 20px;
     padding: 16px;
-    border-radius: var(--border-radius-default, 6px);
-    animation: procFadeIn 0.3s ease-in;
+    border-radius: var(--border-radius-medium, 8px);
+    animation: procFadeIn 200ms ease-out;
 }
 
 .proc-result.correct {
@@ -582,6 +673,134 @@ button {
     color: #fca5a5;
 }
 
+.proc-result-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+}
+
+.proc-result-feedback {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.proc-expected-row {
+    font-size: 0.95rem;
+    margin-top: 6px;
+}
+
+/* =========================================================================
+ * Mistake Classification Grid (Inside Result Panel Above Solution)
+ * ========================================================================= */
+
+.proc-mistake-panel {
+    margin-top: 14px;
+    margin-bottom: 14px;
+    padding: 12px;
+    background: var(--canvas-inset, rgba(0, 0, 0, 0.03));
+    border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+    border-radius: var(--border-radius-default, 8px);
+}
+
+.nightMode .proc-mistake-panel {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.proc-mistake-heading {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--fg, #374151);
+}
+
+.nightMode .proc-mistake-heading {
+    color: var(--fg, #e5e7eb);
+}
+
+.proc-mistake-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.proc-mistake-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--canvas-elevated, #ffffff);
+    color: var(--fg, #374151);
+    border: 1.5px solid var(--border, #d1d5db);
+    border-radius: var(--border-radius-default, 6px);
+    cursor: pointer;
+    text-align: left;
+    transition: all 120ms ease-in-out;
+}
+
+.nightMode .proc-mistake-card {
+    background: var(--canvas-elevated, #1f2937);
+    color: var(--fg, #e5e7eb);
+    border-color: var(--border, #4b5563);
+}
+
+.proc-mistake-card:hover {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.nightMode .proc-mistake-card:hover {
+    border-color: #f87171;
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.proc-mistake-card.selected {
+    border-color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.12) !important;
+}
+
+.nightMode .proc-mistake-card.selected {
+    border-color: #f87171 !important;
+    background: rgba(239, 68, 68, 0.25) !important;
+}
+
+.proc-key-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: var(--button-bg, #e5e7eb);
+    color: var(--fg, #374151);
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.nightMode .proc-key-badge {
+    background: #374151;
+    color: #f3f4f6;
+}
+
+.proc-mistake-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.proc-mistake-info strong {
+    font-size: 0.82rem;
+}
+
+.proc-mistake-info span {
+    font-size: 0.72rem;
+    color: var(--fg-subtle, #6b7280);
+}
+
+.nightMode .proc-mistake-info span {
+    color: #9ca3af;
+}
+
 .proc-solution {
     margin-top: 14px;
     padding: 14px;
@@ -590,6 +809,7 @@ button {
     font-size: 0.95rem;
     line-height: 1.5;
     white-space: pre-wrap;
+    overflow-x: auto;
 }
 
 .nightMode .proc-solution {
@@ -715,4 +935,3 @@ button {
     color: white;
     border-color: #dc2626;
 }
-

@@ -117,22 +117,28 @@ impl PracticeItem {
     pub fn into_problem_instance(self) -> crate::problems::ProblemInstance {
         let mut parameters = serde_json::json!({});
         let mut correct_answer = serde_json::json!({});
-        match self.question_type {
+        let mut object_type = "problem";
+        match &self.question_type {
             QuestionType::Mcq { options, correct_option, explanation } => {
+                object_type = "mcq";
                 parameters["options"] = serde_json::to_value(options).unwrap();
                 correct_answer["correct_option"] = serde_json::to_value(correct_option).unwrap();
+                correct_answer["formatted"] = serde_json::to_value(correct_option).unwrap();
                 if let Some(exp) = explanation {
                     correct_answer["explanation"] = serde_json::to_value(exp).unwrap();
                 }
             }
             QuestionType::Numerical { answer, tolerance } => {
                 correct_answer["answer"] = serde_json::to_value(answer).unwrap();
+                correct_answer["value"] = serde_json::to_value(answer).unwrap();
+                correct_answer["formatted"] = serde_json::json!(format!("{answer}"));
                 if let Some(t) = tolerance {
                     correct_answer["tolerance"] = serde_json::to_value(t).unwrap();
                 }
             }
             QuestionType::Structured { steps } => {
-                correct_answer["steps"] = steps;
+                object_type = "structured";
+                correct_answer["steps"] = steps.clone();
             }
             QuestionType::ReferenceOnly { source_reference } => {
                 correct_answer["reference_only"] = serde_json::to_value(source_reference).unwrap();
@@ -141,9 +147,13 @@ impl PracticeItem {
         
         let mut metadata = self.metadata;
         if let Some(obj) = metadata.as_object_mut() {
+            obj.insert("object_type".to_string(), serde_json::json!(object_type));
+            obj.insert("question_type".to_string(), serde_json::to_value(&self.question_type).unwrap());
             obj.insert("practice_item_id".to_string(), serde_json::to_value(&self.id).unwrap());
             obj.insert("origin".to_string(), serde_json::to_value(&self.origin).unwrap());
+            obj.insert("domain".to_string(), serde_json::json!(format!("{:?}", self.domain)));
             obj.insert("chapter".to_string(), serde_json::to_value(&self.chapter).unwrap());
+            obj.insert("skill_id".to_string(), serde_json::to_value(&self.skill_id).unwrap());
             obj.insert("difficulty".to_string(), serde_json::to_value(self.difficulty).unwrap());
             obj.insert("structural_tags".to_string(), serde_json::to_value(&self.structural_tags).unwrap());
             obj.insert("provenance".to_string(), serde_json::to_value(&self.provenance).unwrap());

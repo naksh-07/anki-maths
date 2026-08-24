@@ -24,6 +24,7 @@ export type ProceduralUIState =
 
 export type LearningObjectKind =
     | "problem"
+    | "mcq"
     | "concept_check"
     | "strategy_drill"
     | "worked_example"
@@ -186,20 +187,20 @@ export class ProceduralReviewer {
     private actualTimeEl: HTMLElement | null = null;
     private nextBtn: HTMLButtonElement | null = null;
 
-    // Footer Elements
-    private footerEl: HTMLElement | null = null;
-    private footerCenter: HTMLElement | null = null;
-    private footerSubmitBtn: HTMLButtonElement | null = null;
-    private editBtn: HTMLButtonElement | null = null;
-    private moreBtn: HTMLButtonElement | null = null;
-    private moreMenu: HTMLElement | null = null;
+    private lastAttemptIsCorrect = false;
+    private lastAttemptIsFast = false;
+    private pendingMistakeOutcome: {
+        outcome: { isCorrect: boolean; reason?: string; score: number };
+        data: { answer: string; steps: string[] };
+        mode: LearningObjectKind;
+        timeTakenMs: number;
+    } | null = null;
 
     constructor(container: HTMLElement, options: ProceduralSetupOptions) {
         this.container = container;
         this.options = options;
         this.startTime = Date.now();
         this.state = "ready";
-        this.buildFooter();
         this.bindElements();
         this.attachEventListeners();
         this.startTimer();
@@ -229,46 +230,19 @@ export class ProceduralReviewer {
         this.resultFeedback = this.container.querySelector("#proc-result-feedback");
         this.actualTimeEl = this.container.querySelector("#proc-actual-time");
         this.nextBtn = this.container.querySelector("#proc-next-btn");
-        this.footerSubmitBtn = this.container.querySelector("#proc-footer-submit-btn");
+        this.mistakePanel = this.container.querySelector("#proc-mistake-panel");
     }
 
-    private buildFooter(): void {
-        this.footerEl = document.createElement("div");
-        this.footerEl.className = "proc-footer";
-        this.footerEl.innerHTML = `
-            <button class="proc-btn-secondary" id="proc-edit-btn">Edit</button>
-            <div class="proc-footer-center" id="proc-footer-center">
-                 <button class="proc-btn" id="proc-footer-submit-btn">Show Answer / Submit</button>
-            </div>
-            <div class="proc-footer-more">
-                 <button class="proc-btn-secondary" id="proc-more-btn">More ▾</button>
-                 <div id="proc-more-menu" class="proc-more-menu hidden">
-                     <button class="proc-more-item" data-action="hint">Hint</button>
-                     <button class="proc-more-item" data-action="tricks">Tricks</button>
-                     <button class="proc-more-item" data-action="solution">Solution</button>
-                     <button class="proc-more-item" data-action="explanation">Explanation</button>
-                     <button class="proc-more-item" data-action="source">Source</button>
-                 </div>
-            </div>
-        `;
-        this.container.appendChild(this.footerEl);
-        
-        this.footerCenter = this.footerEl.querySelector("#proc-footer-center");
-        this.editBtn = this.footerEl.querySelector("#proc-edit-btn");
-        this.moreBtn = this.footerEl.querySelector("#proc-more-btn");
-        this.moreMenu = this.footerEl.querySelector("#proc-more-menu");
-    }
-
-    private addListener<K extends keyof HTMLElementEventMap>(
-        element: HTMLElement | null,
-        type: K,
-        listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
+    private addListener(
+        element: EventTarget | null,
+        type: string,
+        listener: EventListenerOrEventListenerObject,
         options?: boolean | AddEventListenerOptions,
     ): void {
         if (!element) {return;}
-        element.addEventListener(type, listener as EventListener, options);
+        element.addEventListener(type, listener, options);
         this.disposables.push(() => {
-            element.removeEventListener(type, listener as EventListener, options);
+            element.removeEventListener(type, listener, options);
         });
     }
 
@@ -277,22 +251,15 @@ export class ProceduralReviewer {
         this.addListener(this.tabQuickBtn, "click", () => this.switchMode("quick"));
         this.addListener(this.tabStepwiseBtn, "click", () => this.switchMode("stepwise"));
 
-        // Quick submit (inline button usually replaced by footer, but we'll keep the listener in case)
+        // Quick submit
         if (this.quickSubmitBtn) {
             this.addListener(this.quickSubmitBtn, "click", () => this.handleQuickSubmit());
         }
-        if (this.footerSubmitBtn) {
-            this.addListener(this.footerSubmitBtn, "click", () => {
-                if (this.activeMode === "quick") {
-                    this.handleQuickSubmit();
-                } else if (this.activeMode === "stepwise") {
-                    this.handleStepwiseSubmit();
-                }
-            });
-        }
         
-        this.addListener(this.quickInput, "keydown", (e: KeyboardEvent) => {
-            if (e.key === "Enter") {
+        this.addListener(this.quickInput, "keydown", (e: Event) => {
+            const kbEvent = e as KeyboardEvent;
+            if (kbEvent.key === "Enter") {
+                kbEvent.preventDefault();
                 this.handleQuickSubmit();
             }
         });
@@ -303,31 +270,93 @@ export class ProceduralReviewer {
         this.addListener(this.hintBtn, "click", () => this.requestHint());
         this.addListener(this.checkStepsBtn, "click", () => this.handleStepwiseSubmit());
 
-        // Structured option items (ConceptCheck, StrategyDrill)
+        // Structured option items (MCQ, ConceptCheck, StrategyDrill)
         const optionItems = this.container.querySelectorAll<HTMLElement>(".proc-option-item");
         optionItems.forEach((optEl) => {
             const optId = optEl.dataset.optId || "";
             this.addListener(optEl, "click", () => this.selectOption(optId, optEl));
-            this.addListener(optEl, "keydown", (e: KeyboardEvent) => {
-                if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
+            this.addListener(optEl, "keydown", (e: Event) => {
+                const kbEvent = e as KeyboardEvent;
+                if (kbEvent.key === "Enter" || kbEvent.key === " ") {
+                    kbEvent.preventDefault();
                     this.selectOption(optId, optEl);
                 }
             });
         });
 
-        // Keyboard option number keys (1-4) for quick accessible selection in option lists
-        this.addListener(this.container, "keydown", (e: KeyboardEvent) => {
-            if (this.state !== "solving") {return;}
-            const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-            if (targetTag === "input" || targetTag === "textarea") {return;}
+        // Mistake classification cards
+        const mistakeCards = this.container.querySelectorAll<HTMLButtonElement>(".proc-mistake-card");
+        mistakeCards.forEach((card) => {
+            const val = card.dataset.value || "";
+            this.addListener(card, "click", () => {
+                this.selectMistakeCategory(val);
+            });
+        });
 
-            const keyNum = parseInt(e.key, 10);
-            if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= optionItems.length) {
-                const targetOpt = optionItems[keyNum - 1];
-                if (targetOpt) {
-                    const optId = targetOpt.dataset.optId || "";
-                    this.selectOption(optId, targetOpt);
+        // Global window keyboard handler for state-aware shortcuts and leak protection
+        this.addListener(window, "keydown", (e: Event) => {
+            const kbEvent = e as KeyboardEvent;
+            const targetTag = (kbEvent.target as HTMLElement)?.tagName?.toLowerCase();
+            const isInputField = targetTag === "input" || targetTag === "textarea";
+
+            if (this.state === "solving") {
+                if (isInputField) {
+                    if (kbEvent.key === "Enter") {
+                        kbEvent.preventDefault();
+                        this.handleQuickSubmit();
+                    }
+                    return;
+                }
+
+                // Block Space from leaking to native Anki showAnswer
+                if (kbEvent.key === " " || kbEvent.code === "Space") {
+                    kbEvent.preventDefault();
+                    kbEvent.stopPropagation();
+                    return;
+                }
+
+                // Hotkeys 1-4 and A-D for options
+                const keyUpper = kbEvent.key.toUpperCase();
+                let optIndex = -1;
+                const keyNum = parseInt(kbEvent.key, 10);
+                if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= optionItems.length) {
+                    optIndex = keyNum - 1;
+                } else if (keyUpper >= "A" && keyUpper <= "D") {
+                    optIndex = keyUpper.charCodeAt(0) - 65;
+                }
+
+                if (optIndex >= 0 && optIndex < optionItems.length) {
+                    kbEvent.preventDefault();
+                    const targetOpt = optionItems[optIndex];
+                    if (targetOpt) {
+                        const optId = targetOpt.dataset.optId || "";
+                        this.selectOption(optId, targetOpt);
+                    }
+                }
+            } else if (this.state === "mistake_classification") {
+                // Trap Space/Enter to prevent skipping classification
+                if (kbEvent.key === " " || kbEvent.code === "Space" || kbEvent.key === "Enter") {
+                    kbEvent.preventDefault();
+                    kbEvent.stopPropagation();
+                    return;
+                }
+
+                // Numbers 1-4 for mistake categories
+                const keyNum = parseInt(kbEvent.key, 10);
+                if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= 4) {
+                    kbEvent.preventDefault();
+                    kbEvent.stopPropagation();
+                    const targetCard = this.container.querySelector<HTMLButtonElement>(`.proc-mistake-card[data-key="${keyNum}"]`);
+                    if (targetCard) {
+                        const val = targetCard.dataset.value || "";
+                        this.selectMistakeCategory(val);
+                    }
+                }
+            } else if (this.state === "feedback") {
+                if (kbEvent.key === "Enter" || kbEvent.key === " " || kbEvent.code === "Space") {
+                    kbEvent.preventDefault();
+                    kbEvent.stopPropagation();
+                    this.handleNext();
                 }
             }
         });
@@ -346,35 +375,6 @@ export class ProceduralReviewer {
 
         // Next problem / continue button
         this.addListener(this.nextBtn, "click", () => this.handleNext());
-        
-        // Footer actions
-        this.addListener(this.editBtn, "click", () => {
-            bridgeCommand("edit");
-        });
-        
-        this.addListener(this.moreBtn, "click", (e: Event) => {
-            e.stopPropagation();
-            this.moreMenu?.classList.toggle("hidden");
-        });
-        
-        // Close more menu when clicking outside
-        this.addListener(document.body, "click", () => {
-            this.moreMenu?.classList.add("hidden");
-        });
-        
-        const moreItems = this.moreMenu?.querySelectorAll<HTMLButtonElement>(".proc-more-item");
-        moreItems?.forEach((item) => {
-            this.addListener(item, "click", (e: Event) => {
-                e.stopPropagation();
-                this.moreMenu?.classList.add("hidden");
-                const action = item.dataset.action;
-                if (action === "hint") {
-                    this.requestHint();
-                } else if (action) {
-                    bridgeCommand(`procedural_more_action:${action}`);
-                }
-            });
-        });
 
         // Auto-focus initial input or first option
         this.focusTimeout = setTimeout(() => {
@@ -530,31 +530,70 @@ export class ProceduralReviewer {
         optEl.classList.add("selected");
         optEl.setAttribute("aria-checked", "true");
 
-        // Evaluate ConceptCheck or StrategyDrill
         let isCorrect = false;
         let feedbackText = "";
         let expectedId = "";
+        let mode: LearningObjectKind = "mcq";
 
         if (this.options.conceptCheck) {
+            mode = "concept_check";
             const cc = this.options.conceptCheck;
             expectedId = cc.expected_option_id;
             const chosen = cc.options.find((o) => o.id === optId);
             isCorrect = chosen ? chosen.is_correct : false;
             feedbackText = chosen?.feedback || (isCorrect ? "Correct concept understanding." : "Misconception detected.");
         } else if (this.options.strategyDrill) {
+            mode = "strategy_drill";
             const sd = this.options.strategyDrill;
             expectedId = sd.preferred_option_id;
             const chosen = sd.options.find((o) => o.id === optId);
             isCorrect = chosen ? chosen.is_optimal : false;
             feedbackText = chosen?.feedback || (isCorrect ? "Optimal strategy selected." : "Suboptimal method chosen.");
+        } else {
+            // Standard MCQ
+            mode = "mcq";
+            const optIdx = optEl.dataset.optIdx || "";
+            const letter = String.fromCharCode(65 + (parseInt(optIdx, 10) || 0));
+            const correctOpt = String(
+                this.options.correctAnswer?.correct_option || 
+                this.options.correctAnswer?.formatted || 
+                this.options.correctAnswer?.answer || 
+                ""
+            ).trim();
+            const labelText = optEl.querySelector(".proc-option-label")?.textContent?.trim() || "";
+
+            isCorrect = 
+                (optId.trim().toLowerCase() === correctOpt.toLowerCase() && correctOpt.length > 0) ||
+                letter.toLowerCase() === correctOpt.toLowerCase() ||
+                optIdx === correctOpt ||
+                String((parseInt(optIdx, 10) || 0) + 1) === correctOpt ||
+                (labelText.toLowerCase() === correctOpt.toLowerCase() && correctOpt.length > 0);
+
+            feedbackText = isCorrect ? "Correct answer selected." : "Incorrect option selected.";
+
+            allOpts.forEach((el) => {
+                const elId = el.dataset.optId || "";
+                const elIdx = el.dataset.optIdx || "";
+                const elLetter = String.fromCharCode(65 + (parseInt(elIdx, 10) || 0));
+                const elLabel = el.querySelector(".proc-option-label")?.textContent?.trim() || "";
+                if (
+                    (elId.trim().toLowerCase() === correctOpt.toLowerCase() && correctOpt.length > 0) ||
+                    elLetter.toLowerCase() === correctOpt.toLowerCase() ||
+                    elIdx === correctOpt ||
+                    String((parseInt(elIdx, 10) || 0) + 1) === correctOpt ||
+                    (elLabel.toLowerCase() === correctOpt.toLowerCase() && correctOpt.length > 0)
+                ) {
+                    expectedId = elId;
+                }
+            });
         }
 
         // Color options
         allOpts.forEach((el) => {
             const id = el.dataset.optId;
-            if (id === expectedId) {
+            if (id === expectedId || (expectedId && el.querySelector(".proc-option-label")?.textContent?.trim() === expectedId)) {
                 el.classList.add("correct");
-            } else if (id === optId && !isCorrect) {
+            } else if (el === optEl && !isCorrect) {
                 el.classList.add("incorrect");
             }
         });
@@ -565,40 +604,64 @@ export class ProceduralReviewer {
             score: isCorrect ? 1.0 : 0.0,
         };
 
-        let mode:
-            | "quick"
-            | "stepwise"
-            | "concept_check"
-            | "strategy_drill"
-            | "worked_example"
-            | "declarative_recall"
-            | "prerequisite_review" = "quick";
-        if (this.options.conceptCheck) {
-            mode = "concept_check";
-        } else if (this.options.strategyDrill) {
-            mode = "strategy_drill";
-        }
-
-        this.finishAttempt(evalResult, { answer: optId, steps: [] }, mode);
+        const labelText = optEl.querySelector(".proc-option-label")?.textContent?.trim();
+        this.finishAttempt(evalResult, { answer: labelText || optId, steps: [] }, mode);
     }
 
     public parseNumericValue(val: string | null | undefined): number | null {
         if (!val) {return null;}
-        const cleaned = String(val).replace(/[$€£₹%, ]/g, "").trim();
-        if (cleaned.includes("/")) {
-            const parts = cleaned.split("/");
-            const num = parseFloat(parts[0]);
-            const den = parseFloat(parts[1]);
+        let s = String(val).trim();
+        if (!s) {return null;}
+
+        // 1. Strip equation prefixes (e.g. "v = ", "x = ", "ans = ", "answer: ")
+        const eqIdx = s.search(/[:=]/);
+        if (eqIdx !== -1) {
+            const prefix = s.slice(0, eqIdx).trim();
+            if (prefix.length > 0 && /^[a-zA-Z_\s]+$/.test(prefix)) {
+                s = s.slice(eqIdx + 1).trim();
+            }
+        }
+
+        // 2. Remove currencies and common symbols
+        const cleaned = s.replace(/[$€£₹%, ]/g, "");
+        if (!cleaned) {return null;}
+
+        // 3. Scientific notation with x10^ or *10^ or ×10^ or e
+        const sciMatch = cleaned.match(/^([+-]?\d+(?:\.\d+)?)\s*(?:[x*×]\s*10\^?([+-]?\d+)|e([+-]?\d+))/i);
+        if (sciMatch) {
+            const m = parseFloat(sciMatch[1]);
+            const expStr = sciMatch[2] || sciMatch[3];
+            const e = parseInt(expStr, 10);
+            if (!isNaN(m) && !isNaN(e)) {
+                return m * Math.pow(10, e);
+            }
+        }
+
+        // 4. Arithmetic fraction: "3/4" or "3/4 m/s"
+        const fracMatch = cleaned.match(/^([+-]?\d+(?:\.\d+)?)\s*\/\s*([+-]?\d+(?:\.\d+)?)/);
+        if (fracMatch) {
+            const num = parseFloat(fracMatch[1]);
+            const den = parseFloat(fracMatch[2]);
             if (!isNaN(num) && !isNaN(den) && den !== 0) {
                 return num / den;
             }
         }
+
+        // 5. Leading float extraction (e.g. "12m/s", "5kg", "150J", "1.2e-3mol/L")
+        const floatMatch = cleaned.match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)/);
+        if (floatMatch) {
+            const n = parseFloat(floatMatch[1]);
+            return isNaN(n) ? null : n;
+        }
+
         const n = parseFloat(cleaned);
         return isNaN(n) ? null : n;
     }
 
     public evaluateLocally(userText: string): { isCorrect: boolean; reason?: string; score: number } {
-        const expectedVal = this.options.correctAnswer?.value;
+        const expectedVal = this.options.correctAnswer?.value !== undefined 
+            ? this.options.correctAnswer.value 
+            : (typeof this.options.correctAnswer?.answer === "number" ? this.options.correctAnswer.answer : undefined);
         const userNum = this.parseNumericValue(userText);
 
         if (expectedVal !== undefined && typeof expectedVal === "number") {
@@ -606,7 +669,9 @@ export class ProceduralReviewer {
                 return { isCorrect: false, reason: "Please enter a valid numeric value or fraction.", score: 0.0 };
             }
             const diff = Math.abs(userNum - expectedVal);
-            const tolerance = Math.max(0.01, Math.abs(expectedVal) * 0.01);
+            const tolerance = this.options.correctAnswer?.tolerance !== undefined 
+                ? Number(this.options.correctAnswer.tolerance) 
+                : Math.max(0.01, Math.abs(expectedVal) * 0.01);
             const isCorrect = diff <= tolerance;
             return {
                 isCorrect,
@@ -616,7 +681,12 @@ export class ProceduralReviewer {
         }
 
         // Fallback string matching if not numeric
-        const canonicalFormatted = String(this.options.correctAnswer?.formatted || "").trim().toLowerCase();
+        const canonicalFormatted = String(
+            this.options.correctAnswer?.formatted || 
+            this.options.correctAnswer?.correct_option || 
+            this.options.correctAnswer?.answer || 
+            ""
+        ).trim().toLowerCase();
         const userCleaned = userText.trim().toLowerCase();
         const isMatch = userCleaned === canonicalFormatted && canonicalFormatted.length > 0;
 
@@ -688,7 +758,7 @@ export class ProceduralReviewer {
     private finishAttempt(
         outcome: { isCorrect: boolean; reason?: string; score: number },
         data: { answer: string; steps: string[] },
-        mode: "quick" | "stepwise" | "concept_check" | "strategy_drill" | "worked_example" | "declarative_recall" | "prerequisite_review" = "quick",
+        mode: LearningObjectKind = "quick",
     ): void {
         if (this.hasSubmitted || this.state === "teardown") {return;}
         this.hasSubmitted = true;
@@ -696,7 +766,6 @@ export class ProceduralReviewer {
         const timeTakenMs = Date.now() - this.startTime;
 
         if (!outcome.isCorrect) {
-            this.state = "mistake_classification";
             this.showMistakeClassificationUI(outcome, data, mode, timeTakenMs);
             return;
         }
@@ -707,87 +776,100 @@ export class ProceduralReviewer {
     private showMistakeClassificationUI(
         outcome: { isCorrect: boolean; reason?: string; score: number },
         data: { answer: string; steps: string[] },
-        mode: "quick" | "stepwise" | "concept_check" | "strategy_drill" | "worked_example" | "declarative_recall" | "prerequisite_review",
+        mode: LearningObjectKind,
         timeTakenMs: number
     ): void {
+        this.state = "mistake_classification";
+        this.pendingMistakeOutcome = { outcome, data, mode, timeTakenMs };
+
         this.quickContainer?.classList.add("hidden");
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
+        this.nextBtn?.classList.add("hidden");
 
-        if (this.footerCenter) {
-            this.footerCenter.innerHTML = `
-                <button class="proc-mistake-btn" data-value="silly_mistake">Silly mistake</button>
-                <button class="proc-mistake-btn" data-value="pattern_not_recognized">Pattern not recognized</button>
-                <button class="proc-mistake-btn" data-value="formula_or_concept_misapplied">Formula or concept misapplied</button>
-                <button class="proc-mistake-btn" data-value="concept_not_known">Concept not known</button>
-            `;
-            const buttons = this.footerCenter.querySelectorAll<HTMLButtonElement>(".proc-mistake-btn");
-            buttons.forEach(btn => {
-                this.addListener(btn, "click", () => {
-                    buttons.forEach(b => b.classList.remove("selected"));
-                    btn.classList.add("selected");
-                    this.mistakeType = btn.dataset.value || null;
-                    setTimeout(() => {
-                        this.finalizeAndShowFeedback(outcome, data, mode, timeTakenMs);
-                    }, 200);
-                });
-            });
+        if (this.mistakePanel) {
+            this.mistakePanel.classList.remove("hidden");
+            const firstCard = this.mistakePanel.querySelector<HTMLButtonElement>('.proc-mistake-card[data-key="1"]');
+            firstCard?.focus();
         }
-        
+
         this.resultPanel?.classList.remove("hidden");
-        if (this.resultTitle) {this.resultTitle.textContent = "✗ Incorrect Answer";}
-        
-        const canonicalFormatted = this.options.correctAnswer?.formatted || this.options.correctAnswer?.value || "";
+        if (this.resultTitle) {
+            this.resultTitle.textContent = "✗ Incorrect Answer";
+        }
+
+        const canonicalFormatted = this.options.correctAnswer?.formatted || 
+            this.options.correctAnswer?.correct_option || 
+            this.options.correctAnswer?.value || 
+            this.options.correctAnswer?.answer || "";
+
         if (this.resultFeedback) {
             this.resultFeedback.innerHTML = `
                 <div><strong>You answered:</strong> ${data.answer}</div>
                 <div><strong>Correct answer:</strong> ${canonicalFormatted}</div>
-                <div style="margin-top: 8px;"><em>Please classify this mistake in the footer to continue.</em></div>
+                <div style="margin-top: 8px; color: var(--text-muted, #6b7280);"><em>Please classify this error to optimize your spaced repetition schedule.</em></div>
             `;
         }
         this.typesetMathJax(this.resultPanel);
     }
 
+    public selectMistakeCategory(value: string): void {
+        if (this.state !== "mistake_classification" || !this.pendingMistakeOutcome) {
+            return;
+        }
+        this.mistakeType = value;
+        const cards = this.container.querySelectorAll<HTMLButtonElement>(".proc-mistake-card");
+        cards.forEach((c) => {
+            if (c.dataset.value === value) {
+                c.classList.add("selected");
+            } else {
+                c.classList.remove("selected");
+            }
+        });
+
+        const pending = this.pendingMistakeOutcome;
+        this.pendingMistakeOutcome = null;
+
+        setTimeout(() => {
+            this.finalizeAndShowFeedback(pending.outcome, pending.data, pending.mode, pending.timeTakenMs);
+        }, 150);
+    }
+
     private finalizeAndShowFeedback(
         outcome: { isCorrect: boolean; reason?: string; score: number },
         data: { answer: string; steps: string[] },
-        mode: "quick" | "stepwise" | "concept_check" | "strategy_drill" | "worked_example" | "declarative_recall" | "prerequisite_review",
+        mode: LearningObjectKind,
         timeTakenMs: number
     ): void {
         this.state = "feedback";
+        this.lastAttemptIsCorrect = outcome.isCorrect;
 
-        // Hide input containers, show result panel
+        // Hide input containers, show result panel and next button
         this.quickContainer?.classList.add("hidden");
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
         this.resultPanel?.classList.remove("hidden");
+        this.nextBtn?.classList.remove("hidden");
 
         const quadrantInfo = this.computeSpeedQuadrant(outcome.isCorrect, timeTakenMs, this.options.targetTimeMs);
+        const isFast = timeTakenMs <= this.options.targetTimeMs;
+        this.lastAttemptIsFast = isFast;
 
-        // Clear actualTimeEl in the panel since we move it to footer
         if (this.actualTimeEl) {
-            while (this.actualTimeEl.firstChild) {
-                this.actualTimeEl.removeChild(this.actualTimeEl.firstChild);
-            }
-        }
-
-        if (this.footerCenter) {
-            // For correct answers, show performance. For incorrect, clear mistake buttons or show performance.
-            if (outcome.isCorrect) {
-                this.footerCenter.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <strong>Time: ${(timeTakenMs / 1000).toFixed(1)}s</strong>
-                        <div class="${quadrantInfo.className}">${quadrantInfo.label}</div>
-                    </div>
-                `;
-            } else {
-                // Mistake classification is already done, clear footer
-                this.footerCenter.innerHTML = ``;
-            }
+            this.actualTimeEl.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <strong>Time: ${(timeTakenMs / 1000).toFixed(1)}s</strong>
+                    <div class="${quadrantInfo.className}">${quadrantInfo.label}</div>
+                </div>
+            `;
         }
 
         if (this.resultPanel) {
-            const canonicalFormatted = this.options.correctAnswer?.formatted || this.options.correctAnswer?.value || "";
+            const canonicalFormatted = this.options.correctAnswer?.formatted || 
+                this.options.correctAnswer?.correct_option || 
+                this.options.correctAnswer?.value || 
+                this.options.correctAnswer?.answer || "";
+
             if (outcome.isCorrect) {
                 this.resultPanel.className = "proc-result correct";
                 if (this.resultTitle) {this.resultTitle.textContent = "✓ Correct Answer";}
@@ -848,7 +930,7 @@ export class ProceduralReviewer {
                     classification = "slow_correct";
                 }
             } else {
-                classification = "on_target_correct"; // Fallback if no target time
+                classification = "on_target_correct";
             }
         }
 
@@ -869,6 +951,9 @@ export class ProceduralReviewer {
         } else if (this.mistakeType === "pattern_not_recognized") {
             remediationNeeded = true;
             remediationReason = "pattern_not_recognized";
+        } else if (this.mistakeType === "formula_or_concept_misapplied") {
+            remediationNeeded = true;
+            remediationReason = "formula_or_concept_misapplied";
         } else if (this.mistakeType === "concept_not_known") {
             remediationNeeded = true;
             remediationReason = "concept_not_known";
@@ -894,26 +979,31 @@ export class ProceduralReviewer {
             hintsUsed: this.hintsUsed,
             mistakeType: this.mistakeType || undefined,
             mode: mode,
-            proceduralPerformance, // Embedded in standard telemetry payload
-            proceduralRemediation, // Procedural practice signal
-            attemptResult, // Full canonical attempt context for backend persistence
+            proceduralPerformance,
+            proceduralRemediation,
+            attemptResult,
         };
 
         if (globalThis.anki && typeof globalThis.anki.mutateNextCardStates === "function") {
-            // We fire-and-forget this promise so it doesn't block the UI.
-            // It modifies the card states in the backend prior to the user answering.
-            globalThis.anki.mutateNextCardStates((globalThis.anki as any)._state_mutation_key, async (states: any, customData: any) => {
-                for (const state of ["again", "hard", "good", "easy"]) {
-                    if (customData[state]) {
-                        customData[state].studylab = {
-                            ...(customData[state].studylab || {}),
-                            ...telemetry
-                        };
+            try {
+                const res = globalThis.anki.mutateNextCardStates((globalThis.anki as any)._state_mutation_key, async (states: any, customData: any) => {
+                    for (const state of ["again", "hard", "good", "easy"]) {
+                        if (customData[state]) {
+                            customData[state].studylab = {
+                                ...(customData[state].studylab || {}),
+                                ...telemetry
+                            };
+                        }
                     }
+                });
+                if (res && typeof res.catch === "function") {
+                    res.catch((err: any) => {
+                        console.error("Failed to persist StudyLab telemetry", err);
+                    });
                 }
-            }).catch((err: any) => {
-                console.error("Failed to persist StudyLab telemetry", err);
-            });
+            } catch (err) {
+                console.error("Error mutating next card states", err);
+            }
         }
 
         // Bridge notification for Python/Qt backend telemetry recording
@@ -955,8 +1045,8 @@ export class ProceduralReviewer {
     private handleNext(): void {
         if (this.state === "teardown") {return;}
         this.state = "next";
-        // Trigger Anki's show answer / ease rating transition
-        bridgeCommand("ans");
+        const ease = this.lastAttemptIsCorrect ? (this.lastAttemptIsFast ? 4 : 3) : 1;
+        bridgeCommand(`procedural_answer:${ease}`);
     }
 
     private typesetMathJax(element: HTMLElement | null): void {
@@ -986,6 +1076,9 @@ export class ProceduralReviewer {
             }
         }
         this.disposables = [];
+        if ((globalThis as any).__activeProceduralReviewer === this) {
+            (globalThis as any).__activeProceduralReviewer = null;
+        }
     }
 }
 
@@ -997,13 +1090,18 @@ export const proceduralAPI = {
         if (!container) {
             throw new Error(`Procedural container element not found: #${containerId}`);
         }
-        // Safely destroy any existing reviewer instance on this container before creating a new one
+        // Safely destroy any active reviewer instance globally or on this container before creating a new one
+        const active = (globalThis as any).__activeProceduralReviewer;
+        if (active && typeof active.destroy === "function") {
+            active.destroy();
+        }
         const prev = (container as any).__proceduralReviewer;
-        if (prev && typeof prev.destroy === "function") {
+        if (prev && typeof prev.destroy === "function" && prev !== active) {
             prev.destroy();
         }
         const reviewer = new ProceduralReviewer(container as HTMLElement, options);
         (container as any).__proceduralReviewer = reviewer;
+        (globalThis as any).__activeProceduralReviewer = reviewer;
         return reviewer;
     },
     ProceduralReviewer,

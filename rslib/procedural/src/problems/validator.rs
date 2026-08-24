@@ -141,10 +141,28 @@ impl NumericAnswerParser {
         Self::parse_value(input)
     }
 
-    /// Extract numeric value from string containing symbols like $, %, commas, +, fractions (e.g. "3/4"), etc.
+    /// Extract numeric value from string containing symbols like $, %, commas, +, fractions (e.g. "3/4"), 
+    /// scientific notation, physical units (e.g. "12 m/s", "5 kg"), and simple variable assignment prefixes ("v = 12").
     pub fn parse_string(s: &str) -> Option<f64> {
-        let cleaned = s
-            .trim()
+        let mut trimmed = s.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        // 1. Strip leading simple variable assignment prefix (e.g. "v = ", "ans = ", "x: ")
+        // Must be purely alphabetic identifier (no digits or operations in LHS, e.g. NOT "2x = ")
+        if let Some(pos) = trimmed.find(|c| c == '=' || c == ':') {
+            let prefix = trimmed[..pos].trim();
+            if !prefix.is_empty() && prefix.chars().all(|c| c.is_alphabetic() || c == '_' || c.is_whitespace()) {
+                trimmed = trimmed[pos + 1..].trim();
+            } else {
+                // Complex LHS with digits/operators (like "2x = 10") is an equation, not a raw number
+                return None;
+            }
+        }
+
+        // 2. Remove currencies and common formatting
+        let cleaned = trimmed
             .replace('$', "")
             .replace('€', "")
             .replace('£', "")
@@ -157,16 +175,88 @@ impl NumericAnswerParser {
             return None;
         }
 
-        // Check for fraction format: "a/b"
-        if let Some((num_str, den_str)) = cleaned.split_once('/') {
-            if let (Ok(num), Ok(den)) = (num_str.parse::<f64>(), den_str.parse::<f64>()) {
-                if den.abs() > f64::EPSILON {
-                    return Some(num / den);
+        // 3. Check for standard scientific notation with x10^ or *10^ or ×10^
+        let lower = cleaned.to_lowercase();
+        for marker in &["x10^", "*10^", "×10^", "x10", "*10", "×10"] {
+            if let Some(pos) = lower.find(marker) {
+                let mantissa_str = &lower[..pos];
+                let exponent_str = &lower[pos + marker.len()..];
+                let exp_digits: String = exponent_str
+                    .chars()
+                    .take_while(|c| c.is_ascii_digit() || *c == '-' || *c == '+')
+                    .collect();
+                if let (Ok(m), Ok(e)) = (mantissa_str.parse::<f64>(), exp_digits.parse::<i32>()) {
+                    return Some(m * 10f64.powi(e));
                 }
             }
         }
 
-        cleaned.parse::<f64>().ok()
+        // 4. Check for fraction format: "a/b" or "a/b m/s"
+        if let Some((num_part, den_part)) = cleaned.split_once('/') {
+            let num_clean = num_part.trim();
+            let den_digits: String = den_part
+                .chars()
+                .take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == '+')
+                .collect();
+            if !num_clean.is_empty() && !den_digits.is_empty() {
+                if let (Ok(num), Ok(den)) = (num_clean.parse::<f64>(), den_digits.parse::<f64>()) {
+                    if den.abs() > f64::EPSILON {
+                        return Some(num / den);
+                    }
+                }
+            }
+        }
+
+        // 5. Direct parse attempt (handles standard floats and standard "1.2e-3")
+        if let Ok(val) = cleaned.parse::<f64>() {
+            return Some(val);
+        }
+
+        // 6. Extract leading float and ignore trailing physical unit tokens (e.g. "12m/s", "5kg", "150J", "1.2e-3mol/L")
+        let mut chars = cleaned.chars().peekable();
+        let mut num_str = String::new();
+        if let Some(&c) = chars.peek() {
+            if c == '+' || c == '-' {
+                num_str.push(chars.next().unwrap());
+            }
+        }
+        let mut has_dot = false;
+        let mut has_exp = false;
+        while let Some(&c) = chars.peek() {
+            if c.is_ascii_digit() {
+                num_str.push(chars.next().unwrap());
+            } else if c == '.' && !has_dot && !has_exp {
+                has_dot = true;
+                num_str.push(chars.next().unwrap());
+            } else if (c == 'e' || c == 'E') && !has_exp && !num_str.is_empty() {
+                has_exp = true;
+                num_str.push(chars.next().unwrap());
+                if let Some(&sign) = chars.peek() {
+                    if sign == '+' || sign == '-' {
+                        num_str.push(chars.next().unwrap());
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+
+        if num_str.chars().any(|c| c.is_ascii_digit()) {
+            let remainder: String = chars.collect();
+            let rem_lower = remainder.to_lowercase();
+            // Valid unit characters include standard units, degree, slashes, exponents
+            let is_valid_unit = !rem_lower.is_empty() && rem_lower.chars().all(|c| {
+                c.is_alphabetic() || c == '/' || c == '^' || c == '°' || c == '*' || c == 'Ω' || c == 'ω' || c.is_ascii_digit()
+            });
+            // Reject if remainder is purely algebraic (e.g. single variable x, y, z without unit context) or contains '='
+            if is_valid_unit && !rem_lower.contains('=') && rem_lower != "x" && rem_lower != "y" && rem_lower != "z" {
+                if let Ok(val) = num_str.parse::<f64>() {
+                    return Some(val);
+                }
+            }
+        }
+
+        None
     }
 }
 
@@ -468,5 +558,19 @@ mod tests {
         assert!(!res.is_correct);
         assert_eq!(res.error_category, Some(ErrorCategory::Careless));
         assert!(res.diagnostic_message.unwrap().contains("Incomplete"));
+    }
+
+    #[test]
+    fn test_numeric_answer_parser_units_and_formats() {
+        assert_eq!(NumericAnswerParser::parse_string("12 m/s"), Some(12.0));
+        assert_eq!(NumericAnswerParser::parse_string("5 kg"), Some(5.0));
+        assert_eq!(NumericAnswerParser::parse_string("2.5 mol"), Some(2.5));
+        assert_eq!(NumericAnswerParser::parse_string("150 J"), Some(150.0));
+        assert_eq!(NumericAnswerParser::parse_string("v = 12 m/s"), Some(12.0));
+        assert_eq!(NumericAnswerParser::parse_string("ans: 42"), Some(42.0));
+        assert_eq!(NumericAnswerParser::parse_string("3/4 m/s"), Some(0.75));
+        assert_eq!(NumericAnswerParser::parse_string("1.2e-3 mol/L"), Some(0.0012));
+        assert_eq!(NumericAnswerParser::parse_string("3x10^4"), Some(30000.0));
+        assert_eq!(NumericAnswerParser::parse_string("-9.8 m/s^2"), Some(-9.8));
     }
 }

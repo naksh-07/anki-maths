@@ -253,13 +253,18 @@ export function _showAnswer(a: string, bodyclass: string): void {
 }
 
 export function _drawFlag(flag: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7): void {
-    const elem = document.getElementById("_flag")!;
-    elem.toggleAttribute("hidden", flag === 0);
-    elem.style.color = `var(--flag-${flag})`;
+    const elem = document.getElementById("_flag");
+    if (elem) {
+        elem.toggleAttribute("hidden", flag === 0);
+        elem.style.color = `var(--flag-${flag})`;
+    }
 }
 
 export function _drawMark(mark: boolean): void {
-    document.getElementById("_mark")!.toggleAttribute("hidden", !mark);
+    const elem = document.getElementById("_mark");
+    if (elem) {
+        elem.toggleAttribute("hidden", !mark);
+    }
 }
 
 export function _typeAnsPress(): void {

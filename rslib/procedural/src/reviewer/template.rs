@@ -33,7 +33,6 @@ pub fn escape_json_for_script(json: &str) -> String {
 /// DeclarativeRecall bridges, and Prerequisite reviews, hooking directly into Anki's design tokens
 /// and `globalThis.anki.procedural` API.
 pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
-    let title = escape_html(&session.schema.title);
     let prompt_text = escape_html(&session.instance.rendered_prompt);
     let family_id_attr = escape_html(session.instance.family_id.as_str());
     let instance_id_attr = escape_html(session.instance.id.as_str());
@@ -101,13 +100,30 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         .replace('_', " ");
     let variant_label = escape_html(&raw_variant);
 
-    let raw_canonical = session
-        .instance
-        .correct_answer
-        .get("formatted")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let canonical_text = escape_html(raw_canonical);
+    let canonical_str = if let Some(f) = session.instance.correct_answer.get("formatted").and_then(|v| v.as_str()) {
+        f.to_string()
+    } else if let Some(co) = session.instance.correct_answer.get("correct_option").and_then(|v| v.as_str()) {
+        co.to_string()
+    } else if let Some(val) = session.instance.correct_answer.get("value") {
+        if let Some(s) = val.as_str() {
+            s.to_string()
+        } else if let Some(n) = val.as_f64() {
+            format!("{n}")
+        } else {
+            val.to_string()
+        }
+    } else if let Some(ans) = session.instance.correct_answer.get("answer") {
+        if let Some(s) = ans.as_str() {
+            s.to_string()
+        } else if let Some(n) = ans.as_f64() {
+            format!("{n}")
+        } else {
+            ans.to_string()
+        }
+    } else {
+        "".to_string()
+    };
+    let canonical_text = escape_html(&canonical_str);
 
     let raw_solution = session
         .instance
@@ -174,6 +190,38 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
 
     // Body content according to learning object type
     let main_body_html = match object_type {
+        "mcq" => {
+            let options_html = if let Some(opts) = session.instance.parameters.get("options").and_then(|v| v.as_array()) {
+                let mut s = String::new();
+                for (i, opt) in opts.iter().enumerate() {
+                    let letter = (b'A' + (i as u8).min(25)) as char;
+                    let opt_text = opt.as_str().unwrap_or("");
+                    s.push_str(&format!(
+                        r#"<button type="button" class="proc-option-item" data-opt-id="{}" data-opt-idx="{}" role="radio" aria-checked="false">
+                            <div class="proc-option-header">
+                                <span class="proc-option-key">{}</span>
+                                <span class="proc-option-label">{}</span>
+                            </div>
+                            <div class="proc-option-feedback hidden"></div>
+                        </button>"#,
+                        escape_html(opt_text),
+                        i,
+                        letter,
+                        escape_html(opt_text)
+                    ));
+                }
+                s
+            } else {
+                "".to_string()
+            };
+
+            format!(
+                r#"<div class="proc-prompt">{prompt_text}</div>
+                <div class="proc-option-group" role="radiogroup" aria-label="Multiple choice options">
+                    {options_html}
+                </div>"#
+            )
+        }
         "concept_check" => {
             let options_html = if let Some(cc) = session.instance.metadata.get("concept_check") {
                 if let Some(opts) = cc.get("options").and_then(|v| v.as_array()) {
@@ -389,15 +437,70 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         &serde_json::to_string(&session.instance.metadata).unwrap_or_else(|_| "{}".to_string()),
     );
 
+    let domain_meta = session.instance.metadata.get("domain").and_then(|v| v.as_str()).unwrap_or("");
+    let chapter_meta = session.instance.metadata.get("chapter").and_then(|v| v.as_str()).unwrap_or("");
+    let domain_display = if !domain_meta.is_empty() {
+        domain_meta
+    } else if session.instance.family_id.as_str().contains("math") {
+        "Quantitative Aptitude"
+    } else if session.instance.family_id.as_str().contains("physics") {
+        "Physics"
+    } else if session.instance.family_id.as_str().contains("chem") {
+        "Chemistry"
+    } else if session.instance.family_id.as_str().contains("reason") {
+        "Logical Reasoning"
+    } else {
+        "StudyLab"
+    };
+
+    let title_clean = if session.schema.title.to_lowercase().starts_with("dynamic practice schema for ") {
+        let rest = &session.schema.title["dynamic practice schema for ".len()..];
+        let last = rest.split('.').last().unwrap_or(rest).replace('_', " ");
+        let mut c = last.chars();
+        match c.next() {
+            None => String::new(),
+            Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+        }
+    } else {
+        session.schema.title.clone()
+    };
+
+    let breadcrumbs_html = if !chapter_meta.is_empty() {
+        format!(
+            r#"<nav class="proc-breadcrumbs" aria-label="Topic breadcrumbs">
+                <span class="proc-crumb proc-crumb-domain">{}</span>
+                <span class="proc-crumb-sep">›</span>
+                <span class="proc-crumb proc-crumb-topic">{}</span>
+                <span class="proc-crumb-sep">›</span>
+                <span class="proc-crumb proc-crumb-skill">{}</span>
+            </nav>"#,
+            escape_html(domain_display),
+            escape_html(chapter_meta),
+            escape_html(&title_clean)
+        )
+    } else {
+        format!(
+            r#"<nav class="proc-breadcrumbs" aria-label="Topic breadcrumbs">
+                <span class="proc-crumb proc-crumb-domain">{}</span>
+                <span class="proc-crumb-sep">›</span>
+                <span class="proc-crumb proc-crumb-skill">{}</span>
+            </nav>"#,
+            escape_html(domain_display),
+            escape_html(&title_clean)
+        )
+    };
+
     format!(
         r#"<div class="procedural-card-container" id="procedural-card" data-instance-id="{instance_id_attr}" data-family-id="{family_id_attr}" data-target-time="{target_time_ms}">
     {transparency_html}
     <div class="proc-header">
-        <div class="proc-badges">
-            <span class="proc-badge">{title}</span>
-            <span class="proc-diff-badge">{difficulty_badge_text}</span>
-            <span class="proc-variant-tag">{variant_label}</span>
-            {provenance_badge}
+        <div class="proc-header-left">
+            {breadcrumbs_html}
+            <div class="proc-badges">
+                <span class="proc-diff-badge">{difficulty_badge_text}</span>
+                <span class="proc-variant-tag">{variant_label}</span>
+                {provenance_badge}
+            </div>
         </div>
         <span class="proc-timer" id="proc-stopwatch">00:00</span>
     </div>
@@ -405,19 +508,55 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     {main_body_html}
 
     <div id="proc-result-panel" class="proc-result hidden">
-        <div id="proc-result-title" style="font-weight: 700; font-size: 1.1rem; margin-bottom: 8px;"></div>
-        <div id="proc-result-feedback" style="margin-bottom: 8px;"></div>
+        <div id="proc-result-title" class="proc-result-title"></div>
+        <div id="proc-result-feedback" class="proc-result-feedback"></div>
         <div class="proc-meta-row">
             <span><strong>Target Time:</strong> {target_time_secs}s</span>
             <div id="proc-actual-time"></div>
         </div>
-        <div style="margin-top: 6px;"><strong>Expected Answer:</strong> <span id="proc-expected-ans">{canonical_text}</span></div>
+        <div class="proc-expected-row" style="margin-top: 6px;"><strong>Expected Answer:</strong> <span id="proc-expected-ans">{canonical_text}</span></div>
+
+        <!-- Mistake Classification (immediately visible on wrong answer above solution) -->
+        <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
+            <div class="proc-mistake-heading">Classify Error to Optimize Spaced Repetition:</div>
+            <div class="proc-mistake-grid">
+                <button type="button" class="proc-mistake-card" data-value="silly_mistake" data-key="1">
+                    <span class="proc-key-badge">1</span>
+                    <div class="proc-mistake-info">
+                        <strong>Silly Mistake</strong>
+                        <span>Calculation or reading slip</span>
+                    </div>
+                </button>
+                <button type="button" class="proc-mistake-card" data-value="pattern_not_recognized" data-key="2">
+                    <span class="proc-key-badge">2</span>
+                    <div class="proc-mistake-info">
+                        <strong>Pattern Missed</strong>
+                        <span>Failed to identify structure</span>
+                    </div>
+                </button>
+                <button type="button" class="proc-mistake-card" data-value="formula_or_concept_misapplied" data-key="3">
+                    <span class="proc-key-badge">3</span>
+                    <div class="proc-mistake-info">
+                        <strong>Concept Misapplied</strong>
+                        <span>Used incorrect formula or rule</span>
+                    </div>
+                </button>
+                <button type="button" class="proc-mistake-card" data-value="concept_not_known" data-key="4">
+                    <span class="proc-key-badge">4</span>
+                    <div class="proc-mistake-info">
+                        <strong>Concept Not Known</strong>
+                        <span>Unfamiliar prerequisite topic</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
         <div id="proc-solution-container" class="proc-solution">
             <strong>Step-by-Step Solution:</strong>
             <div style="margin-top: 6px;">{solution_text}</div>
         </div>
-        <div style="margin-top: 14px;">
-            <button type="button" id="proc-next-btn" class="proc-btn" style="background: var(--button-bg, #4b5563); color: var(--fg, #ffffff);">Next Problem</button>
+        <div class="proc-result-actions" style="margin-top: 14px;">
+            <button type="button" id="proc-next-btn" class="proc-btn proc-btn-primary">Next Problem</button>
         </div>
     </div>
 

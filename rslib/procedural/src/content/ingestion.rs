@@ -235,7 +235,7 @@ impl PracticeContentIngester {
         if let Some(questions) = root["questions"].as_array() {
             for q in questions {
                 let q_id_str = q["id"].as_str().unwrap_or("unknown_q");
-                let item_id = if q_id_str.starts_with("item_") {
+                let item_id = if q_id_str.starts_with("item_") || q_id_str.starts_with("item-") {
                     PracticeItemId::new(q_id_str)
                 } else {
                     PracticeItemId::new(format!("item_{}", q_id_str))

@@ -50,6 +50,21 @@ use crate::skills::signals::MasteryEvidence;
 use crate::skills::{Skill, SkillState};
 use crate::storage::ProceduralStore;
 
+pub(crate) fn format_family_title(family_id: &str) -> String {
+    let last_segment = family_id.split('.').last().unwrap_or(family_id);
+    let words: Vec<String> = last_segment
+        .split('_')
+        .map(|w| {
+            let mut c = w.chars();
+            match c.next() {
+                None => String::new(),
+                Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+            }
+        })
+        .collect();
+    words.join(" ")
+}
+
 /// High-level service facade providing the narrow integration boundary
 /// between Anki and the procedural practice engine subsystem.
 #[derive(Clone)]
@@ -190,12 +205,13 @@ impl ProceduralService {
 
         // Check if dynamically registered in registry contracts
         if let Some(contract) = self.registry.get_family_contract(schema_id.as_str()) {
+            let clean_title = format_family_title(contract.family_id.as_str());
             let schema_obj = SchemaPracticeObject::new(
                 contract.default_schema.clone(),
                 contract.skill_id.clone(),
                 contract.family_id.clone(),
-                format!("Dynamic Practice Schema for {}", contract.family_id.as_str()),
-                format!("Dynamic declarative schema for family {}", contract.family_id.as_str()),
+                clean_title.clone(),
+                format!("Declarative schema for {}", clean_title),
             );
             return Ok(Some(schema_obj));
         }
@@ -494,12 +510,13 @@ impl ProceduralService {
                 None,
             )?;
 
+            let clean_title = format_family_title(family_id.as_str());
             let schema = SchemaPracticeObject::new(
                 inline_contract.contract.default_schema.clone(),
                 inline_contract.contract.skill_id.clone(),
                 inline_contract.contract.family_id.clone(),
-                format!("Dynamic Practice Schema for {}", family_id.as_str()),
-                format!("Dynamic declarative schema for family {}", family_id.as_str()),
+                clean_title.clone(),
+                format!("Declarative schema for {}", clean_title),
             );
 
             let skill_state = self.load_skill_state(&schema.skill_id)?;

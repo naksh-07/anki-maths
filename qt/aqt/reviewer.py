@@ -658,7 +658,16 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         av_player.seek_relative(self.seek_secs)
         gui_hooks.audio_did_seek_relative(self.web, self.seek_secs)
 
+    def _is_procedural_card(self) -> bool:
+        try:
+            nt = self.card.note_type()
+            return bool(nt and nt.get("name", "").startswith("StudyLab Procedural Anchor"))
+        except Exception:
+            return False
+
     def onEnterKey(self) -> None:
+        if self._is_procedural_card():
+            return
         if self.state == "question":
             self._getTypedAnswer()
         elif self.state == "answer" and aqt.mw.pm.spacebar_rates_card():
@@ -680,6 +689,14 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         elif url.startswith("ease"):
             val: Literal[1, 2, 3, 4] = int(url[4:])  # type: ignore
             self._answerCard(val)
+        elif url.startswith("procedural_answer:"):
+            try:
+                val = int(url.split(":", 1)[1])
+                if val in (1, 2, 3, 4):
+                    self.state = "answer"
+                    self._answerCard(val)  # type: ignore
+            except Exception as e:
+                print("Error handling procedural_answer link:", e)
         elif url == "edit":
             self.mw.onEditCurrent()
         elif url == "more":
@@ -693,6 +710,9 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
             self.web.update()
         elif url == "statesMutated":
             self._states_mutated = True
+        elif url.startswith("procedural_"):
+            # Procedural background bridge messages (attempt, hint, etc.)
+            pass
         else:
             print("unrecognized anki link:", url)
 
@@ -843,6 +863,15 @@ timerStopped = false;
         )
 
     def _showAnswerButton(self) -> None:
+        if self._is_procedural_card():
+            middle = (
+                "<table cellpadding=0><tr><td class=stat2 align=center><span class=stattxt>%s</span></td></tr></table>"
+                % self._remaining()
+            )
+            maxTime = 0
+            self.bottom.web.eval("showQuestion(%s,%d);" % (json.dumps(middle), maxTime))
+            return
+
         middle = """
 <button title="{}" id="ansbut" onclick='pycmd("ans");'>{}<span class=stattxt>{}</span></button>""".format(
             tr.actions_shortcut_key(val=tr.studying_space()),
