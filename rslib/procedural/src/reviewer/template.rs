@@ -401,7 +401,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 escape_html(advisory)
             )
         }
-        _ => {
+        "problem" | "quick" | "stepwise" => {
             // Standard Quick / Stepwise Problem
             let initial_steps_html = if let Some(ref graph) = solution_graph_opt {
                 let mut s = String::new();
@@ -455,6 +455,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 <div id="proc-hint-container" class="proc-hint-box hidden"></div>"#
             )
         }
+        _ => String::new(),
     };
 
     let target_time_secs = target_time_ms / 1000;

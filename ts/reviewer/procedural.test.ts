@@ -442,12 +442,11 @@ describe("ProceduralReviewer API", () => {
         input.value = "10";
         submitBtn.click();
 
-        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(2);
+        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(1);
         expect((window as any).bridgeCommand).toHaveBeenCalledWith(
             expect.stringContaining("procedural_attempt:"),
             undefined,
         );
-        expect((window as any).bridgeCommand).toHaveBeenCalledWith("ans", undefined);
         r2.destroy();
     });
 
@@ -509,12 +508,11 @@ describe("ProceduralReviewer API", () => {
         submitBtn.click();
         submitBtn.click();
 
-        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(2);
+        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(1);
         expect((window as any).bridgeCommand).toHaveBeenCalledWith(
             expect.stringContaining("procedural_attempt:"),
             undefined,
         );
-        expect((window as any).bridgeCommand).toHaveBeenCalledWith("ans", undefined);
         reviewer.destroy();
     });
 

@@ -319,7 +319,7 @@ export class ProceduralReviewer {
                 },
                 typesetMathJax: (el) => this.typesetMathJax(el),
             });
-        } else {
+        } else if (this.options.objectType === "problem" || this.options.objectType === "quick" || this.options.objectType === "stepwise" || !this.options.objectType) {
             this.numericalContainer = new NumericalContainer(this.container, {
                 inputElement: this.quickInput,
                 submitButton: this.quickSubmitBtn,
@@ -928,7 +928,7 @@ export class ProceduralReviewer {
         clearInterval(this.timerInterval);
         const timeTakenMs = Date.now() - this.startTime;
 
-        if (!outcome.isCorrect) {
+        if (!outcome.isCorrect && mode !== "concept_check" && mode !== "strategy_drill") {
             this.showMistakeClassificationUI(outcome, data, mode, timeTakenMs);
             return;
         }
@@ -1045,19 +1045,41 @@ export class ProceduralReviewer {
 
             if (outcome.isCorrect) {
                 this.resultPanel.className = "proc-result correct";
-                if (this.resultTitle) {this.resultTitle.textContent = "✓ Correct Answer";}
+                if (this.resultTitle) {
+                    if (mode === "concept_check") {
+                        this.resultTitle.textContent = "✓ Concept Mastered";
+                    } else if (mode === "strategy_drill") {
+                        this.resultTitle.textContent = "✓ Optimal Strategy";
+                    } else {
+                        this.resultTitle.textContent = "✓ Correct Answer";
+                    }
+                }
                 
                 let msg = ``;
                 if (this.hintsUsed > 0) {
-                    msg += `[${this.hintsUsed} hint(s) used]<br>`;
+                    msg += `<span class="proc-hint-chip">${this.hintsUsed} hint(s) used</span>`;
                 }
-                msg += `<div><strong>You answered:</strong> ${escapeHtml(data.answer)}</div>`;
+                if (data.answer.trim().toLowerCase() !== String(canonicalFormatted).trim().toLowerCase()) {
+                    msg += `<div><strong>You answered:</strong> ${escapeHtml(data.answer)}</div>`;
+                }
                 if (this.resultFeedback) {this.resultFeedback.innerHTML = msg;}
             } else {
                 this.resultPanel.className = "proc-result incorrect";
-                if (this.resultTitle) {this.resultTitle.textContent = "✗ Incorrect Answer";}
+                if (this.resultTitle) {
+                    if (mode === "concept_check") {
+                        this.resultTitle.textContent = "💡 Concept Clarification";
+                    } else if (mode === "strategy_drill") {
+                        this.resultTitle.textContent = "⚠️ Suboptimal Method";
+                    } else {
+                        this.resultTitle.textContent = "✗ Incorrect Answer";
+                    }
+                }
                 if (this.resultFeedback) {
-                    let msg = `
+                    let msg = ``;
+                    if (this.hintsUsed > 0) {
+                        msg += `<span class="proc-hint-chip">${this.hintsUsed} hint(s) used</span>`;
+                    }
+                    msg += `
                         <div><strong>You answered:</strong> ${escapeHtml(data.answer)}</div>
                         <div><strong>Correct answer:</strong> ${escapeHtml(canonicalFormatted)}</div>
                     `;
@@ -1183,7 +1205,7 @@ export class ProceduralReviewer {
         bridgeCommand(`procedural_attempt:${JSON.stringify(attemptResult)}`);
 
         // Synchronize with native Anki reviewer answer state to show footer ease buttons
-        bridgeCommand("ans");
+        // bridgeCommand("ans"); // Removed to prevent native ease buttons from duplicating the custom "Next Problem" flow.
 
         // Focus next button if present
         this.nextBtn?.focus();
@@ -1216,6 +1238,16 @@ export class ProceduralReviewer {
             target_skill_id: prereq?.primary_missing_prerequisite ?? null,
             executable_schema_id: prereq?.executable_schema_id ?? null,
         })}`);
+    }
+
+    public handleNativeShowAnswer(): void {
+        if (this.state === "solving" || this.state === "ready") {
+            if (this.activeMode === "stepwise") {
+                this.handleStepwiseSubmit();
+            } else {
+                this.handleQuickSubmit();
+            }
+        }
     }
 
     private handleNext(): void {
@@ -1303,6 +1335,12 @@ export const proceduralAPI = {
         const active = (globalThis as any).__activeProceduralReviewer;
         if (active && typeof active.destroy === "function") {
             active.destroy();
+        }
+    },
+    handleNativeShowAnswer: (): void => {
+        const active = (globalThis as any).__activeProceduralReviewer;
+        if (active && typeof active.handleNativeShowAnswer === "function") {
+            active.handleNativeShowAnswer();
         }
     },
     ProceduralReviewer,

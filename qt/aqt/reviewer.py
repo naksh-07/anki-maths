@@ -927,6 +927,9 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         return self.mw.col.extract_cloze_for_typing(txt, idx) or None
 
     def _getTypedAnswer(self) -> None:
+        if self._is_procedural_card():
+            self.web.eval("if(globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.handleNativeShowAnswer === 'function') { globalThis.anki.procedural.handleNativeShowAnswer(); }")
+            return
         self.web.evalWithCallback("getTypedAnswer();", self._onTypedAnswer)
 
     def _onTypedAnswer(self, val: None) -> None:
