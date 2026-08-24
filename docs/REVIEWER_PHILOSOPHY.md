@@ -1,3 +1,5 @@
+> **NOTE**: The canonical source of truth for all frontend UI/UX, modalities, state transitions, and interaction invariants is now defined in [FRONTEND_PRODUCT_SPEC.md](./FRONTEND_PRODUCT_SPEC.md). Any frontend-specific implementation details in this document are superseded by the new specification.
+
 # StudyLab Reviewer Philosophy
 
 The StudyLab reviewer is not a flashcard with extra buttons; it is a dedicated **problem-solving workspace** embedded within Anki. 
@@ -30,3 +32,4 @@ Once classified, the solution is fully revealed. For severe categories (Concept 
 - **State Machine:** `ts/reviewer/procedural.ts` and `02_product_reconciliation.md`.
 - **Modality Handling:** `ts/reviewer/components/mcq_container.ts` and `NumericalParser.parseScalar`.
 - **Mistake Trapping:** `ts/reviewer/components/mistake_footer.ts` and `rslib/procedural/src/practice/request.rs`.
+

@@ -1,3 +1,5 @@
+> **NOTE**: The canonical source of truth for all frontend UI/UX, modalities, state transitions, and interaction invariants is now defined in [FRONTEND_PRODUCT_SPEC.md](./FRONTEND_PRODUCT_SPEC.md). Any frontend-specific implementation details in this document are superseded by the new specification.
+
 # StudyLab Reviewer State Machine & Lifecycle Specification
 
 **Document Version:** 1.0.0 (Canonical)  
@@ -365,3 +367,4 @@ Performance is categorized on submission completion via `computeSpeedQuadrant(is
 | `ts/reviewer/components/numerical_container.test.ts` | 28 | 5D dimensional vectors, 50+ unit conversions, scientific notation, equation prefixes, physical sanity constraints, tolerance checks, preview pill. |
 | `ts/reviewer/components/stepwise_container.test.ts` | 7 | Solution graph dynamic rows, algebraic root equivalence, downstream consistency (`PartiallyValid`), 3-tier progressive hints. |
 | `rslib/procedural/tests/desktop_validation_master_suite.rs` | 1000 iter | 1,000 continuous card transitions in 3.09s with zero memory leaks and zero event listener leaks. |
+

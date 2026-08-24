@@ -1,3 +1,5 @@
+> **NOTE**: The canonical source of truth for all frontend UI/UX, modalities, state transitions, and interaction invariants is now defined in [FRONTEND_PRODUCT_SPEC.md](./FRONTEND_PRODUCT_SPEC.md). Any frontend-specific implementation details in this document are superseded by the new specification.
+
 # StudyLab Learning Objects & Interactive Modality Contracts
 
 **Document Version:** 1.0.0 (Canonical)  
@@ -309,3 +311,4 @@ To guarantee 100% non-interference with standard Anki flashcards:
 | `MistakeFooter` & Trapping | `ts/reviewer/components/mistake_footer.ts:1-180` | `procedural.test.ts` (27 tests) | `05_live_ui_screenshots/03_mistake_footer.png` |
 | Worked Example Object | `rslib/procedural/src/remediation/objects.rs:1-150` | `remediation_engine_tests.rs` (6 tests) | `05_live_ui_screenshots/06_worked_example.png` |
 | Reviewer Teardown & Safety | `ts/reviewer/procedural.ts:1239-1278` | `desktop_validation_master_suite.rs` (Section 7, 1000 transitions) | `07_test_summary.md` (Section 5) |
+

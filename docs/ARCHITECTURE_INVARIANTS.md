@@ -1,3 +1,5 @@
+> **NOTE**: The canonical source of truth for all frontend UI/UX, modalities, state transitions, and interaction invariants is now defined in [FRONTEND_PRODUCT_SPEC.md](./FRONTEND_PRODUCT_SPEC.md). Any frontend-specific implementation details in this document are superseded by the new specification.
+
 # StudyLab Architecture Invariants & Frozen Non-Negotiables
 
 **Document Version:** 1.0.0 (Canonical Master Specification)  
@@ -245,3 +247,4 @@ The 15-point release decision checklist from `08_release_decision.md` confirms 1
 ---
 
 *The 16 Architecture Invariants are hereby frozen as the canonical ground truth of StudyLab.*
+

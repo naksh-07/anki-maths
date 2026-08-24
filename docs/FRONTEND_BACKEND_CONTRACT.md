@@ -1,3 +1,5 @@
+> **NOTE**: The canonical source of truth for all frontend UI/UX, modalities, state transitions, and interaction invariants is now defined in [FRONTEND_PRODUCT_SPEC.md](./FRONTEND_PRODUCT_SPEC.md). Any frontend-specific implementation details in this document are superseded by the new specification.
+
 # Frontend / Backend Bridge Contract & IPC Protocol Specification
 
 **Document Version:** 1.0.0 (Canonical)  
@@ -351,3 +353,4 @@ To ensure maximum responsiveness without sacrificing mathematical or cognitive r
    - In `qt/aqt/reviewer.py:750-770`, all bridge commands wrap JSON parsing in `try/except Exception`. Malformed payloads log an error message and store `{"raw": str}` without crashing the Qt review loop.
 4. **SQL Parameterization:**
    - 100% of SQLite database queries in `rslib/procedural/src/storage/` use parameterized arguments (`?1, ?2, ...` or `rusqlite::params!`), completely eliminating SQL injection vectors.
+
