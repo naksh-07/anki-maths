@@ -15,8 +15,10 @@ use crate::core::{
 };
 use crate::diagnostics::{ErrorCategory, ProceduralReviewOutcome};
 use crate::exam::{
-    ExamPracticeMode, ExamProfile, ExamSessionSelector, HumanReviewWorkflow, PyqMasteryAction,
-    PyqMasteryBridge, PyqVariantPipeline, PYQSource, PyqMapping, ReviewAction, ReviewInspection,
+    apply_diagnostic_report_to_store, ComprehensiveDiagnosticReport, ExamPracticeMode,
+    ExamProfile, ExamSessionSelector, HumanReviewWorkflow, MockBlueprint, MockQuestionItem,
+    MockSession, PyqMasteryAction, PyqMasteryBridge, PyqVariantPipeline, PYQSource, PyqMapping,
+    ReviewAction, ReviewInspection,
 };
 use crate::practice::{ErrorEvent, PracticeAttempt, PracticeRequest, SchemaPracticeObject};
 use crate::problems::catalog::{
@@ -953,9 +955,7 @@ impl ProceduralService {
             crate::problems::steps::StepErrorType::Unknown => ErrorCategory::Unknown,
         });
 
-        let domain_ev_opt = step_eval.to_chemistry_physical_evidence().map(|c| {
-            crate::skills::domain_evidence::VersionedDomainEvidence::new_chemistry(c)
-        });
+        let domain_ev_opt = step_eval.to_domain_evidence(family.id.as_str());
 
         let mut metadata = serde_json::json!({
             "hints_used": submission.hints_used,
@@ -1654,6 +1654,105 @@ impl ProceduralService {
             target_override_ms,
         ))
     }
+
+    // =========================================================================
+    // DIAGNOSTIC ASSESSMENT / MOCK SESSION ENGINE (GAP-DIAG-01, GAP-EV-01)
+    // =========================================================================
+
+    /// Create a fixed measuring mode Diagnostic Mock Session across domains.
+    pub fn create_diagnostic_session(
+        &self,
+        total_questions: usize,
+        time_limit_ms: u64,
+        seed: u64,
+    ) -> Result<MockSession> {
+        let blueprint = MockBlueprint::diagnostic_balanced("Diagnostic Assessment", total_questions, time_limit_ms);
+        
+        let math_schemas = [
+            (SCHEMA_SUCCESSIVE_PERCENTAGE, Domain::Mathematics, "Arithmetic", "Percentages"),
+            (SCHEMA_LINEAR_EQUATIONS, Domain::Mathematics, "Algebra", "Linear Equations"),
+            (SCHEMA_PROFIT_LOSS, Domain::Mathematics, "Arithmetic", "Profit & Loss"),
+            (SCHEMA_RATIO, Domain::Mathematics, "Arithmetic", "Ratio & Proportion"),
+            (SCHEMA_AVERAGE, Domain::Mathematics, "Arithmetic", "Averages"),
+            (SCHEMA_DIVISIBILITY, Domain::Mathematics, "Number System", "Divisibility Rules"),
+            (SCHEMA_TIME_WORK, Domain::Mathematics, "Arithmetic", "Time & Work"),
+            (SCHEMA_TIME_SPEED_DISTANCE, Domain::Mathematics, "Arithmetic", "Speed & Distance"),
+            (SCHEMA_MIXTURES_ALLIGATION, Domain::Mathematics, "Arithmetic", "Mixtures"),
+            (SCHEMA_REMAINDERS_MODULAR, Domain::Mathematics, "Number System", "Modular Arithmetic"),
+            (SCHEMA_LINEAR_INEQUALITIES, Domain::Mathematics, "Algebra", "Inequalities"),
+            (SCHEMA_ALGEBRAIC_IDENTITIES, Domain::Mathematics, "Algebra", "Identities"),
+            (SCHEMA_GEOMETRY_TRIANGLES, Domain::Mathematics, "Geometry", "Triangles"),
+            (SCHEMA_COMBINED_MULTI_CONCEPT, Domain::Mathematics, "Integrated", "Multi-Concept"),
+        ];
+
+        let reasoning_schemas = [
+            (SCHEMA_REASONING_SERIES, Domain::Reasoning, "Analytical Reasoning", "Number & Letter Series"),
+            (SCHEMA_REASONING_SYLLOGISM, Domain::Reasoning, "Logical Deduction", "Syllogisms"),
+            (SCHEMA_REASONING_SEATING, Domain::Reasoning, "Arrangement", "Linear & Circular Seating"),
+            (SCHEMA_REASONING_RELATIONS, Domain::Reasoning, "Deduction", "Blood Relations"),
+        ];
+
+        let physics_schemas = [
+            (SCHEMA_PHYSICS_KINEMATICS, Domain::Physics, "Mechanics", "1D/2D Kinematics"),
+            (SCHEMA_PHYSICS_WORK_ENERGY, Domain::Physics, "Mechanics", "Work, Energy & Power"),
+        ];
+
+        let chemistry_schemas = [
+            (SCHEMA_CHEMISTRY_STOICHIOMETRY, Domain::Chemistry, "Physical Chemistry", "Mole & Stoichiometry"),
+            (SCHEMA_CHEMISTRY_EQUILIBRIUM, Domain::Chemistry, "Physical Chemistry", "Chemical Equilibrium"),
+        ];
+
+        let mut questions = Vec::new();
+        let q_count = total_questions.clamp(4, 50);
+
+        for idx in 0..q_count {
+            let domain_order = idx % 4;
+            let round = idx / 4;
+            let (sch_name, domain, chapter, topic) = match domain_order {
+                0 => &math_schemas[round % math_schemas.len()],
+                1 => &reasoning_schemas[round % reasoning_schemas.len()],
+                2 => &physics_schemas[round % physics_schemas.len()],
+                _ => &chemistry_schemas[round % chemistry_schemas.len()],
+            };
+
+            let schema_id = SchemaId::new(*sch_name);
+            let schema = self.resolve_schema(&schema_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Diagnostic schema '{}' not found", sch_name)))?;
+
+            let diff_level = ((idx % 4) + 2) as u32;
+            let q_seed = seed.wrapping_add((idx as u64) * 1000 + 42);
+            let mut inst = self.registry.generate(&schema.problem_family_id, schema.problem_family_id.as_str(), q_seed, diff_level, None)?;
+            
+            inst.metadata["chapter"] = serde_json::json!(chapter);
+            inst.metadata["topic"] = serde_json::json!(topic);
+            inst.metadata["domain"] = serde_json::json!(domain);
+
+            questions.push(MockQuestionItem {
+                question_index: idx,
+                schema_id: schema.id.clone(),
+                skill_id: schema.skill_id.clone(),
+                domain: domain.clone(),
+                schema_title: schema.title.clone(),
+                instance: inst,
+                difficulty_level: diff_level,
+                target_time_ms: 45_000,
+                is_pyq: false,
+                provenance: None,
+            });
+        }
+
+        let session_id = format!("diag_sess_{}_{}", Utc::now().timestamp_millis(), seed % 10000);
+        Ok(MockSession::new(session_id, blueprint, questions))
+    }
+
+    /// Batch-updates existing SkillState and DomainEvidence in store from a completed Diagnostic Mock Session.
+    pub fn record_diagnostic_report_evidence(
+        &self,
+        session: &MockSession,
+        report: &ComprehensiveDiagnosticReport,
+    ) -> Result<Vec<SkillState>> {
+        apply_diagnostic_report_to_store(&self.store, session, report)
+    }
 }
 
 #[cfg(test)]
@@ -1831,5 +1930,52 @@ mod tests {
         let attempts = service.get_attempts_for_card(777).unwrap();
         assert_eq!(attempts.len(), 1);
         assert_eq!(attempts[0].metadata.get("catalog_version").unwrap().as_str().unwrap(), MATHS_CATALOG_VERSION);
+    }
+
+    #[test]
+    fn test_service_diagnostic_mock_session_and_evidence_sync() {
+        let service = ProceduralService::open_in_memory().unwrap();
+        
+        // 1. Generate a 12-question diagnostic session
+        let mut session = service.create_diagnostic_session(12, 600_000, 12345).unwrap();
+        assert_eq!(session.questions.len(), 12);
+        assert_eq!(session.blueprint.negative_mark_per_incorrect, 0.0);
+        assert_eq!(session.blueprint.total_questions, 12);
+
+        // 2. Answer questions across domains
+        for i in 0..12 {
+            let q = &session.questions[i];
+            let ans_str = if let Some(v) = q.instance.correct_answer.get("formatted").and_then(|f| f.as_str()) {
+                v.to_string()
+            } else if let Some(v) = q.instance.correct_answer.get("value").and_then(|v| v.as_f64()) {
+                v.to_string()
+            } else if let Some(s) = q.instance.correct_answer.as_str() {
+                s.to_string()
+            } else {
+                "0".to_string()
+            };
+
+            // Answer first 8 correctly, rest with errors
+            if i < 8 {
+                session.record_answer(i, ans_str, 20_000);
+            } else {
+                session.record_answer(i, "wrong_ans", 30_000);
+            }
+        }
+
+        // 3. Generate comprehensive report
+        let report = session.generate_comprehensive_report(Utc::now().timestamp_millis());
+        assert_eq!(report.total_questions, 12);
+        assert_eq!(report.answered_count, 12);
+        assert_eq!(report.correct_count, 8);
+        assert_eq!(report.incorrect_count, 4);
+
+        // 4. Batch-sync evidence to ProceduralStore without parallel state models
+        let updated_states = service.record_diagnostic_report_evidence(&session, &report).unwrap();
+        assert_eq!(updated_states.len(), 12);
+        
+        // Verify store has updated skill states
+        let math_state = service.store.get_skill_state(&session.questions[0].skill_id).unwrap();
+        assert!(math_state.is_some());
     }
 }

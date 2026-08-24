@@ -9,15 +9,12 @@ use procedural::problems::catalog::{
 };
 use procedural::problems::steps::StepErrorType;
 use procedural::remediation::{
-    ConceptCheckObject, ConceptCheckOption, DeclarativeRecallBridge, RemediationAction,
-    RemediationActionKind, RemediationContext, RemediationIntervention, RemediationOutcomeStatus,
-    RemediationPolicy, RemediationQueue, RemediationSelector, RemediationUrgency,
-    StrategyDrillObject, StrategyOption, WorkedExampleObject,
+    DeclarativeRecallBridge, RemediationActionKind, RemediationContext, RemediationIntervention,
+    RemediationOutcomeStatus, RemediationPolicy, RemediationSelector,
 };
 use procedural::scheduling::PracticeMode;
 use procedural::service::ProceduralService;
 use procedural::skills::signals::{IndependenceLevel, MasteryEvidence, PracticeProgressionState};
-use procedural::skills::SkillState;
 
 #[test]
 fn test_remediation_maths_end_to_end_flow() {

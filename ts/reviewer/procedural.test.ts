@@ -4,6 +4,7 @@
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { MistakeFooter } from "./components/mistake_footer";
 import { proceduralAPI, ProceduralReviewer } from "./procedural";
 
 describe("ProceduralReviewer API", () => {
@@ -441,7 +442,12 @@ describe("ProceduralReviewer API", () => {
         input.value = "10";
         submitBtn.click();
 
-        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(1);
+        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(2);
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining("procedural_attempt:"),
+            undefined,
+        );
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith("ans", undefined);
         r2.destroy();
     });
 
@@ -503,7 +509,12 @@ describe("ProceduralReviewer API", () => {
         submitBtn.click();
         submitBtn.click();
 
-        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(1);
+        expect((window as any).bridgeCommand).toHaveBeenCalledTimes(2);
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining("procedural_attempt:"),
+            undefined,
+        );
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith("ans", undefined);
         reviewer.destroy();
     });
 
@@ -651,6 +662,68 @@ describe("ProceduralReviewer API", () => {
         expect(optParis.classList.contains("selected")).toBe(true);
         expect(optParis.classList.contains("correct")).toBe(true);
         expect(reviewer.getState()).toBe("feedback");
+        expect(reviewer.getMCQContainer()).not.toBeNull();
+
+        reviewer.destroy();
+    });
+
+    test("MCQ mock exam mode (GAP-MOD-03) integrates with ProceduralReviewer without instant grading", () => {
+        container.innerHTML = `
+            <div class="proc-prompt">What is 15% of 200?</div>
+            <div class="proc-option-group" role="radiogroup">
+                <button type="button" class="proc-option-item" data-opt-id="opt-a" data-opt-idx="0" role="radio" aria-checked="false">
+                    <span class="proc-option-key">A</span>
+                    <span class="proc-option-label">20</span>
+                </button>
+                <button type="button" class="proc-option-item" data-opt-id="opt-b" data-opt-idx="1" role="radio" aria-checked="false">
+                    <span class="proc-option-key">B</span>
+                    <span class="proc-option-label">30</span>
+                </button>
+                <button type="button" class="proc-option-item" data-opt-id="opt-c" data-opt-idx="2" role="radio" aria-checked="false">
+                    <span class="proc-option-key">C</span>
+                    <span class="proc-option-label">35</span>
+                </button>
+            </div>
+            <div id="proc-result-panel" class="proc-result hidden"></div>
+        `;
+
+        let selectedChangedId: string | null = null;
+        const reviewer = proceduralAPI.setup({
+            containerId: "procedural-card",
+            instanceId: "inst-mock-mcq",
+            familyId: "math.percentage",
+            targetTimeMs: 40000,
+            objectType: "mcq",
+            mode: "mock",
+            correctAnswer: { canonical_id: "opt-b", correct_option: "30" },
+            onSelectionChanged: (optId) => {
+                selectedChangedId = optId;
+            },
+        });
+
+        const optA = container.querySelector<HTMLElement>('[data-opt-id="opt-a"]')!;
+        const optB = container.querySelector<HTMLElement>('[data-opt-id="opt-b"]')!;
+
+        // Select Option A (key '1')
+        container.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true }));
+        expect(selectedChangedId).toBe("opt-a");
+        expect(optA.classList.contains("selected")).toBe(true);
+        expect(optA.classList.contains("incorrect")).toBe(false);
+        expect(reviewer.getState()).toBe("solving"); // Still in solving state, no auto feedback!
+
+        // Switch to Option B (key '2')
+        container.dispatchEvent(new KeyboardEvent("keydown", { key: "2", bubbles: true }));
+        expect(selectedChangedId).toBe("opt-b");
+        expect(optB.classList.contains("selected")).toBe(true);
+        expect(optA.classList.contains("selected")).toBe(false);
+        expect(reviewer.getState()).toBe("solving");
+
+        // Evaluate mock question on demand
+        const evalResult = reviewer.evaluateMockMCQ();
+        expect(evalResult).not.toBeNull();
+        expect(evalResult?.isCorrect).toBe(true);
+        expect(evalResult?.selectedOptionId).toBe("opt-b");
+        expect(evalResult?.score).toBe(1.0);
 
         reviewer.destroy();
     });
@@ -681,15 +754,27 @@ describe("ProceduralReviewer API", () => {
         expect(spaceInMistake.defaultPrevented).toBe(true);
         expect(reviewer.getState()).toBe("mistake_classification");
 
+        // Wait to verify no delayed transition or accidental silly_mistake bypass occurred
+        await new Promise(resolve => setTimeout(resolve, 200));
+        expect(reviewer.getState()).toBe("mistake_classification");
+
         const enterInMistake = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
         container.dispatchEvent(enterInMistake);
         expect(enterInMistake.defaultPrevented).toBe(true);
+        expect(reviewer.getState()).toBe("mistake_classification");
+
+        await new Promise(resolve => setTimeout(resolve, 200));
         expect(reviewer.getState()).toBe("mistake_classification");
 
         // Select mistake using shortcut key '3' (Formula or concept misapplied)
         const key3Event = new KeyboardEvent("keydown", { key: "3", bubbles: true, cancelable: true });
         container.dispatchEvent(key3Event);
         expect(key3Event.defaultPrevented).toBe(true);
+
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining('"mistake_type":"formula_or_concept_misapplied"'),
+            undefined
+        );
 
         await new Promise(resolve => setTimeout(resolve, 200));
         expect(reviewer.getState()).toBe("feedback");
@@ -700,6 +785,125 @@ describe("ProceduralReviewer API", () => {
         expect((window as any).bridgeCommand).toHaveBeenCalledWith("procedural_answer:1", undefined);
 
         reviewer.destroy();
+    });
+
+    test("MistakeFooter component traps Space/Enter without bypass and dispatches all 1-4 categories with telemetry", () => {
+        let selectedMistake: string | null = null;
+        const footerContainer = document.createElement("div");
+        footerContainer.innerHTML = `<div id="proc-result-panel"><div id="proc-solution-container"></div></div>`;
+        document.body.appendChild(footerContainer);
+
+        const footer = new MistakeFooter({
+            container: footerContainer,
+            instanceId: "inst-test-footer",
+            familyId: "math.percentages",
+            onSelect: (val) => {
+                selectedMistake = val;
+            },
+        });
+
+        footer.show();
+        expect(footer.isShown()).toBe(true);
+
+        // 1. Space and Enter must be trapped and NOT select any category
+        const spaceEvent = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+        const handledSpace = footer.handleKeydown(spaceEvent);
+        expect(handledSpace).toBe(true);
+        expect(spaceEvent.defaultPrevented).toBe(true);
+        expect(footer.getSelectedValue()).toBeNull();
+        expect(selectedMistake).toBeNull();
+
+        const enterEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+        const handledEnter = footer.handleKeydown(enterEvent);
+        expect(handledEnter).toBe(true);
+        expect(enterEvent.defaultPrevented).toBe(true);
+        expect(footer.getSelectedValue()).toBeNull();
+        expect(selectedMistake).toBeNull();
+
+        // 2. Test keydown '2' (Pattern Missed)
+        const key2Event = new KeyboardEvent("keydown", { key: "2", bubbles: true, cancelable: true });
+        const handled2 = footer.handleKeydown(key2Event);
+        expect(handled2).toBe(true);
+        expect(key2Event.defaultPrevented).toBe(true);
+        expect(selectedMistake).toBe("pattern_not_recognized");
+        expect(footer.getSelectedValue()).toBe("pattern_not_recognized");
+
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining('"mistake_type":"pattern_not_recognized"'),
+            undefined,
+        );
+
+        // 3. Test keydown '1', '3', '4' selections
+        footer.select(1);
+        expect(footer.getSelectedValue()).toBe("silly_mistake");
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining('"mistake_type":"silly_mistake"'),
+            undefined,
+        );
+
+        footer.select(3);
+        expect(footer.getSelectedValue()).toBe("formula_or_concept_misapplied");
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining('"mistake_type":"formula_or_concept_misapplied"'),
+            undefined,
+        );
+
+        footer.select(4);
+        expect(footer.getSelectedValue()).toBe("concept_not_known");
+        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
+            expect.stringContaining('"mistake_type":"concept_not_known"'),
+            undefined,
+        );
+
+        footer.destroy();
+        footerContainer.remove();
+    });
+
+    test("lifecycle: unmounting procedural container automatically destroys reviewer and unbinds window listeners", async () => {
+        const reviewer = proceduralAPI.setup({
+            containerId: "procedural-card",
+            instanceId: "inst-leak-test",
+            familyId: "math.algebra",
+            targetTimeMs: 30000,
+            correctAnswer: { value: 100 },
+        });
+
+        expect(reviewer.getState()).toBe("solving");
+
+        // Simulate navigating away to a standard Anki card by unmounting the procedural container from DOM
+        container.remove();
+
+        // Allow MutationObserver callback to run
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // State must automatically transition to teardown
+        expect(reviewer.getState()).toBe("teardown");
+
+        // Global keydown on window should not be intercepted or prevented
+        const spaceEvent = new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true });
+        window.dispatchEvent(spaceEvent);
+        expect(spaceEvent.defaultPrevented).toBe(false);
+
+        // Re-attach container for subsequent tests
+        document.body.appendChild(container);
+    });
+
+    test("proceduralAPI.destroyActive cleanly tears down active instance and resets global state", () => {
+        const reviewer = proceduralAPI.setup({
+            containerId: "procedural-card",
+            instanceId: "inst-destroy-active",
+            familyId: "math.algebra",
+            targetTimeMs: 30000,
+            correctAnswer: { value: 100 },
+        });
+
+        expect(reviewer.getState()).toBe("solving");
+        expect((globalThis as any).__activeProceduralReviewer).toBe(reviewer);
+
+        proceduralAPI.destroyActive();
+
+        expect(reviewer.getState()).toBe("teardown");
+        expect((globalThis as any).__activeProceduralReviewer).toBeNull();
     });
 });
 
@@ -778,7 +982,6 @@ describe("ProceduralReviewer Performance Classification", () => {
         vi.advanceTimersByTime(timeMs);
         
         const data = { answer: isCorrect ? "42" : "99", steps: [] };
-        
         const quickInput = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
         const submitBtn = container.querySelector<HTMLButtonElement>("#proc-submit-btn")!;
         quickInput.value = data.answer;
@@ -797,6 +1000,7 @@ describe("ProceduralReviewer Performance Classification", () => {
         const dummyCustomData = { again: {} };
         await mutateFn({}, dummyCustomData);
         
+        reviewer.destroy();
         return (dummyCustomData.again as any).studylab;
     }
 

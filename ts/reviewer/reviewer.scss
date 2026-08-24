@@ -325,9 +325,16 @@ button {
 
 .proc-step-row {
     display: flex;
-    gap: 8px;
-    margin-bottom: 10px;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.proc-step-input-wrapper {
+    display: flex;
+    position: relative;
     align-items: center;
+    width: 100%;
 }
 
 .proc-step-label {
@@ -344,8 +351,8 @@ button {
     font-size: 1rem;
     background: var(--canvas-inset, #ffffff);
     color: var(--fg, #111827);
-    border: 1px solid var(--border, #d1d5db);
-    border-radius: var(--border-radius-default, 5px);
+    border: 1.5px solid var(--border, #d1d5db);
+    border-radius: var(--border-radius-default, 6px);
     outline: none;
     box-sizing: border-box;
     transition: border-color var(--transition-default, 180ms);
@@ -354,6 +361,58 @@ button {
 .proc-input:focus {
     border-color: var(--border-focus, #3b82f6);
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.proc-input.valid {
+    border-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.proc-input.invalid {
+    border-color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.proc-input.partial {
+    border-color: #f59e0b !important;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.proc-step-badge {
+    position: absolute;
+    right: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    pointer-events: none;
+}
+
+.proc-step-badge.valid {
+    background: rgba(16, 185, 129, 0.15);
+    color: #059669;
+}
+
+.proc-step-badge.invalid {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+}
+
+.proc-step-badge.partial {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+}
+
+.proc-step-badge.unnecessary {
+    background: rgba(107, 114, 128, 0.15);
+    color: #4b5563;
+}
+
+.proc-step-feedback {
+    font-size: 0.8rem;
+    margin-top: 2px;
+    color: var(--text-muted, #6b7280);
+    padding-left: 2px;
 }
 
 .proc-controls {
@@ -722,6 +781,24 @@ button {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 8px;
+}
+
+.proc-mistake-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.proc-step-desc {
+    font-size: 0.85rem;
+    color: var(--fg, #374151);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+.nightMode .proc-step-desc {
+    color: var(--fg, #e5e7eb);
 }
 
 .proc-mistake-card {

@@ -179,6 +179,16 @@ impl ProblemRegistry {
         }
     }
 
+    /// Convenience helper: generate instance with difficulty level using family_id.
+    pub fn generate_with_difficulty(
+        &self,
+        family_id: &ProblemFamilyId,
+        seed: u64,
+        difficulty_level: u32,
+    ) -> Result<ProblemInstance> {
+        self.generate(family_id, family_id.as_str(), seed, difficulty_level, None)
+    }
+
     /// Build canonical Mathematics registry containing all 14 topic generators and validators.
     pub fn default_maths_registry() -> Self {
         let mut registry = Self::new();

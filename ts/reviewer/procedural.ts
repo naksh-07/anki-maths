@@ -7,6 +7,19 @@
 
 import { bridgeCommand } from "@tslib/bridgecommand";
 
+import { MCQContainer, type MCQEvaluationResult, type MCQOption } from "./components/mcq_container";
+import { MistakeFooter } from "./components/mistake_footer";
+import {
+    NumericalContainer,
+    NumericalParser,
+    type NumericalEvaluationResult,
+    type NumericalParseResult,
+    PhysicalDimension,
+    type PhysicalUnit,
+    UnitRegistry,
+} from "./components/numerical_container";
+import { StepwiseContainer, type StepwiseEvaluationResult } from "./components/stepwise_container";
+
 declare const MathJax: any;
 
 export type ProceduralUIState =
@@ -24,6 +37,8 @@ export type ProceduralUIState =
 
 export type LearningObjectKind =
     | "problem"
+    | "quick"
+    | "stepwise"
     | "mcq"
     | "concept_check"
     | "strategy_drill"
@@ -135,13 +150,17 @@ export interface ProceduralSetupOptions {
     prerequisiteReview?: PrerequisiteReviewData | null;
     provenance?: ContentProvenanceData | null;
     remediationMessage?: string | null;
+    mode?: "practice" | "mock";
+    mcqMode?: "practice" | "mock";
     onCompleted?: (result: ProceduralAttemptResult) => void;
+    onOptionSelected?: (optId: string, isCorrect?: boolean) => void;
+    onSelectionChanged?: (optId: string | null) => void;
 }
 
 export interface ProceduralAttemptResult {
     instanceId: string;
     answer: string;
-    mode: "quick" | "stepwise" | "concept_check" | "strategy_drill" | "worked_example" | "declarative_recall" | "prerequisite_review";
+    mode: LearningObjectKind;
     steps: string[];
     hintsUsed: number;
     timeTakenMs: number;
@@ -166,6 +185,10 @@ export class ProceduralReviewer {
     private hasSubmitted = false;
     private mistakeType: string | null = null;
     private mistakePanel: HTMLElement | null = null;
+    private mistakeFooter: MistakeFooter | null = null;
+    private mcqContainer: MCQContainer | null = null;
+    private numericalContainer: NumericalContainer | null = null;
+    private stepwiseContainerComponent: StepwiseContainer | null = null;
 
     // DOM Elements
     private timerEl: HTMLElement | null = null;
@@ -211,6 +234,22 @@ export class ProceduralReviewer {
         return this.state;
     }
 
+    public getMCQContainer(): MCQContainer | null {
+        return this.mcqContainer;
+    }
+
+    public getNumericalContainer(): NumericalContainer | null {
+        return this.numericalContainer;
+    }
+
+    public getStepwiseContainer(): StepwiseContainer | null {
+        return this.stepwiseContainerComponent;
+    }
+
+    public evaluateMockMCQ(): MCQEvaluationResult | null {
+        return this.mcqContainer?.evaluate() || null;
+    }
+
     private bindElements(): void {
         this.timerEl = this.container.querySelector("#proc-stopwatch");
         this.quickContainer = this.container.querySelector("#proc-quick-container");
@@ -231,6 +270,63 @@ export class ProceduralReviewer {
         this.actualTimeEl = this.container.querySelector("#proc-actual-time");
         this.nextBtn = this.container.querySelector("#proc-next-btn");
         this.mistakePanel = this.container.querySelector("#proc-mistake-panel");
+
+        this.mistakeFooter = new MistakeFooter({
+            container: this.container,
+            instanceId: this.options.instanceId,
+            familyId: this.options.familyId,
+            onSelect: (val) => this.selectMistakeCategory(val),
+        });
+
+        if (this.stepwiseContainer) {
+            this.stepwiseContainerComponent = new StepwiseContainer(this.container, {
+                instanceId: this.options.instanceId,
+                familyId: this.options.familyId,
+                targetTimeMs: this.options.targetTimeMs,
+                solutionGraph: this.options.solutionGraph,
+                correctAnswer: this.options.correctAnswer,
+                onStepwiseCompleted: (evalResult) => {
+                    this.onStepwiseCheckCompleted(evalResult);
+                },
+                onHintRequested: (lvl) => {
+                    this.hintsUsed = lvl;
+                    this.hintTimestamps.push(Date.now() - this.startTime);
+                },
+                typesetMathJax: (el) => this.typesetMathJax(el),
+            });
+        }
+
+        const hasOptions = this.container.querySelectorAll(".proc-option-item").length > 0 || 
+            this.options.objectType === "mcq" || 
+            Boolean(this.options.conceptCheck) || 
+            Boolean(this.options.strategyDrill);
+
+        if (hasOptions) {
+            this.mcqContainer = new MCQContainer(this.container, {
+                mode: this.options.mode || this.options.mcqMode || "practice",
+                objectType: this.options.objectType,
+                correctAnswer: this.options.correctAnswer,
+                conceptCheck: this.options.conceptCheck,
+                strategyDrill: this.options.strategyDrill,
+                onOptionSelected: (option, evalResult) => {
+                    this.handleMCQOptionSelected(option, evalResult);
+                },
+                onSelectionChanged: (option) => {
+                    this.selectedOptionId = option ? option.id : null;
+                    if (this.options.onSelectionChanged) {
+                        this.options.onSelectionChanged(this.selectedOptionId);
+                    }
+                },
+                typesetMathJax: (el) => this.typesetMathJax(el),
+            });
+        } else {
+            this.numericalContainer = new NumericalContainer(this.container, {
+                inputElement: this.quickInput,
+                submitButton: this.quickSubmitBtn,
+                correctAnswer: this.options.correctAnswer,
+                targetTimeMs: this.options.targetTimeMs,
+            });
+        }
     }
 
     private addListener(
@@ -284,22 +380,45 @@ export class ProceduralReviewer {
             });
         });
 
-        // Mistake classification cards
-        const mistakeCards = this.container.querySelectorAll<HTMLButtonElement>(".proc-mistake-card");
-        mistakeCards.forEach((card) => {
-            const val = card.dataset.value || "";
-            this.addListener(card, "click", () => {
+        // Mistake classification buttons & cards
+        const mistakeBtns = this.container.querySelectorAll<HTMLButtonElement>(".proc-mistake-card, .proc-mistake-btn");
+        mistakeBtns.forEach((btn) => {
+            const val = btn.dataset.value || "";
+            this.addListener(btn, "click", () => {
                 this.selectMistakeCategory(val);
             });
         });
 
+        // MutationObserver to safely destroy when container is removed from DOM (e.g. navigation to standard card)
+        if (typeof MutationObserver !== "undefined") {
+            const observer = new MutationObserver(() => {
+                if (!document.body.contains(this.container)) {
+                    this.destroy();
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+            this.disposables.push(() => observer.disconnect());
+        }
+
         // Global window keyboard handler for state-aware shortcuts and leak protection
         this.addListener(window, "keydown", (e: Event) => {
+            if (!this.container.isConnected || this.state === "teardown") {
+                this.destroy();
+                return;
+            }
+
             const kbEvent = e as KeyboardEvent;
             const targetTag = (kbEvent.target as HTMLElement)?.tagName?.toLowerCase();
             const isInputField = targetTag === "input" || targetTag === "textarea";
 
             if (this.state === "solving") {
+                if (this.mcqContainer) {
+                    const handled = this.mcqContainer.handleGlobalKeyDown(kbEvent);
+                    if (handled) {
+                        return;
+                    }
+                }
+
                 if (isInputField) {
                     if (kbEvent.key === "Enter") {
                         kbEvent.preventDefault();
@@ -308,14 +427,15 @@ export class ProceduralReviewer {
                     return;
                 }
 
-                // Block Space from leaking to native Anki showAnswer
+                // If Space is pressed outside text input during solving, submit or reveal
                 if (kbEvent.key === " " || kbEvent.code === "Space") {
                     kbEvent.preventDefault();
                     kbEvent.stopPropagation();
+                    this.handleQuickSubmit();
                     return;
                 }
 
-                // Hotkeys 1-4 and A-D for options
+                // Hotkeys 1-4 and A-D for options fallback
                 const keyUpper = kbEvent.key.toUpperCase();
                 let optIndex = -1;
                 const keyNum = parseInt(kbEvent.key, 10);
@@ -334,23 +454,40 @@ export class ProceduralReviewer {
                     }
                 }
             } else if (this.state === "mistake_classification") {
-                // Trap Space/Enter to prevent skipping classification
-                if (kbEvent.key === " " || kbEvent.code === "Space" || kbEvent.key === "Enter") {
-                    kbEvent.preventDefault();
-                    kbEvent.stopPropagation();
+                if (this.mistakeFooter?.handleKeydown(kbEvent)) {
                     return;
                 }
 
-                // Numbers 1-4 for mistake categories
+                // Numbers 1-4 for mistake categories fallback
                 const keyNum = parseInt(kbEvent.key, 10);
                 if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= 4) {
                     kbEvent.preventDefault();
                     kbEvent.stopPropagation();
-                    const targetCard = this.container.querySelector<HTMLButtonElement>(`.proc-mistake-card[data-key="${keyNum}"]`);
-                    if (targetCard) {
-                        const val = targetCard.dataset.value || "";
+                    const targetBtn = this.container.querySelector<HTMLButtonElement>(
+                        `.proc-mistake-btn[data-key="${keyNum}"], .proc-mistake-card[data-key="${keyNum}"]`
+                    );
+                    if (targetBtn) {
+                        const val = targetBtn.dataset.value || "";
                         this.selectMistakeCategory(val);
                     }
+                    return;
+                }
+
+                // Space or Enter in mistake classification MUST NOT bypass reflection
+                if (kbEvent.key === " " || kbEvent.code === "Space" || kbEvent.key === "Enter") {
+                    const activeEl = document.activeElement as HTMLElement;
+                    if (activeEl && (activeEl.classList.contains("proc-mistake-btn") || activeEl.classList.contains("proc-mistake-card"))) {
+                        const val = activeEl.dataset.value || "";
+                        if (val) {
+                            kbEvent.preventDefault();
+                            kbEvent.stopPropagation();
+                            this.selectMistakeCategory(val);
+                            return;
+                        }
+                    }
+                    kbEvent.preventDefault();
+                    kbEvent.stopPropagation();
+                    return;
                 }
             } else if (this.state === "feedback") {
                 if (kbEvent.key === "Enter" || kbEvent.key === " " || kbEvent.code === "Space") {
@@ -515,8 +652,13 @@ export class ProceduralReviewer {
         })}`);
     }
 
-    public selectOption(optId: string, optEl: HTMLElement): void {
-        if (this.state !== "solving") {return;}
+    public selectOption(optId: string, optEl?: HTMLElement): void {
+        if (this.state !== "solving" && this.state !== "ready") {return;}
+        if (this.mcqContainer) {
+            this.mcqContainer.selectOptionById(optId);
+            return;
+        }
+
         this.selectedOptionId = optId;
         this.state = "submitting";
 
@@ -527,8 +669,10 @@ export class ProceduralReviewer {
             el.classList.add("disabled");
         });
 
-        optEl.classList.add("selected");
-        optEl.setAttribute("aria-checked", "true");
+        if (optEl) {
+            optEl.classList.add("selected");
+            optEl.setAttribute("aria-checked", "true");
+        }
 
         let isCorrect = false;
         let feedbackText = "";
@@ -552,7 +696,7 @@ export class ProceduralReviewer {
         } else {
             // Standard MCQ
             mode = "mcq";
-            const optIdx = optEl.dataset.optIdx || "";
+            const optIdx = optEl?.dataset.optIdx || "";
             const letter = String.fromCharCode(65 + (parseInt(optIdx, 10) || 0));
             const correctOpt = String(
                 this.options.correctAnswer?.correct_option || 
@@ -560,7 +704,7 @@ export class ProceduralReviewer {
                 this.options.correctAnswer?.answer || 
                 ""
             ).trim();
-            const labelText = optEl.querySelector(".proc-option-label")?.textContent?.trim() || "";
+            const labelText = optEl?.querySelector(".proc-option-label")?.textContent?.trim() || "";
 
             isCorrect = 
                 (optId.trim().toLowerCase() === correctOpt.toLowerCase() && correctOpt.length > 0) ||
@@ -604,64 +748,64 @@ export class ProceduralReviewer {
             score: isCorrect ? 1.0 : 0.0,
         };
 
-        const labelText = optEl.querySelector(".proc-option-label")?.textContent?.trim();
+        const labelText = optEl?.querySelector(".proc-option-label")?.textContent?.trim();
         this.finishAttempt(evalResult, { answer: labelText || optId, steps: [] }, mode);
     }
 
+    private handleMCQOptionSelected(option: MCQOption, evalResult: MCQEvaluationResult): void {
+        if (this.state !== "solving" && this.state !== "ready") {return;}
+        this.selectedOptionId = option.id;
+
+        let mode: LearningObjectKind = "mcq";
+        if (this.options.conceptCheck) {
+            mode = "concept_check";
+        } else if (this.options.strategyDrill) {
+            mode = "strategy_drill";
+        }
+
+        if (this.options.onOptionSelected) {
+            this.options.onOptionSelected(option.id, evalResult.isCorrect);
+        }
+
+        this.finishAttempt(
+            {
+                isCorrect: evalResult.isCorrect,
+                reason: evalResult.reason,
+                score: evalResult.score,
+            },
+            {
+                answer: option.label || option.id,
+                steps: [],
+            },
+            mode,
+        );
+    }
+
     public parseNumericValue(val: string | null | undefined): number | null {
-        if (!val) {return null;}
-        let s = String(val).trim();
-        if (!s) {return null;}
-
-        // 1. Strip equation prefixes (e.g. "v = ", "x = ", "ans = ", "answer: ")
-        const eqIdx = s.search(/[:=]/);
-        if (eqIdx !== -1) {
-            const prefix = s.slice(0, eqIdx).trim();
-            if (prefix.length > 0 && /^[a-zA-Z_\s]+$/.test(prefix)) {
-                s = s.slice(eqIdx + 1).trim();
-            }
-        }
-
-        // 2. Remove currencies and common symbols
-        const cleaned = s.replace(/[$€£₹%, ]/g, "");
-        if (!cleaned) {return null;}
-
-        // 3. Scientific notation with x10^ or *10^ or ×10^ or e
-        const sciMatch = cleaned.match(/^([+-]?\d+(?:\.\d+)?)\s*(?:[x*×]\s*10\^?([+-]?\d+)|e([+-]?\d+))/i);
-        if (sciMatch) {
-            const m = parseFloat(sciMatch[1]);
-            const expStr = sciMatch[2] || sciMatch[3];
-            const e = parseInt(expStr, 10);
-            if (!isNaN(m) && !isNaN(e)) {
-                return m * Math.pow(10, e);
-            }
-        }
-
-        // 4. Arithmetic fraction: "3/4" or "3/4 m/s"
-        const fracMatch = cleaned.match(/^([+-]?\d+(?:\.\d+)?)\s*\/\s*([+-]?\d+(?:\.\d+)?)/);
-        if (fracMatch) {
-            const num = parseFloat(fracMatch[1]);
-            const den = parseFloat(fracMatch[2]);
-            if (!isNaN(num) && !isNaN(den) && den !== 0) {
-                return num / den;
-            }
-        }
-
-        // 5. Leading float extraction (e.g. "12m/s", "5kg", "150J", "1.2e-3mol/L")
-        const floatMatch = cleaned.match(/^([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)/);
-        if (floatMatch) {
-            const n = parseFloat(floatMatch[1]);
-            return isNaN(n) ? null : n;
-        }
-
-        const n = parseFloat(cleaned);
-        return isNaN(n) ? null : n;
+        return NumericalParser.parseScalar(val);
     }
 
     public evaluateLocally(userText: string): { isCorrect: boolean; reason?: string; score: number } {
-        const expectedVal = this.options.correctAnswer?.value !== undefined 
-            ? this.options.correctAnswer.value 
-            : (typeof this.options.correctAnswer?.answer === "number" ? this.options.correctAnswer.answer : undefined);
+        if (this.numericalContainer) {
+            const evalResult = this.numericalContainer.evaluate(userText);
+            const expVal = this.numericalContainer.getExpectedValue();
+            if (expVal !== null) {
+                return {
+                    isCorrect: evalResult.isCorrect,
+                    reason: evalResult.isCorrect
+                        ? undefined
+                        : (evalResult.reason || evalResult.diagnosticMessage || `Expected ${expVal}, but received ${userText}`),
+                    score: evalResult.score,
+                };
+            }
+        }
+
+        let expectedVal: number | undefined;
+        if (this.options.correctAnswer?.value !== undefined) {
+            expectedVal = this.options.correctAnswer.value;
+        } else if (typeof this.options.correctAnswer?.answer === "number") {
+            expectedVal = this.options.correctAnswer.answer;
+        }
         const userNum = this.parseNumericValue(userText);
 
         if (expectedVal !== undefined && typeof expectedVal === "number") {
@@ -740,19 +884,38 @@ export class ProceduralReviewer {
     }
 
     private handleStepwiseSubmit(): void {
-        if (this.state !== "solving" || !this.stepsList) {return;}
-        const stepInputs = this.stepsList.querySelectorAll<HTMLInputElement>(".proc-step-input");
-        const steps: string[] = [];
-
-        stepInputs.forEach((input) => {
-            const val = input.value.trim();
-            if (val) {steps.push(val);}
-        });
-
-        const lastAnswer = steps.length > 0 ? steps[steps.length - 1] : "";
+        if (this.state !== "solving") {return;}
         this.state = "submitting";
-        const evalResult = this.evaluateLocally(lastAnswer);
-        this.finishAttempt(evalResult, { answer: lastAnswer, steps }, "stepwise");
+
+        if (this.stepwiseContainerComponent) {
+            const stepEval = this.stepwiseContainerComponent.handleCheckSolution();
+            this.onStepwiseCheckCompleted(stepEval);
+        } else {
+            const stepInputs = this.stepsList?.querySelectorAll<HTMLInputElement>(".proc-step-input");
+            const steps: string[] = [];
+            stepInputs?.forEach((input) => {
+                const val = input.value.trim();
+                if (val) {steps.push(val);}
+            });
+            const lastAnswer = steps.length > 0 ? steps[steps.length - 1] : "";
+            const evalResult = this.evaluateLocally(lastAnswer);
+            this.finishAttempt(evalResult, { answer: lastAnswer, steps }, "stepwise");
+        }
+    }
+
+    private onStepwiseCheckCompleted(evalResult: StepwiseEvaluationResult): void {
+        const lastAnswer = evalResult.finalAnswer || (evalResult.stepEvaluations.length > 0 ? evalResult.stepEvaluations[evalResult.stepEvaluations.length - 1].submittedText : "");
+        const steps = evalResult.stepEvaluations.map((e) => e.submittedText);
+
+        this.finishAttempt(
+            {
+                isCorrect: evalResult.isCorrect,
+                reason: evalResult.overallFeedback,
+                score: evalResult.score,
+            },
+            { answer: lastAnswer, steps },
+            "stepwise",
+        );
     }
 
     private finishAttempt(
@@ -787,10 +950,14 @@ export class ProceduralReviewer {
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
         this.nextBtn?.classList.add("hidden");
 
-        if (this.mistakePanel) {
+        if (this.mistakeFooter) {
+            this.mistakeFooter.show((val) => {
+                this.selectMistakeCategory(val);
+            });
+        } else if (this.mistakePanel) {
             this.mistakePanel.classList.remove("hidden");
-            const firstCard = this.mistakePanel.querySelector<HTMLButtonElement>('.proc-mistake-card[data-key="1"]');
-            firstCard?.focus();
+            this.mistakePanel.tabIndex = -1;
+            this.mistakePanel.focus();
         }
 
         this.resultPanel?.classList.remove("hidden");
@@ -805,8 +972,8 @@ export class ProceduralReviewer {
 
         if (this.resultFeedback) {
             this.resultFeedback.innerHTML = `
-                <div><strong>You answered:</strong> ${data.answer}</div>
-                <div><strong>Correct answer:</strong> ${canonicalFormatted}</div>
+                <div><strong>You answered:</strong> ${escapeHtml(data.answer)}</div>
+                <div><strong>Correct answer:</strong> ${escapeHtml(canonicalFormatted)}</div>
                 <div style="margin-top: 8px; color: var(--text-muted, #6b7280);"><em>Please classify this error to optimize your spaced repetition schedule.</em></div>
             `;
         }
@@ -818,8 +985,14 @@ export class ProceduralReviewer {
             return;
         }
         this.mistakeType = value;
-        const cards = this.container.querySelectorAll<HTMLButtonElement>(".proc-mistake-card");
-        cards.forEach((c) => {
+        bridgeCommand(`procedural_mistake:${JSON.stringify({
+            instance_id: this.options.instanceId,
+            family_id: this.options.familyId,
+            mistake_type: value,
+        })}`);
+
+        const btns = this.container.querySelectorAll<HTMLButtonElement>(".proc-mistake-btn, .proc-mistake-card");
+        btns.forEach((c) => {
             if (c.dataset.value === value) {
                 c.classList.add("selected");
             } else {
@@ -878,18 +1051,18 @@ export class ProceduralReviewer {
                 if (this.hintsUsed > 0) {
                     msg += `[${this.hintsUsed} hint(s) used]<br>`;
                 }
-                msg += `<div><strong>You answered:</strong> ${data.answer}</div>`;
+                msg += `<div><strong>You answered:</strong> ${escapeHtml(data.answer)}</div>`;
                 if (this.resultFeedback) {this.resultFeedback.innerHTML = msg;}
             } else {
                 this.resultPanel.className = "proc-result incorrect";
                 if (this.resultTitle) {this.resultTitle.textContent = "✗ Incorrect Answer";}
                 if (this.resultFeedback) {
                     let msg = `
-                        <div><strong>You answered:</strong> ${data.answer}</div>
-                        <div><strong>Correct answer:</strong> ${canonicalFormatted}</div>
+                        <div><strong>You answered:</strong> ${escapeHtml(data.answer)}</div>
+                        <div><strong>Correct answer:</strong> ${escapeHtml(canonicalFormatted)}</div>
                     `;
                     if (outcome.reason) {
-                        msg += `<div style="margin-top: 8px;">${outcome.reason}</div>`;
+                        msg += `<div style="margin-top: 8px;">${escapeHtml(outcome.reason)}</div>`;
                     }
                     this.resultFeedback.innerHTML = msg;
                 }
@@ -1009,7 +1182,10 @@ export class ProceduralReviewer {
         // Bridge notification for Python/Qt backend telemetry recording
         bridgeCommand(`procedural_attempt:${JSON.stringify(attemptResult)}`);
 
-        // Focus next button
+        // Synchronize with native Anki reviewer answer state to show footer ease buttons
+        bridgeCommand("ans");
+
+        // Focus next button if present
         this.nextBtn?.focus();
     }
 
@@ -1045,7 +1221,10 @@ export class ProceduralReviewer {
     private handleNext(): void {
         if (this.state === "teardown") {return;}
         this.state = "next";
-        const ease = this.lastAttemptIsCorrect ? (this.lastAttemptIsFast ? 4 : 3) : 1;
+        let ease = 1;
+        if (this.lastAttemptIsCorrect) {
+            ease = this.lastAttemptIsFast ? 4 : 3;
+        }
         bridgeCommand(`procedural_answer:${ease}`);
     }
 
@@ -1067,6 +1246,22 @@ export class ProceduralReviewer {
         if (this.focusTimeout) {
             clearTimeout(this.focusTimeout);
             this.focusTimeout = null;
+        }
+        if (this.mcqContainer) {
+            this.mcqContainer.destroy();
+            this.mcqContainer = null;
+        }
+        if (this.numericalContainer) {
+            this.numericalContainer.destroy();
+            this.numericalContainer = null;
+        }
+        if (this.mistakeFooter) {
+            this.mistakeFooter.destroy();
+            this.mistakeFooter = null;
+        }
+        if (this.stepwiseContainerComponent) {
+            this.stepwiseContainerComponent.destroy();
+            this.stepwiseContainerComponent = null;
         }
         for (const dispose of this.disposables) {
             try {
@@ -1104,5 +1299,22 @@ export const proceduralAPI = {
         (globalThis as any).__activeProceduralReviewer = reviewer;
         return reviewer;
     },
+    destroyActive: (): void => {
+        const active = (globalThis as any).__activeProceduralReviewer;
+        if (active && typeof active.destroy === "function") {
+            active.destroy();
+        }
+    },
     ProceduralReviewer,
+    MistakeFooter,
+    escapeHtml,
 };
+
+function escapeHtml(str: unknown): string {
+    return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}

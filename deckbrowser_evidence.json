@@ -1,0 +1,97 @@
+{
+  "framework": null,
+  "engine": "qtwebengine",
+  "platform": "win32",
+  "verification_level": "runtime_verified",
+  "target": {
+    "id": "review_target",
+    "type": "page",
+    "title": "main webview",
+    "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=1934543990416",
+    "engine": "qtwebengine",
+    "framework": null,
+    "process_id": null,
+    "debug_endpoint": null,
+    "websocket_endpoint": "ws://127.0.0.1:9222/devtools/page/5E40D621FA674A9C6596ECB59487130F",
+    "is_application": true,
+    "rank_score": 0,
+    "filter_reason": null,
+    "metadata": {}
+  },
+  "engine_info": {
+    "engine": "qtwebengine",
+    "backend": "QtWebEngine (Embedded Chromium)",
+    "version": "6.x / 5.x",
+    "protocol": "cdp",
+    "framework": null,
+    "confidence": "high",
+    "signals": [],
+    "capabilities": {
+      "DOM": "supported",
+      "INPUT": "supported",
+      "KEYBOARD": "supported",
+      "MOUSE": "supported",
+      "RUNTIME": "supported",
+      "SCREENSHOT": "supported",
+      "CONSOLE": "supported",
+      "NETWORK": "degraded",
+      "TARGETS": "degraded",
+      "MULTI_TARGET": "degraded",
+      "NAVIGATION": "supported",
+      "JS": "supported"
+    },
+    "probed_capabilities": {},
+    "notes": [
+      "Remote debugging enabled via QTWEBENGINE_REMOTE_DEBUGGING environment variable.",
+      "Does not support Browser.* domain context management (e.g. Browser.setDownloadBehavior).",
+      "Direct page-level WebSocket attachment is required.",
+      "Child process 'QtWebEngineProcess' must be recursively terminated during cleanup."
+    ],
+    "verification_level": "runtime_verified"
+  },
+  "actions": [],
+  "dom_snapshot_length": 2145,
+  "screenshot_path": "deckbrowser_initial.png",
+  "screenshot_sha256": "3180687a78d4fabcd444b8585363778eb90fe95d96d7b9ee2fba7c77f0e9541d",
+  "console_messages": [],
+  "state_assertions": [
+    {
+      "description": "JavaScript Runtime Arithmetic Test",
+      "passed": true,
+      "expected": "2",
+      "actual": "2",
+      "error": null,
+      "timestamp": 1787567580.5149202
+    },
+    {
+      "description": "Document Body Presence",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787567580.5164962
+    }
+  ],
+  "process_ownership": {
+    "pid": 17828,
+    "create_time": 1787567493.7563448,
+    "launched_by_reviewer": true,
+    "command": [
+      "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\out\\pyenv\\Scripts\\python.exe",
+      "tools\\run.py"
+    ],
+    "port": 9222
+  },
+  "diagnostics": {
+    "framework": "native",
+    "engine": "qtwebengine",
+    "confidence": "high",
+    "platform": "win32",
+    "target_url": "http://127.0.0.1:40000/_anki/legacyPageData?id=1934543990416",
+    "target_title": "main webview"
+  },
+  "metadata": {
+    "collection_time": 1787567580.6470487,
+    "collection_iso": "2026-08-24T10:33:00Z"
+  }
+}

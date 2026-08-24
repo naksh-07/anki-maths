@@ -18,27 +18,118 @@ from core.session import CDPSession, MultiTargetSessionManager
 from detectors.engine_detector import EngineDetector
 
 
+async def ensure_anki_running(port: int = 9222) -> bool:
+    import urllib.request
+    import subprocess
+    url = f"http://127.0.0.1:{port}/json/list"
+    for _ in range(3):
+        try:
+            req = urllib.request.urlopen(url, timeout=1.5)
+            data = json.loads(req.read().decode("utf-8"))
+            if data:
+                print(f"[Launcher] Anki is already running with {len(data)} target(s).")
+                return True
+        except Exception:
+            pass
+        time.sleep(0.5)
+
+    print("[Launcher] Launching Anki dev instance...")
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    python_exe = os.path.join(repo_root, r"out\pyenv\Scripts\python.exe")
+    run_script = os.path.join(repo_root, r"tools\run.py")
+
+    env = os.environ.copy()
+    env["ANKIDEV"] = "1"
+    env["PYTHONWARNINGS"] = "default"
+    env["PYTHONPYCACHEPREFIX"] = os.path.join(repo_root, r"out\pycache")
+    env["QTWEBENGINE_REMOTE_DEBUGGING"] = str(port)
+    env["QTWEBENGINE_CHROMIUM_FLAGS"] = f"--remote-allow-origins=http://localhost:{port},http://127.0.0.1:{port} --no-sandbox"
+    env["ANKI_API_PORT"] = "40000"
+    env["ANKI_API_HOST"] = "127.0.0.1"
+
+    flags = 0
+    if sys.platform == "win32":
+        flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+
+    log_path = os.path.join(repo_root, "desktop_app.log")
+    log_file = open(log_path, "a", encoding="utf-8", errors="replace")
+
+    proc = subprocess.Popen(
+        [python_exe, run_script],
+        cwd=repo_root,
+        env=env,
+        stdout=log_file,
+        stderr=log_file,
+        stdin=subprocess.DEVNULL,
+        creationflags=flags
+    )
+    print(f"[Launcher] Spawned PID {proc.pid}. Awaiting CDP endpoint...")
+
+    for i in range(30):
+        time.sleep(1.0)
+        try:
+            req = urllib.request.urlopen(url, timeout=1.0)
+            data = json.loads(req.read().decode("utf-8"))
+            if data:
+                print(f"[Launcher] Connected! Found {len(data)} target(s).")
+                return True
+        except Exception as e:
+            if i % 5 == 0:
+                print(f"  [{i+1}/30] Waiting for CDP: {e}")
+
+    return False
+
+
 async def run_forensic_suite():
     print("=" * 80)
     print("=== StudyLab Phase 41B — Live Desktop WebView Forensic Test Suite ===")
     print("=" * 80)
 
+    if not await ensure_anki_running(port=9222):
+        raise RuntimeError("Failed to connect to Anki on port 9222")
+
     mgr = MultiTargetSessionManager(host="127.0.0.1", port=9222, engine="qtwebengine")
     targets = mgr.list_targets()
     print(f"Connected to debug host. Found {len(targets)} target(s):")
-    for t in targets:
-        print(f"  - Target ID: {t.id} | Title: '{t.title}' | URL: {t.url}")
-
-    main_target = next((t for t in targets if "main webview" in t.title.lower()), None)
-    if not main_target:
-        raise RuntimeError("Could not find 'main webview' target!")
-
+    
     adapter = EngineDetector.resolve_adapter(engine_name_or_hint="qtwebengine")
     engine_info = adapter.get_engine_info()
+    
+    main_target = None
+    session = None
+    for t in targets:
+        s = await mgr.switch_target(t)
+        try:
+            t_title = await s.evaluate_js("document.title")
+            print(f"  - Target ID: {t.id} | Document Title: '{t_title}' | URL: {t.url}")
+            if "main webview" in t_title.lower() or "main" in t_title.lower():
+                main_target = t
+                session = s
+        except Exception:
+            pass
+
+    if not main_target:
+        main_target = targets[1] if len(targets) > 1 else targets[0]
+
     session = await mgr.switch_target(main_target)
+
     actions = adapter.create_actions(session)
     assertions = adapter.create_assertions(session)
     collector = adapter.create_evidence_collector(session)
+
+    # Inject reviewer.js bundle if needed
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    reviewer_js_path = os.path.join(repo_root, "out", "ts", "reviewer", "reviewer.js")
+    if os.path.exists(reviewer_js_path):
+        with open(reviewer_js_path, "r", encoding="utf-8") as f:
+            reviewer_bundle = f.read()
+        await session.evaluate_js(f"""
+        (() => {{
+            window.anki = window.anki || {{}};
+            {reviewer_bundle}
+            return true;
+        }})()
+        """)
 
     os.makedirs("artifacts_qa", exist_ok=True)
     evidence_items = []

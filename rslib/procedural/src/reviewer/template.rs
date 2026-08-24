@@ -41,12 +41,16 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     let skill_id_js = escape_json_for_script(session.schema.skill_id.as_str());
     let schema_id_js = escape_json_for_script(session.schema.id.as_str());
 
-    let object_type = session
+    let mut object_type = session
         .instance
         .metadata
         .get("object_type")
         .and_then(|v| v.as_str())
         .unwrap_or("problem");
+
+    if object_type == "problem" && session.instance.parameters.get("options").and_then(|v| v.as_array()).is_some() {
+        object_type = "mcq";
+    }
 
     let remediation_message = session
         .instance
@@ -98,7 +102,15 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         })
         .unwrap_or("standard")
         .replace('_', " ");
-    let variant_label = escape_html(&raw_variant);
+    
+    let variant_badge_html = if !raw_variant.is_empty() 
+        && raw_variant.to_lowercase() != "standard" 
+        && raw_variant.to_lowercase() != "practice variant" 
+    {
+        format!("<span class=\"proc-variant-tag\">{}</span>", escape_html(&raw_variant))
+    } else {
+        "".to_string()
+    };
 
     let canonical_str = if let Some(f) = session.instance.correct_answer.get("formatted").and_then(|v| v.as_str()) {
         f.to_string()
@@ -133,9 +145,9 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         .unwrap_or("");
     let solution_text = escape_html(raw_solution);
 
-    let solution_graph_raw = session
-        .instance
-        .solution_graph()
+    let solution_graph_opt = session.instance.solution_graph();
+    let solution_graph_raw = solution_graph_opt
+        .as_ref()
         .map(|g| serde_json::to_string(&g).unwrap_or_else(|_| "null".to_string()))
         .unwrap_or_else(|| "null".to_string());
     let solution_graph_json = escape_json_for_script(&solution_graph_raw);
@@ -164,7 +176,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             }
             (Some(e), None) => format!("PYQ: {}", e),
             _ => {
-                if !variant_type.is_empty() {
+                if !variant_type.is_empty() && variant_type != "standard" {
                     format!("Variant: {}", variant_type.replace('_', " "))
                 } else {
                     "".to_string()
@@ -202,7 +214,6 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                                 <span class="proc-option-key">{}</span>
                                 <span class="proc-option-label">{}</span>
                             </div>
-                            <div class="proc-option-feedback hidden"></div>
                         </button>"#,
                         escape_html(opt_text),
                         i,
@@ -352,7 +363,6 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                     {pitfalls_html}
                     <div style="margin-top: 16px; display: flex; gap: 10px;">
                         <button type="button" id="proc-try-similar-btn" class="proc-btn">Try Similar Problem</button>
-                        <button type="button" id="proc-next-btn" class="proc-btn proc-btn-secondary">Continue</button>
                     </div>
                 </div>"#,
                 escape_html(decision_point),
@@ -370,7 +380,6 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                     <div style="font-size: 1.15rem; font-weight: 700; margin: 12px 0;">{}</div>
                     <div style="margin-top: 18px; display: flex; justify-content: center; gap: 12px;">
                         <button type="button" id="proc-anki-recall-btn" class="proc-btn">Review in Anki</button>
-                        <button type="button" id="proc-next-btn" class="proc-btn proc-btn-secondary">Got It</button>
                     </div>
                 </div>"#,
                 escape_html(concept_name),
@@ -383,11 +392,10 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
 
             format!(
                 r#"<div class="proc-worked-example-card">
-                    <div style="font-weight: 600; font-size: 1rem; color: #b91c1c;">⚠️ Foundational Skill Needed</div>
+                <div style="font-weight: 600; font-size: 1rem; color: #b91c1c;">⚠️ Foundational Skill Needed</div>
                     <div style="margin-top: 8px; line-height: 1.5;">{}</div>
                     <div style="margin-top: 16px; display: flex; gap: 10px;">
                         <button type="button" id="proc-practice-prereq-btn" class="proc-btn">Practice Prerequisite</button>
-                        <button type="button" id="proc-next-btn" class="proc-btn proc-btn-secondary">Continue</button>
                     </div>
                 </div>"#,
                 escape_html(advisory)
@@ -395,6 +403,26 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         }
         _ => {
             // Standard Quick / Stepwise Problem
+            let initial_steps_html = if let Some(ref graph) = solution_graph_opt {
+                let mut s = String::new();
+                for (idx, step) in graph.steps.iter().enumerate() {
+                    let desc = escape_html(&step.description);
+                    let label = format!("Step {}", idx + 1);
+                    s.push_str(&format!(
+                        r#"<div class="proc-step-row" data-step-idx="{idx}">
+                            <div class="proc-step-desc"><strong>{label}:</strong> {desc}</div>
+                            <input type="text" class="proc-input proc-step-input" placeholder="Transform equation or compute step value..." autocomplete="off" />
+                        </div>"#
+                    ));
+                }
+                s
+            } else {
+                r#"<div class="proc-step-row" data-step-idx="0">
+                    <span class="proc-step-label">Step 1</span>
+                    <input type="text" class="proc-input proc-step-input" placeholder="Write step 1 transformation or equation..." autocomplete="off" />
+                </div>"#.to_string()
+            };
+
             format!(
                 r#"<div class="proc-prompt">{prompt_text}</div>
 
@@ -414,10 +442,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 <!-- Stepwise Solving Mode -->
                 <div id="proc-stepwise-container" class="hidden">
                     <div id="proc-steps-list">
-                        <div class="proc-step-row" data-step-idx="0">
-                            <span class="proc-step-label">Step 1</span>
-                            <input type="text" class="proc-input proc-step-input" placeholder="Write step 1 transformation or equation..." autocomplete="off" />
-                        </div>
+                        {initial_steps_html}
                     </div>
                     <div class="proc-controls">
                         <button type="button" id="proc-add-step-btn" class="proc-btn proc-btn-secondary">+ Add Step</button>
@@ -453,16 +478,27 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         "StudyLab"
     };
 
-    let title_clean = if session.schema.title.to_lowercase().starts_with("dynamic practice schema for ") {
-        let rest = &session.schema.title["dynamic practice schema for ".len()..];
-        let last = rest.split('.').last().unwrap_or(rest).replace('_', " ");
-        let mut c = last.chars();
-        match c.next() {
-            None => String::new(),
-            Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
-        }
-    } else {
-        session.schema.title.clone()
+    let title_clean = {
+        let raw = session.schema.title.trim();
+        let cleaned = if raw.to_lowercase().starts_with("dynamic practice schema for ") {
+            &raw["dynamic practice schema for ".len()..]
+        } else if raw.to_lowercase().starts_with("schema.") {
+            &raw["schema.".len()..]
+        } else {
+            raw
+        };
+        let last_part = cleaned.split('.').last().unwrap_or(cleaned).replace('_', " ");
+        last_part
+            .split_whitespace()
+            .map(|word| {
+                let mut c = word.chars();
+                match c.next() {
+                    None => String::new(),
+                    Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
     };
 
     let breadcrumbs_html = if !chapter_meta.is_empty() {
@@ -498,11 +534,10 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             {breadcrumbs_html}
             <div class="proc-badges">
                 <span class="proc-diff-badge">{difficulty_badge_text}</span>
-                <span class="proc-variant-tag">{variant_label}</span>
+                {variant_badge_html}
                 {provenance_badge}
             </div>
         </div>
-        <span class="proc-timer" id="proc-stopwatch">00:00</span>
     </div>
 
     {main_body_html}
@@ -516,37 +551,21 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         </div>
         <div class="proc-expected-row" style="margin-top: 6px;"><strong>Expected Answer:</strong> <span id="proc-expected-ans">{canonical_text}</span></div>
 
-        <!-- Mistake Classification (immediately visible on wrong answer above solution) -->
+        <!-- Mistake Classification (compact action strip seamlessly styled with native review actions) -->
         <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
-            <div class="proc-mistake-heading">Classify Error to Optimize Spaced Repetition:</div>
-            <div class="proc-mistake-grid">
-                <button type="button" class="proc-mistake-card" data-value="silly_mistake" data-key="1">
-                    <span class="proc-key-badge">1</span>
-                    <div class="proc-mistake-info">
-                        <strong>Silly Mistake</strong>
-                        <span>Calculation or reading slip</span>
-                    </div>
+            <div class="proc-mistake-heading">Classify error (1-4) to reflect and optimize spaced repetition:</div>
+            <div class="proc-mistake-footer">
+                <button type="button" class="proc-mistake-btn" data-value="silly_mistake" data-key="1">
+                    <span class="proc-key-badge">1</span> Silly Slip
                 </button>
-                <button type="button" class="proc-mistake-card" data-value="pattern_not_recognized" data-key="2">
-                    <span class="proc-key-badge">2</span>
-                    <div class="proc-mistake-info">
-                        <strong>Pattern Missed</strong>
-                        <span>Failed to identify structure</span>
-                    </div>
+                <button type="button" class="proc-mistake-btn" data-value="pattern_not_recognized" data-key="2">
+                    <span class="proc-key-badge">2</span> Pattern Missed
                 </button>
-                <button type="button" class="proc-mistake-card" data-value="formula_or_concept_misapplied" data-key="3">
-                    <span class="proc-key-badge">3</span>
-                    <div class="proc-mistake-info">
-                        <strong>Concept Misapplied</strong>
-                        <span>Used incorrect formula or rule</span>
-                    </div>
+                <button type="button" class="proc-mistake-btn" data-value="formula_or_concept_misapplied" data-key="3">
+                    <span class="proc-key-badge">3</span> Concept Gap
                 </button>
-                <button type="button" class="proc-mistake-card" data-value="concept_not_known" data-key="4">
-                    <span class="proc-key-badge">4</span>
-                    <div class="proc-mistake-info">
-                        <strong>Concept Not Known</strong>
-                        <span>Unfamiliar prerequisite topic</span>
-                    </div>
+                <button type="button" class="proc-mistake-btn" data-value="concept_not_known" data-key="4">
+                    <span class="proc-key-badge">4</span> Prereq Unknown
                 </button>
             </div>
         </div>
@@ -554,9 +573,6 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         <div id="proc-solution-container" class="proc-solution">
             <strong>Step-by-Step Solution:</strong>
             <div style="margin-top: 6px;">{solution_text}</div>
-        </div>
-        <div class="proc-result-actions" style="margin-top: 14px;">
-            <button type="button" id="proc-next-btn" class="proc-btn proc-btn-primary">Next Problem</button>
         </div>
     </div>
 
@@ -589,28 +605,12 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         }}
 
         // Standalone fallback
-        var startTime = Date.now();
-        var timerEl = document.getElementById('proc-stopwatch');
         var inputEl = document.getElementById('proc-answer-input');
         var submitBtn = document.getElementById('proc-submit-btn');
         var resultPanel = document.getElementById('proc-result-panel');
-        var resultTitle = document.getElementById('proc-result-title');
-        var feedbackEl = document.getElementById('proc-result-feedback');
-        var actualTimeEl = document.getElementById('proc-actual-time');
-        var isSubmitted = false;
-
-        var timerInterval = setInterval(function() {{
-            if (isSubmitted) return;
-            var elapsed = Math.floor((Date.now() - startTime) / 1000);
-            var m = String(Math.floor(elapsed / 60)).padStart(2, '0');
-            var s = String(elapsed % 60).padStart(2, '0');
-            if (timerEl) timerEl.textContent = m + ':' + s;
-        }}, 200);
 
         if (submitBtn && inputEl) {{
             submitBtn.addEventListener('click', function() {{
-                isSubmitted = true;
-                clearInterval(timerInterval);
                 if (resultPanel) resultPanel.classList.remove('hidden');
             }});
         }}
@@ -641,11 +641,10 @@ mod tests {
         let html = render_reviewer_html(&session);
 
         assert!(html.contains("id=\"procedural-card\""));
-        assert!(html.contains("id=\"proc-stopwatch\""));
         assert!(html.contains("id=\"proc-answer-input\""));
         assert!(html.contains("id=\"proc-submit-btn\""));
         assert!(html.contains("id=\"proc-result-panel\""));
-        assert!(html.contains("id=\"proc-next-btn\""));
+        assert!(html.contains("id=\"proc-mistake-panel\""));
         assert!(html.contains("Step-by-Step Solution:"));
         assert!(html.contains("Level"));
         assert!(html.contains("Quick Solve"));
@@ -792,5 +791,24 @@ mod tests {
         let escaped = escape_json_for_script(raw_json);
         assert!(!escaped.contains("</script>"));
         assert!(escaped.contains(r#"\u003c/script\u003e"#));
+    }
+
+    #[test]
+    fn test_render_reviewer_html_auto_mcq_detection() {
+        let schema = MathsCatalog::linear_equations_schema();
+        let mut instance = crate::problems::generators::LinearEquationsGenerator::generate_problem(
+            123, 1, None,
+        );
+        instance.parameters = serde_json::json!({
+            "options": ["Option 1", "Option 2", "Option 3", "Option 4"]
+        });
+
+        let session = PracticeSessionObject::new(schema, instance, Some(105), None);
+        let html = render_reviewer_html(&session);
+
+        assert!(html.contains("proc-option-group"));
+        assert!(html.contains("Option 1"));
+        assert!(html.contains("Option 4"));
+        assert!(!html.contains("id=\"proc-answer-input\""));
     }
 }

@@ -62,7 +62,7 @@ fn test_adversarial_persistent_concept_failure_escalates_without_infinite_loops(
     assert_eq!(queue.len(), 1);
     let top = queue.select_next_remediation(&PracticeMode::MixedMaths).unwrap();
     assert_eq!(top.kind, RemediationActionKind::CircuitBreaker);
-    assert_eq!(top.urgency, RemediationUrgency::Advisory);
+    assert_eq!(top.urgency, RemediationUrgency::Critical);
 }
 
 #[test]

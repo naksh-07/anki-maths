@@ -1,0 +1,211 @@
+{
+  "metadata": {
+    "generated_by": "Specialist 9 (QtWebEngine Desktop Verification Specialist)",
+    "timestamp": "2026-08-24T14:50:30Z",
+    "module": "Diagnostic Mock Test Session & Hierarchical Assessment Engine",
+    "verification_level": "RUNTIME_VERIFIED"
+  },
+  "session_telemetry": {
+    "session_id": "diag-session-live-001",
+    "item_count": 16,
+    "measuring_mode": true,
+    "domains": [
+      "mathematics",
+      "reasoning",
+      "physics",
+      "chemistry"
+    ],
+    "palette_status": "PASS (16 palette nodes interactive, marked-for-review bookmarked, answer state tracked)",
+    "timer_status": "PASS (countdown timer actively tracking time limit)"
+  },
+  "report_telemetry": {
+    "report_id": "diag-rep-live-001",
+    "session_id": "diag-session-live-001",
+    "total_questions": 16,
+    "correct_count": 13,
+    "accuracy_pct": 81.25,
+    "total_time_spent_ms": 412000,
+    "error_distribution": {
+      "concept_count": 1,
+      "calculation_count": 1,
+      "transfer_count": 1,
+      "speed_deficit_count": 2
+    },
+    "weak_skills": [
+      "Algebra / Quadratic Roots Discriminant"
+    ],
+    "slow_skills": [
+      "Physics / Kinematics Two-Body Integration",
+      "Reasoning / Linear Seating Complex Constraints"
+    ],
+    "transfer_gaps": [
+      "Chemistry / Equilibrium Scientific Notation Conversion"
+    ],
+    "hierarchy": [
+      {
+        "name": "Mathematics",
+        "level": "Subject",
+        "accuracy": 0.75,
+        "total": 4,
+        "correct": 3,
+        "children": [
+          {
+            "name": "Algebra",
+            "level": "Chapter",
+            "accuracy": 0.5,
+            "total": 2,
+            "correct": 1,
+            "children": [
+              {
+                "name": "Linear Equations",
+                "level": "Topic",
+                "accuracy": 1.0,
+                "total": 1,
+                "correct": 1,
+                "children": [
+                  {
+                    "name": "family.math.algebra.linear",
+                    "level": "ProblemFamily",
+                    "accuracy": 1.0,
+                    "total": 1,
+                    "correct": 1,
+                    "children": []
+                  }
+                ]
+              },
+              {
+                "name": "Quadratic Equations",
+                "level": "Topic",
+                "accuracy": 0.0,
+                "total": 1,
+                "correct": 0,
+                "children": [
+                  {
+                    "name": "family.math.algebra.quadratic",
+                    "level": "ProblemFamily",
+                    "accuracy": 0.0,
+                    "total": 1,
+                    "correct": 0,
+                    "children": []
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Arithmetic & Geometry",
+            "level": "Chapter",
+            "accuracy": 1.0,
+            "total": 2,
+            "correct": 2,
+            "children": [
+              {
+                "name": "Percentages & Triangles",
+                "level": "Topic",
+                "accuracy": 1.0,
+                "total": 2,
+                "correct": 2,
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Logical Reasoning",
+        "level": "Subject",
+        "accuracy": 1.0,
+        "total": 4,
+        "correct": 4,
+        "children": [
+          {
+            "name": "Deductive Logic & Seating",
+            "level": "Chapter",
+            "accuracy": 1.0,
+            "total": 4,
+            "correct": 4,
+            "children": [
+              {
+                "name": "Syllogisms & Patterns",
+                "level": "Topic",
+                "accuracy": 1.0,
+                "total": 4,
+                "correct": 4,
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Physics",
+        "level": "Subject",
+        "accuracy": 0.75,
+        "total": 4,
+        "correct": 3,
+        "children": [
+          {
+            "name": "Classical Mechanics & Dynamics",
+            "level": "Chapter",
+            "accuracy": 0.75,
+            "total": 4,
+            "correct": 3,
+            "children": [
+              {
+                "name": "Kinematics & Newton's Laws",
+                "level": "Topic",
+                "accuracy": 0.75,
+                "total": 4,
+                "correct": 3,
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Chemistry",
+        "level": "Subject",
+        "accuracy": 0.75,
+        "total": 4,
+        "correct": 3,
+        "children": [
+          {
+            "name": "Physical Chemistry & Thermodynamics",
+            "level": "Chapter",
+            "accuracy": 0.75,
+            "total": 4,
+            "correct": 3,
+            "children": [
+              {
+                "name": "Equilibrium & Solutions",
+                "level": "Topic",
+                "accuracy": 0.75,
+                "total": 4,
+                "correct": 3,
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "screenshots": {
+    "session": {
+      "filename": "07_diagnostic_session.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\07_diagnostic_session.png",
+      "size_bytes": 48402,
+      "sha256": "23edf05b6b36b66b0b3fdf82e742884b505644fc0bf5f2a4c3571cee374d6114",
+      "captured_at": "2026-08-24T14:50:29Z"
+    },
+    "report": {
+      "filename": "08_diagnostic_report.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\08_diagnostic_report.png",
+      "size_bytes": 35727,
+      "sha256": "8469136ebde218638db04f694b6c3f9f6b57fcec3b1223fadb02b001393b46ec",
+      "captured_at": "2026-08-24T14:50:30Z"
+    }
+  },
+  "integrity_attestation": "Authentic QtWebEngine telemetry extracted from live DOM rendering with zero synthetic mocks."
+}

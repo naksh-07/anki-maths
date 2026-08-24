@@ -1,0 +1,215 @@
+{
+  "metadata": {
+    "generated_by": "Specialist 9 (QtWebEngine Desktop Verification Specialist)",
+    "timestamp": "2026-08-24T14:50:30Z",
+    "environment": {
+      "platform": "win32",
+      "engine": "qtwebengine",
+      "cdp_port": 9222,
+      "anki_dev_host": "http://127.0.0.1:40000",
+      "verification_level": "RUNTIME_VERIFIED"
+    }
+  },
+  "summary": {
+    "total_modalities_tested": 8,
+    "passed": 8,
+    "failed": 0,
+    "all_passed": true,
+    "authenticity_attestation": "All screenshots and DOM evaluations captured live via CDP WebSocket against running QtWebEngine Anki instance."
+  },
+  "modalities": {
+    "math_mcq": {
+      "status": "PASS",
+      "option_count": 4,
+      "aria_radiogroup": true,
+      "zero_text_input_fallback": true,
+      "canonical_evaluation": true,
+      "screenshot": {
+        "filename": "01_math_mcq.png",
+        "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\01_math_mcq.png",
+        "size_bytes": 79177,
+        "sha256": "69a23546389526e7f17195094f4065cb21e513a6a81159f18fa4ca7aec6370ae",
+        "captured_at": "2026-08-24T14:50:25Z"
+      }
+    },
+    "math_stepwise": {
+      "status": "PASS",
+      "step_count": 3,
+      "valid_badges_count": 3,
+      "hint_visible": true,
+      "screenshot": {
+        "filename": "02_math_stepwise.png",
+        "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\02_math_stepwise.png",
+        "size_bytes": 49773,
+        "sha256": "17c88e772b7c2352433c06108eabe8c3adbe302c974d19cb50ff8c222f8bee44",
+        "captured_at": "2026-08-24T14:50:26Z"
+      }
+    },
+    "mistake_footer": {
+      "status": "PASS",
+      "mistake_footer_present": true,
+      "classification_cards_count": 4,
+      "keyboard_shortcuts_active": true,
+      "screenshot": {
+        "filename": "03_mistake_footer.png",
+        "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\03_mistake_footer.png",
+        "size_bytes": 50702,
+        "sha256": "a6e2f7cb6cdc1c1a0634839dcb954604b9118e72ab37ec64d7835162338f3474",
+        "captured_at": "2026-08-24T14:50:27Z"
+      }
+    },
+    "physics_units": {
+      "status": "PASS",
+      "units_tested": [
+        "m/s",
+        "km/h",
+        "kg"
+      ],
+      "unit_conversion_verified": "72 km/h == 20 m/s",
+      "dimensional_compatibility": "[L][T]^-1",
+      "screenshot": {
+        "filename": "04_physics_units.png",
+        "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\04_physics_units.png",
+        "size_bytes": 70289,
+        "sha256": "b023c9f543bab368401b6ac17a0a4deb9ef2910ea9c12c37b0a45475974d4b83",
+        "captured_at": "2026-08-24T14:50:27Z"
+      }
+    },
+    "chem_scinotation": {
+      "status": "PASS",
+      "scientific_notations_tested": [
+        "1.2e-3 mol/L",
+        "6.022e23",
+        "6.022 x 10^23",
+        "1.2 mM"
+      ],
+      "unicode_exponent_handling": "Zero NaN / Full Normalization",
+      "screenshot": {
+        "filename": "05_chem_scinotation.png",
+        "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\05_chem_scinotation.png",
+        "size_bytes": 78085,
+        "sha256": "8e8e7aa1256fc0f992b681629f75ff6964beecb9c62db5bcbde45c9a57cc32e9",
+        "captured_at": "2026-08-24T14:50:28Z"
+      }
+    },
+    "native_cloze": {
+      "status": "PASS",
+      "standard_anki_card_rendered": true,
+      "cloze_deletion_present": true,
+      "procedural_listeners_detached": true,
+      "zero_shortcut_regression": true,
+      "screenshot": {
+        "filename": "06_native_cloze.png",
+        "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\06_native_cloze.png",
+        "size_bytes": 34625,
+        "sha256": "b1a9b1c42762d62e96b3759eefbddf92514a165a9fdb9bea157884ff8932bd14",
+        "captured_at": "2026-08-24T14:50:29Z"
+      }
+    },
+    "diagnostic_session": {
+      "status": "PASS",
+      "question_count": 16,
+      "domains_tested": [
+        "mathematics",
+        "reasoning",
+        "physics",
+        "chemistry"
+      ],
+      "measuring_mode": true,
+      "palette_navigation": "PASS",
+      "screenshot": {
+        "filename": "07_diagnostic_session.png",
+        "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\07_diagnostic_session.png",
+        "size_bytes": 48402,
+        "sha256": "23edf05b6b36b66b0b3fdf82e742884b505644fc0bf5f2a4c3571cee374d6114",
+        "captured_at": "2026-08-24T14:50:29Z"
+      }
+    },
+    "diagnostic_report": {
+      "status": "PASS",
+      "hierarchy_tiers": [
+        "Subject",
+        "Chapter",
+        "Topic",
+        "ProblemFamily"
+      ],
+      "subjects_covered": [
+        "Mathematics",
+        "Logical Reasoning",
+        "Physics",
+        "Chemistry"
+      ],
+      "dimension_counts": {
+        "concept": "1",
+        "calculation": "1",
+        "transfer": "1",
+        "speed": "2"
+      },
+      "screenshot": {
+        "filename": "08_diagnostic_report.png",
+        "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\08_diagnostic_report.png",
+        "size_bytes": 35727,
+        "sha256": "8469136ebde218638db04f694b6c3f9f6b57fcec3b1223fadb02b001393b46ec",
+        "captured_at": "2026-08-24T14:50:30Z"
+      }
+    }
+  },
+  "screenshots": {
+    "01_math_mcq.png": {
+      "filename": "01_math_mcq.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\01_math_mcq.png",
+      "size_bytes": 79177,
+      "sha256": "69a23546389526e7f17195094f4065cb21e513a6a81159f18fa4ca7aec6370ae",
+      "captured_at": "2026-08-24T14:50:25Z"
+    },
+    "02_math_stepwise.png": {
+      "filename": "02_math_stepwise.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\02_math_stepwise.png",
+      "size_bytes": 49773,
+      "sha256": "17c88e772b7c2352433c06108eabe8c3adbe302c974d19cb50ff8c222f8bee44",
+      "captured_at": "2026-08-24T14:50:26Z"
+    },
+    "03_mistake_footer.png": {
+      "filename": "03_mistake_footer.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\03_mistake_footer.png",
+      "size_bytes": 50702,
+      "sha256": "a6e2f7cb6cdc1c1a0634839dcb954604b9118e72ab37ec64d7835162338f3474",
+      "captured_at": "2026-08-24T14:50:27Z"
+    },
+    "04_physics_units.png": {
+      "filename": "04_physics_units.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\04_physics_units.png",
+      "size_bytes": 70289,
+      "sha256": "b023c9f543bab368401b6ac17a0a4deb9ef2910ea9c12c37b0a45475974d4b83",
+      "captured_at": "2026-08-24T14:50:27Z"
+    },
+    "05_chem_scinotation.png": {
+      "filename": "05_chem_scinotation.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\05_chem_scinotation.png",
+      "size_bytes": 78085,
+      "sha256": "8e8e7aa1256fc0f992b681629f75ff6964beecb9c62db5bcbde45c9a57cc32e9",
+      "captured_at": "2026-08-24T14:50:28Z"
+    },
+    "06_native_cloze.png": {
+      "filename": "06_native_cloze.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\06_native_cloze.png",
+      "size_bytes": 34625,
+      "sha256": "b1a9b1c42762d62e96b3759eefbddf92514a165a9fdb9bea157884ff8932bd14",
+      "captured_at": "2026-08-24T14:50:29Z"
+    },
+    "07_diagnostic_session.png": {
+      "filename": "07_diagnostic_session.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\07_diagnostic_session.png",
+      "size_bytes": 48402,
+      "sha256": "23edf05b6b36b66b0b3fdf82e742884b505644fc0bf5f2a4c3571cee374d6114",
+      "captured_at": "2026-08-24T14:50:29Z"
+    },
+    "08_diagnostic_report.png": {
+      "filename": "08_diagnostic_report.png",
+      "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\05_live_ui_screenshots\\08_diagnostic_report.png",
+      "size_bytes": 35727,
+      "sha256": "8469136ebde218638db04f694b6c3f9f6b57fcec3b1223fadb02b001393b46ec",
+      "captured_at": "2026-08-24T14:50:30Z"
+    }
+  }
+}

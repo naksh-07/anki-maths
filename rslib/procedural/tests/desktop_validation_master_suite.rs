@@ -95,17 +95,17 @@ fn test_section_6_procedural_smoke_all_modalities() {
     assert!(session.instance.correct_answer.is_object(), "Math answer present");
 
     // 2. Physics
-    let phys_anchor = ProceduralCardAnchor::new("physics.kinematics");
+    let _phys_anchor = ProceduralCardAnchor::new("physics.kinematics");
     let phys_res = service.resolve_schema(&SchemaId::from("physics.kinematics")).expect("resolve phys");
     assert!(phys_res.is_some(), "Physics schema resolves");
 
     // 3. Chemistry
-    let chem_anchor = ProceduralCardAnchor::new("chemistry.equilibrium");
+    let _chem_anchor = ProceduralCardAnchor::new("chemistry.equilibrium");
     let chem_res = service.resolve_schema(&SchemaId::from("chemistry.equilibrium")).expect("resolve chem");
     assert!(chem_res.is_some(), "Chemistry schema resolves");
 
     // 4. Reasoning
-    let reas_anchor = ProceduralCardAnchor::new("reasoning.seating");
+    let _reas_anchor = ProceduralCardAnchor::new("reasoning.seating");
     let reas_res = service.resolve_schema(&SchemaId::from("reasoning.seating")).expect("resolve reas");
     assert!(reas_res.is_some(), "Reasoning schema resolves");
 

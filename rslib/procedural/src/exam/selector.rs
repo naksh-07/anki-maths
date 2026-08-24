@@ -360,16 +360,15 @@ impl ExamSessionSelector {
 
     /// Convert an authentic PYQ into a playable ProblemInstance.
     pub fn create_instance_from_pyq(pyq: &PYQSource, mapping: &PyqMapping) -> ProblemInstance {
-        let mut prompt = pyq.original_question.clone();
+        let prompt = pyq.original_question.clone();
+        let is_mcq = pyq.original_options.is_some();
+
+        let mut parameters = serde_json::json!({ "pyq_source_id": pyq.id.as_str() });
         if let Some(ref options) = pyq.original_options {
-            prompt.push_str("\n\nOptions:\n");
-            for (i, opt) in options.iter().enumerate() {
-                let letter = (b'A' + i as u8) as char;
-                prompt.push_str(&format!("({}) {}\n", letter, opt));
-            }
+            parameters["options"] = serde_json::to_value(options).unwrap_or_default();
         }
 
-        let metadata = serde_json::json!({
+        let mut metadata = serde_json::json!({
             "is_authentic_pyq": true,
             "source_pyq_id": pyq.id.as_str(),
             "exam": pyq.exam,
@@ -378,11 +377,15 @@ impl ExamSessionSelector {
             "provenance": pyq.provenance,
         });
 
+        if is_mcq {
+            metadata["object_type"] = serde_json::json!("mcq");
+        }
+
         ProblemInstance::new(
             ProblemInstanceId::new(format!("inst_pyq_{}", pyq.id.as_str())),
             mapping.problem_family_id.clone(),
             0,
-            serde_json::json!({ "pyq_source_id": pyq.id.as_str() }),
+            parameters,
             prompt,
             pyq.original_answer.clone(),
         )

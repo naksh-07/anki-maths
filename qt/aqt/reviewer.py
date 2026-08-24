@@ -169,6 +169,10 @@ class Reviewer:
         self._show_question_timer: QTimer | None = None
         self._show_answer_timer: QTimer | None = None
         self.auto_advance_enabled = False
+        self._last_procedural_attempt: dict[str, Any] | None = None
+        self._last_procedural_mistake: dict[str, Any] | None = None
+        self._last_procedural_hint: dict[str, Any] | None = None
+        self._last_procedural_stepwise_validation: dict[str, Any] | None = None
         gui_hooks.av_player_did_end_playing.append(self._on_av_player_did_end_playing)
 
     def show(self) -> None:
@@ -199,6 +203,10 @@ class Reviewer:
         gui_hooks.reviewer_will_end()
         self.card = None
         self.auto_advance_enabled = False
+        try:
+            self.web.eval("if (globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.destroyActive === 'function') { globalThis.anki.procedural.destroyActive(); }")
+        except Exception:
+            pass
 
     def refresh_if_needed(self) -> None:
         if self._refresh_needed is RefreshNeeded.QUEUES:
@@ -396,6 +404,11 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
 
         bodyclass = theme_manager.body_classes_for_card_ord(c.ord)
         a = self.mw.col.media.escape_media_filenames(c.answer())
+
+        # Clean up any lingering active procedural reviewer from previous card to prevent shortcut leaks
+        self.web.eval(
+            "if (globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.destroyActive === 'function') { globalThis.anki.procedural.destroyActive(); }"
+        )
 
         self.web.eval(
             f"_showQuestion({json.dumps(q)}, {json.dumps(a)}, '{bodyclass}');"
@@ -666,8 +679,6 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
             return False
 
     def onEnterKey(self) -> None:
-        if self._is_procedural_card():
-            return
         if self.state == "question":
             self._getTypedAnswer()
         elif self.state == "answer" and aqt.mw.pm.spacebar_rates_card():
@@ -711,10 +722,104 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         elif url == "statesMutated":
             self._states_mutated = True
         elif url.startswith("procedural_"):
-            # Procedural background bridge messages (attempt, hint, etc.)
-            pass
+            self._handle_procedural_command(url)
         else:
             print("unrecognized anki link:", url)
+
+    # Procedural Bridge Handlers
+    ##########################################################################
+
+    def _handle_procedural_command(self, url: str) -> None:
+        """Dispatch StudyLab procedural bridge commands from webview."""
+        try:
+            if url.startswith("procedural_answer:"):
+                val_str = url.split(":", 1)[1]
+                val = int(val_str)
+                if val in (1, 2, 3, 4):
+                    self.state = "answer"
+                    self._answerCard(val)  # type: ignore
+                return
+
+            if ":" in url:
+                cmd, payload_str = url.split(":", 1)
+            else:
+                cmd = url
+                payload_str = "{}"
+
+            data: dict[str, Any] = {}
+            if payload_str:
+                try:
+                    data = json.loads(payload_str)
+                except Exception:
+                    data = {"raw": payload_str}
+
+            if cmd == "procedural_hint":
+                self._on_procedural_hint(data)
+            elif cmd == "procedural_attempt":
+                self._on_procedural_attempt(data)
+            elif cmd == "procedural_validate_steps":
+                self._on_procedural_validate_steps(data)
+            elif cmd == "procedural_mistake":
+                self._on_procedural_mistake(data)
+            elif cmd == "procedural_try_similar":
+                self._on_procedural_try_similar(data)
+            elif cmd == "procedural_practice_prerequisite":
+                self._on_procedural_practice_prerequisite(data)
+            elif cmd == "procedural_declarative_recall":
+                self._on_procedural_declarative_recall(data)
+            else:
+                pass
+        except Exception as e:
+            print(f"Error handling procedural command '{url}':", e)
+
+    def _on_procedural_validate_steps(self, data: dict[str, Any]) -> None:
+        """Handle procedural stepwise validation telemetry."""
+        self._last_procedural_stepwise_validation = data
+
+    def _on_procedural_hint(self, data: dict[str, Any]) -> None:
+        """Handle procedural hint request telemetry."""
+        self._last_procedural_hint = data
+
+    def _on_procedural_attempt(self, data: dict[str, Any]) -> None:
+        """Handle procedural attempt submission telemetry and synchronize review state."""
+        self._last_procedural_attempt = data
+        if self.state == "question":
+            self.state = "answer"
+            self._showEaseButtons()
+
+    def _on_procedural_mistake(self, data: dict[str, Any]) -> None:
+        """Handle mistake classification reflection signal."""
+        self._last_procedural_mistake = data
+
+    def _on_procedural_try_similar(self, data: dict[str, Any]) -> None:
+        """Handle 'Try Similar' action to reload/regenerate practice problem variant."""
+        family_id = data.get("family_id", "")
+        if self._is_procedural_card():
+            tooltip(f"Generating similar variant for {family_id}...")
+            self._showQuestion()
+        else:
+            tooltip(f"Try Similar requested: {family_id}")
+
+    def _on_procedural_practice_prerequisite(self, data: dict[str, Any]) -> None:
+        """Handle 'Practice Prerequisite' remediation bridge command."""
+        target_skill_id = data.get("target_skill_id", "")
+        schema_id = data.get("executable_schema_id", "")
+        skill_ref = target_skill_id or schema_id or "Prerequisite"
+        tooltip(f"Practice Prerequisite: {skill_ref}")
+
+    def _on_procedural_declarative_recall(self, data: dict[str, Any]) -> None:
+        """Handle 'Review in Anki' declarative recall bridge command."""
+        card_id = data.get("target_anki_card_id")
+        tag = data.get("target_anki_tag")
+        if card_id:
+            try:
+                c = self.mw.col.get_card(CardId(int(card_id)))
+                if c:
+                    tooltip(f"Opening declarative recall for {c.note_type().get('name', 'Card')}")
+                    return
+            except Exception:
+                pass
+        tooltip(f"Declarative recall requested (tag: {tag})")
 
     # Type in the answer
     ##########################################################################
@@ -863,15 +968,6 @@ timerStopped = false;
         )
 
     def _showAnswerButton(self) -> None:
-        if self._is_procedural_card():
-            middle = (
-                "<table cellpadding=0><tr><td class=stat2 align=center><span class=stattxt>%s</span></td></tr></table>"
-                % self._remaining()
-            )
-            maxTime = 0
-            self.bottom.web.eval("showQuestion(%s,%d);" % (json.dumps(middle), maxTime))
-            return
-
         middle = """
 <button title="{}" id="ansbut" onclick='pycmd("ans");'>{}<span class=stattxt>{}</span></button>""".format(
             tr.actions_shortcut_key(val=tr.studying_space()),

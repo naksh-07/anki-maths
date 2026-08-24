@@ -13,8 +13,9 @@ pub mod selector;
 pub use analytics::{ExamFailingSchemaSummary, PyqAnalyticsEngine, PyqSourcePerformance};
 pub use mastery::{PyqMasteryAction, PyqMasteryBridge};
 pub use mock::{
-    DomainMockMetric, MockAnswerSubmission, MockBlueprint, MockFollowUpEngine, MockQuestionItem,
-    MockScoringResult, MockSession, SchemaMockMetric,
+    apply_diagnostic_report_to_store, ComprehensiveDiagnosticReport, DiagnosticErrorDistribution, DiagnosticHierarchyLevel,
+    DiagnosticHierarchyNode, DomainMockMetric, MockAnswerSubmission, MockBlueprint,
+    MockFollowUpEngine, MockQuestionItem, MockScoringResult, MockSession, SchemaMockMetric,
 };
 pub use pipeline::{PyqVariantPipeline, RejectedVariantRecord};
 pub use profile::{ExamObjective, ExamProfile};

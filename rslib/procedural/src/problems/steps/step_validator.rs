@@ -222,6 +222,172 @@ pub struct StepGraphEvaluation {
 }
 
 impl StepGraphEvaluation {
+    /// Extract Mathematics domain diagnostic evidence from stepwise evaluation.
+    pub fn to_math_evidence(&self) -> Option<crate::skills::domain_evidence::MathEvidence> {
+        if self.step_evaluations.is_empty() {
+            return None;
+        }
+
+        if self.is_correct {
+            return Some(crate::skills::domain_evidence::MathEvidence {
+                pattern_recognition: Some(true),
+                method_selection: Some(true),
+                execution: Some(true),
+                verification: Some(true),
+                structural_transfer: None,
+            });
+        }
+
+        let first_err_idx = self.first_error_step;
+        let (pattern_rec, method_sel, exec, verif) = match first_err_idx {
+            Some(0) => {
+                let is_method_error = match self.first_error_type {
+                    Some(StepErrorType::FormulaSelectionError)
+                    | Some(StepErrorType::SetupError)
+                    | Some(StepErrorType::SchemaRecognitionError)
+                    | Some(StepErrorType::RatioInversionError)
+                    | Some(StepErrorType::AlligationSwapError)
+                    | Some(StepErrorType::RateInversionError) => true,
+                    _ => false,
+                };
+                if is_method_error {
+                    (Some(false), Some(false), None, Some(false))
+                } else {
+                    (Some(true), Some(true), Some(false), Some(false))
+                }
+            }
+            _ => (Some(true), Some(true), Some(false), Some(false)),
+        };
+
+        Some(crate::skills::domain_evidence::MathEvidence {
+            pattern_recognition: pattern_rec,
+            method_selection: method_sel,
+            execution: exec,
+            verification: verif,
+            structural_transfer: None,
+        })
+    }
+
+    /// Extract Reasoning domain diagnostic evidence from stepwise evaluation.
+    pub fn to_reasoning_evidence(&self) -> Option<crate::skills::domain_evidence::ReasoningEvidence> {
+        if self.step_evaluations.is_empty() {
+            return None;
+        }
+
+        if self.is_correct {
+            return Some(crate::skills::domain_evidence::ReasoningEvidence {
+                pattern_recognition: Some(true),
+                representation: Some(true),
+                constraint_extraction: Some(true),
+                decision_path: Some(true),
+                deduction: Some(true),
+                trap_checking: Some(true),
+                structural_transfer: None,
+            });
+        }
+
+        let first_err_type = self.first_error_type;
+        let (pattern_rec, rep, constr, dec_path, ded, trap) = match first_err_type {
+            Some(StepErrorType::SchemaRecognitionError) => {
+                (Some(false), None, None, None, None, Some(true))
+            }
+            Some(StepErrorType::RepresentationError) => {
+                (Some(true), Some(false), Some(true), None, None, Some(true))
+            }
+            Some(StepErrorType::StrategySelectionError) | Some(StepErrorType::FormulaSelectionError) => {
+                (Some(true), Some(true), Some(true), Some(false), None, Some(true))
+            }
+            Some(StepErrorType::ConstraintApplicationError) | Some(StepErrorType::SetupError) => {
+                (Some(true), Some(true), Some(false), Some(true), None, Some(true))
+            }
+            Some(StepErrorType::SearchCaseError) | Some(StepErrorType::ContradictionHandlingError) => {
+                (Some(true), Some(true), Some(true), Some(false), Some(false), Some(true))
+            }
+            Some(StepErrorType::InferenceError) => {
+                (Some(true), Some(true), Some(true), Some(true), Some(false), Some(true))
+            }
+            Some(StepErrorType::ReadingTrapError) => {
+                (Some(true), Some(true), Some(true), Some(true), Some(true), Some(false))
+            }
+            Some(StepErrorType::ExecutionSlipError)
+            | Some(StepErrorType::ArithmeticError)
+            | Some(StepErrorType::TransformationError) => {
+                (Some(true), Some(true), Some(true), Some(true), Some(true), Some(true))
+            }
+            _ => (Some(true), Some(false), Some(false), Some(false), Some(false), Some(true)),
+        };
+
+        Some(crate::skills::domain_evidence::ReasoningEvidence {
+            pattern_recognition: pattern_rec,
+            representation: rep,
+            constraint_extraction: constr,
+            decision_path: dec_path,
+            deduction: ded,
+            trap_checking: trap,
+            structural_transfer: None,
+        })
+    }
+
+    /// Extract Physics domain diagnostic evidence from stepwise evaluation.
+    pub fn to_physics_evidence(&self) -> Option<crate::skills::domain_evidence::PhysicsEvidence> {
+        if self.step_evaluations.is_empty() {
+            return None;
+        }
+
+        if self.is_correct {
+            return Some(crate::skills::domain_evidence::PhysicsEvidence {
+                physical_model_selection: Some(true),
+                representation: Some(true),
+                governing_principle: Some(true),
+                equation_setup: Some(true),
+                calculation: Some(true),
+                unit_validity: Some(true),
+                boundary_validity: Some(true),
+                verification: Some(true),
+                transfer: None,
+            });
+        }
+
+        let mut ev = crate::skills::domain_evidence::PhysicsEvidence {
+            physical_model_selection: Some(true),
+            representation: Some(true),
+            governing_principle: Some(true),
+            equation_setup: Some(true),
+            calculation: Some(true),
+            unit_validity: Some(true),
+            boundary_validity: Some(true),
+            verification: Some(false),
+            transfer: None,
+        };
+
+        match self.first_error_type {
+            Some(StepErrorType::ModelSelectionError) => {
+                ev.physical_model_selection = Some(false);
+                ev.governing_principle = Some(false);
+            }
+            Some(StepErrorType::RepresentationError) | Some(StepErrorType::SignConventionError) => {
+                ev.representation = Some(false);
+            }
+            Some(StepErrorType::EquationSetupError) | Some(StepErrorType::SetupError) => {
+                ev.equation_setup = Some(false);
+            }
+            Some(StepErrorType::AlgebraExecutionError) | Some(StepErrorType::ArithmeticError) => {
+                ev.calculation = Some(false);
+            }
+            Some(StepErrorType::UnitError) => {
+                ev.unit_validity = Some(false);
+            }
+            Some(StepErrorType::PhysicalPlausibilityError) => {
+                ev.boundary_validity = Some(false);
+            }
+            _ => {
+                ev.calculation = Some(false);
+            }
+        }
+
+        Some(ev)
+    }
+
     /// Extract Chemistry domain diagnostic evidence from stepwise evaluation.
     pub fn to_chemistry_physical_evidence(&self) -> Option<crate::skills::domain_evidence::ChemistryEvidence> {
         if self.step_evaluations.is_empty() {
@@ -281,6 +447,30 @@ impl StepGraphEvaluation {
             verification: Some(false),
             transfer: None,
         })
+    }
+
+    /// Convert evaluation outcome into a versioned domain evidence structure based on problem family.
+    pub fn to_domain_evidence(&self, family_id: &str) -> Option<crate::skills::domain_evidence::VersionedDomainEvidence> {
+        let fid = family_id.to_lowercase();
+        if fid.contains("chem") {
+            self.to_chemistry_physical_evidence()
+                .map(crate::skills::domain_evidence::VersionedDomainEvidence::new_chemistry)
+        } else if fid.contains("phys") {
+            self.to_physics_evidence()
+                .map(crate::skills::domain_evidence::VersionedDomainEvidence::new_physics)
+        } else if fid.contains("reason") || fid.contains("logic") || fid.contains("syllogism") || fid.contains("seating") || fid.contains("relations") || fid.contains("floor_grid") || fid.contains("coded_expressions") || fid.contains("data_sufficiency") {
+            self.to_reasoning_evidence()
+                .map(crate::skills::domain_evidence::VersionedDomainEvidence::new_reasoning)
+        } else if fid.contains("math") || fid.contains("arithmetic") || fid.contains("algebra") || fid.contains("percentage") || fid.contains("ratio") || fid.contains("average") || fid.contains("geometry") || fid.contains("number_systems") {
+            self.to_math_evidence()
+                .map(crate::skills::domain_evidence::VersionedDomainEvidence::new_math)
+        } else if let Some(r) = self.to_reasoning_evidence() {
+            Some(crate::skills::domain_evidence::VersionedDomainEvidence::new_reasoning(r))
+        } else if let Some(m) = self.to_math_evidence() {
+            Some(crate::skills::domain_evidence::VersionedDomainEvidence::new_math(m))
+        } else {
+            None
+        }
     }
 }
 
@@ -543,7 +733,140 @@ impl MathSemanticComparator {
             }
         }
 
-        // 5. Transformation error
+        // 5. Reasoning-specific step error classification
+        match expected_step.step_type {
+            StepType::IdentifySchema => {
+                return (
+                    StepErrorType::SchemaRecognitionError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Schema recognition error: Failed to identify problem schema for '{}'.", expected_step.description),
+                );
+            }
+            StepType::SelectStrategy => {
+                return (
+                    StepErrorType::StrategySelectionError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Strategy selection error: Inappropriate strategy or starting constraint selected ('{}').", expected_step.description),
+                );
+            }
+            StepType::BuildRepresentation | StepType::ChooseCoordinateSystem => {
+                return (
+                    StepErrorType::RepresentationError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Representation error: Flawed mental model, slot allocation, or coordinate setup ('{}').", expected_step.description),
+                );
+            }
+            StepType::ApplyConstraint | StepType::PropagateConstraint => {
+                return (
+                    StepErrorType::ConstraintApplicationError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Constraint application error: Violated problem condition or applied constraint incorrectly ('{}').", expected_step.description),
+                );
+            }
+            StepType::MakeInference | StepType::VerifyConclusion => {
+                return (
+                    StepErrorType::InferenceError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Inference error: Invalid logical deduction or relational inference ('{}').", expected_step.description),
+                );
+            }
+            StepType::CreateCase | StepType::EliminateCase => {
+                return (
+                    StepErrorType::SearchCaseError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Search case error: Missed, improperly merged, or mishandled search branching case ('{}').", expected_step.description),
+                );
+            }
+            StepType::CheckContradiction => {
+                return (
+                    StepErrorType::ContradictionHandlingError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Contradiction handling error: Failed to recognize or resolve logical contradiction ('{}').", expected_step.description),
+                );
+            }
+            // Physics-specific step types
+            StepType::SelectModel | StepType::IdentifyKnowns => {
+                return (
+                    StepErrorType::ModelSelectionError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Model selection error: Wrong physical law or governing model ('{}').", expected_step.description),
+                );
+            }
+            StepType::SelectEquation => {
+                return (
+                    StepErrorType::EquationSetupError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Equation setup error: Inappropriate equation formulation ('{}').", expected_step.description),
+                );
+            }
+            StepType::PhysicalSanityCheck => {
+                return (
+                    StepErrorType::PhysicalPlausibilityError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Physical plausibility error: Result violates physical constraints ('{}').", expected_step.description),
+                );
+            }
+            // Chemistry-specific step types
+            StepType::IdentifyChemicalSpecies => {
+                return (
+                    StepErrorType::ChemicalRepresentationError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Chemical representation error: Incorrect chemical species or formula ('{}').", expected_step.description),
+                );
+            }
+            StepType::BalanceEquation => {
+                return (
+                    StepErrorType::EquationBalanceError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Equation balance error: Reaction balancing or stoichiometry error ('{}').", expected_step.description),
+                );
+            }
+            StepType::ApplyStoichiometricRatio => {
+                return (
+                    StepErrorType::StoichiometricRatioError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Stoichiometric ratio error: Incorrect molar ratio applied ('{}').", expected_step.description),
+                );
+            }
+            StepType::IdentifyLimitingReagent => {
+                return (
+                    StepErrorType::LimitingReagentError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Limiting reagent error: Limiting reactant misidentified ('{}').", expected_step.description),
+                );
+            }
+            StepType::ConstructEquilibriumExpression => {
+                return (
+                    StepErrorType::RegimeSelectionError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Chemical regime error: Inappropriate equilibrium formulation ('{}').", expected_step.description),
+                );
+            }
+            StepType::ChemicalSanityCheck => {
+                return (
+                    StepErrorType::ConservationViolationError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Conservation error: Result violates conservation of mass or charge ('{}').", expected_step.description),
+                );
+            }
+            StepType::UnitConversion => {
+                return (
+                    StepErrorType::UnitError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Unit conversion error: Incompatible or incorrect units ('{}').", expected_step.description),
+                );
+            }
+            StepType::Arithmetic => {
+                return (
+                    StepErrorType::ArithmeticError,
+                    DiagnosticConfidence::StronglyInferred,
+                    format!("Arithmetic calculation slip: Expected '{}', received '{}'.", expected_step.expected_expression, submitted),
+                );
+            }
+            _ => {}
+        }
+
+        // 6. Transformation error
         if expected_step.step_type == StepType::Transformation || expected_step.step_type == StepType::EquationRearrangement {
             return (
                 StepErrorType::TransformationError,
@@ -555,7 +878,7 @@ impl MathSemanticComparator {
             );
         }
 
-        // 6. Premature completion
+        // 7. Premature completion
         if !expected_step.is_final && prev_submitted.is_none() && expected_step.expected_value.is_some() {
             return (
                 StepErrorType::PrematureCompletion,

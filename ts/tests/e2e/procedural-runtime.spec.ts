@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { chromium, Page } from "playwright";
+import { chromium, type Page } from "playwright";
 import { callRpc } from "./helpers";
 import { SearchRequest } from "@generated/anki/search_pb";
 import { ImportAnkiPackageOptions, ImportAnkiPackageRequest, ImportResponse } from "@generated/anki/import_export_pb";

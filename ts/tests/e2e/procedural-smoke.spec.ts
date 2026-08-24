@@ -1,4 +1,4 @@
-﻿// Copyright: Ankitects Pty Ltd and contributors
+// Copyright: Ankitects Pty Ltd and contributors
 // License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 /**
@@ -71,7 +71,7 @@ async function findCardsByTag(page, tag: string): Promise<bigint[]> {
             new SearchRequest({ search: `tag:${tag}` }),
         ),
     );
-    return resp.cardIds;
+    return resp.ids;
 }
 
 async function renderCard(page, cardId: bigint): Promise<RenderCardResponse> {
@@ -92,8 +92,8 @@ async function renderCard(page, cardId: bigint): Promise<RenderCardResponse> {
 function extractHtml(rendered: RenderCardResponse): string {
     const parts: string[] = [];
     for (const node of rendered.questionNodes) {
-        if ("text" in node.value) {
-            parts.push(node.value.text);
+        if (node.value && typeof node.value === "object" && "text" in node.value) {
+            parts.push(String((node.value as any).text));
         }
     }
     return parts.join("");

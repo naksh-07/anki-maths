@@ -25,6 +25,7 @@ pub mod scheduling;
 pub mod service;
 pub mod skills;
 pub mod storage;
+pub mod units;
 
 pub use anchor::{ProceduralCardAnchor, SeedMode};
 pub use chemistry::{
@@ -44,12 +45,16 @@ pub use diagnostics::{
     ProceduralReviewOutcome,
 };
 pub use exam::{
-    ContentProvenance, ExamFailingSchemaSummary, ExamObjective, ExamPracticeMode, ExamProfile,
+    apply_diagnostic_report_to_store, ComprehensiveDiagnosticReport, ContentProvenance,
+    DiagnosticErrorDistribution, DiagnosticHierarchyLevel, DiagnosticHierarchyNode,
+    DomainMockMetric, ExamFailingSchemaSummary, ExamObjective, ExamPracticeMode, ExamProfile,
     ExamRelevanceScore, ExamRelevanceScorer, ExamSessionSelector, HumanReviewWorkflow,
-    MappingConfidence, MappingStatus, PyqAnalyticsEngine, PyqMasteryAction, PyqMasteryBridge,
-    PyqSourcePerformance, PyqVariantPipeline, PYQSource, PyqMapping, RejectedVariantRecord,
-    ReviewAction, ReviewInspection, DEFAULT_CATALOG_VERSION, DEFAULT_GENERATOR_VERSION,
-    DEFAULT_PYQ_SOURCE_VERSION, DEFAULT_SCHEMA_VERSION,
+    MappingConfidence, MappingStatus, MockAnswerSubmission, MockBlueprint, MockFollowUpEngine,
+    MockQuestionItem, MockScoringResult, MockSession, PyqAnalyticsEngine, PyqMasteryAction,
+    PyqMasteryBridge, PyqSourcePerformance, PyqVariantPipeline, PYQSource, PyqMapping,
+    RejectedVariantRecord, ReviewAction, ReviewInspection, SchemaMockMetric,
+    DEFAULT_CATALOG_VERSION, DEFAULT_GENERATOR_VERSION, DEFAULT_PYQ_SOURCE_VERSION,
+    DEFAULT_SCHEMA_VERSION,
 };
 pub use physics::{
     CoordinateSystem, DimensionalValidator, Kinematics1DGenerator, Kinematics1DValidator,
@@ -87,7 +92,9 @@ pub use problems::{
     variation::*,
     ProblemFamily, ProblemInstance,
 };
-pub use reviewer::render_reviewer_html;
+pub use reviewer::{
+    render_diagnostic_report_html, render_diagnostic_session_html, render_reviewer_html,
+};
 pub use scheduling::{
     derive_fsrs_rating, AdaptiveDifficultyEngine, BacklogSeverity, BacklogTriageEngine,
     BacklogTriagePlan, DifficultyDecision, DomainBlock, DomainBudget, DomainSpeedConfig,
@@ -110,3 +117,4 @@ pub use skills::{
     SkillState, VariantCategory, VariantPerformance,
 };
 pub use storage::{MigrationRunner, ProceduralStore};
+pub use units::{Dimension, ParsedQuantity, Quantity, Tolerance, Unit, UnitAnswerValidator, UnitParser};
