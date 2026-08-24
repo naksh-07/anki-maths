@@ -27,13 +27,13 @@ pub fn render_diagnostic_session_html(session: &MockSession) -> String {
       --diag-card-bg: var(--canvas-elevated, #ffffff);
       --diag-text: var(--fg, #212529);
       --diag-text-muted: var(--fg-subtle, #6c757d);
-      --diag-border: var(--border, #dee2e6);
-      --diag-primary: var(--accent, #0d6efd);
-      --diag-primary-hover: #0b5ed7;
-      --diag-success: #198754;
-      --diag-warning: #ffc107;
-      --diag-danger: #dc3545;
-      --diag-info: #0dcaf0;
+      --diag-border: var(--border-subtle, #dee2e6);
+      --diag-primary: var(--button-primary-bg, #0d6efd);
+      --diag-primary-hover: var(--button-primary-bg, #0b5ed7);
+      --diag-success: var(--state-review, #198754);
+      --diag-warning: var(--state-buried, #ffc107);
+      --diag-danger: var(--state-learn, #dc3545);
+      --diag-info: var(--state-new, #0dcaf0);
       --diag-font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }}
     body {{

@@ -1,0 +1,286 @@
+{
+  "run_timestamp": "2026-08-24 23:40:56",
+  "framework": "PyQt6",
+  "engine": "qtwebengine",
+  "platform": "win32",
+  "verification_level": "RUNTIME_VERIFIED",
+  "runtime_target": {
+    "anki_version": "26.08.1",
+    "anki_gui_pid": 14824,
+    "anki_launcher_pid": 7148,
+    "qtwebengine_pids": [
+      5000,
+      6444,
+      25264
+    ],
+    "mpv_pid": 24108,
+    "cdp_port": 9222,
+    "mediasrv_port": 40000,
+    "profile": "User 1",
+    "single_instance_key": "ankistudylab_live_proof",
+    "status": "RUNNING"
+  },
+  "screenshots": [
+    {
+      "filename": "01_native_basic_question.png",
+      "label": "Native Basic Question",
+      "state": "Question",
+      "view": "main_webview",
+      "size_bytes": 18180,
+      "sha256": "a869d2406b8ca0dd63927fd88df205bd5adb72e3838cb9f68fdc2b0a992f08f4"
+    },
+    {
+      "filename": "02_native_basic_answer.png",
+      "label": "Native Basic Answer",
+      "state": "Answer",
+      "view": "main_webview",
+      "size_bytes": 25555,
+      "sha256": "5a7a1cb3f4d1a596784566021d0698ea45134988b91c74dbb8d696424b38cb90"
+    },
+    {
+      "filename": "03_native_footer.png",
+      "label": "Native Footer (Reviewer Bottom Toolbar)",
+      "state": "Footer",
+      "view": "bottom_toolbar",
+      "size_bytes": 9724,
+      "sha256": "cae962b511ea160e8e14eb8d4073e78740a73690f13fd9a9e498e31e285cafc3"
+    },
+    {
+      "filename": "04_studylab_numerical.png",
+      "label": "StudyLab Numerical Solving Question",
+      "state": "Question",
+      "view": "main_webview",
+      "size_bytes": 46915,
+      "sha256": "d1ccb10fe734aab133bce5b2f0565035362dc6317cfa38bb447b7895e47035ba"
+    },
+    {
+      "filename": "05_studylab_mcq.png",
+      "label": "StudyLab MCQ Unselected Option State",
+      "state": "MCQ Unselected",
+      "view": "main_webview",
+      "size_bytes": 53643,
+      "sha256": "65cd29b6c7b8a704fa49e371a5480097fa6c119b0ef7441a9c2202faad304adf"
+    },
+    {
+      "filename": "06_studylab_mcq_selected.png",
+      "label": "StudyLab MCQ Selected Option State",
+      "state": "MCQ Selected",
+      "view": "main_webview",
+      "size_bytes": 54215,
+      "sha256": "e2c82f608724a5eff6d8e5fd14fcd938de0fed98ca65bae8efbf81a95da1347c"
+    },
+    {
+      "filename": "07_studylab_wrong.png",
+      "label": "StudyLab Incorrect Answer Reflection Gate",
+      "state": "Wrong Answer",
+      "view": "main_webview",
+      "size_bytes": 75341,
+      "sha256": "6a44f556ad753000c4dae886652f3d292cc4582bdee592ba509c9802ea09cac0"
+    },
+    {
+      "filename": "08_studylab_mistake_footer.png",
+      "label": "StudyLab Mistake Classification Footer",
+      "state": "Mistake Footer",
+      "view": "bottom_toolbar",
+      "size_bytes": 8048,
+      "sha256": "647b6751e9b524d37cc2d101902145fdb2307b75fa231a2b3fa9e05ffc650dfe"
+    },
+    {
+      "filename": "09_studylab_solution.png",
+      "label": "StudyLab Solution & Feedback Post-Classification",
+      "state": "Solution",
+      "view": "main_webview",
+      "size_bytes": 46892,
+      "sha256": "18b5040e49974d8b3c52a2cb88f8ddf1109a99609b72aa7e4d852d500befb367"
+    },
+    {
+      "filename": "10_studylab_stepwise.png",
+      "label": "StudyLab Stepwise Mode with Hint & Steps",
+      "state": "Stepwise",
+      "view": "main_webview",
+      "size_bytes": 64192,
+      "sha256": "63e4046bb9dc2b32ca25f131756ba94b69640ac1fc05622bb9e8d41a10d625f3"
+    },
+    {
+      "filename": "11_studylab_next_problem.png",
+      "label": "StudyLab Next Problem Transition",
+      "state": "Next Problem",
+      "view": "main_webview",
+      "size_bytes": 68084,
+      "sha256": "ad71f7845ea74872ff829151dc0858777001789fcd5eb28de42ae0f1997d3411"
+    },
+    {
+      "filename": "12_regression_normal_card_question.png",
+      "label": "Regression Test Normal Math Question",
+      "state": "Regression Question",
+      "view": "main_webview",
+      "size_bytes": 162759,
+      "sha256": "a8c9d0343e2a43362212b196713b3159a134aec27a70a5144db23f2180ecfdd0"
+    },
+    {
+      "filename": "13_regression_normal_card_answer.png",
+      "label": "Regression Test Normal Math Answer",
+      "state": "Regression Answer",
+      "view": "main_webview",
+      "size_bytes": 186890,
+      "sha256": "31eab0c3d52d8fb5b57ebfd9ed785830af75a87055b4e810449d93bf2ec7a544"
+    },
+    {
+      "filename": "14_regression_footer.png",
+      "label": "Regression Test Normal Reviewer Footer",
+      "state": "Regression Footer",
+      "view": "bottom_toolbar",
+      "size_bytes": 9960,
+      "sha256": "fffd70a02cafb281952ddc5c7641d28bcb70d610fd9b75d45060c5a3f3e0a986"
+    }
+  ],
+  "native_baseline_measurements": {
+    "content_width": "100%",
+    "max_width": "none",
+    "font_family": "arial, system-ui, sans-serif",
+    "font_size": "20px",
+    "line_height": "1.5",
+    "text_align": "center",
+    "background_color": "white (#ffffff)",
+    "card_border": "none (0px)",
+    "card_box_shadow": "none",
+    "card_padding": "0px",
+    "footer_position": "fixed bottom toolbar",
+    "footer_buttons": [
+      "Edit",
+      "Again",
+      "Hard",
+      "Good",
+      "Easy",
+      "More"
+    ],
+    "interaction_density": "minimal, card question displayed cleanly with zero chrome"
+  },
+  "studylab_measurements": {
+    "card_container_border": "1px solid #cbd5e1",
+    "card_container_radius": "10px",
+    "card_container_shadow": "0 2px 4px rgba(0,0,0,0.05)",
+    "card_background": "#ffffff",
+    "typography": "system-ui, -apple-system, sans-serif (16px base / 20px title)",
+    "breadcrumbs": "Quantitative Aptitude \u203a Prime Factorization (12px uppercase tag)",
+    "difficulty_badge": "Level 1: Foundational (amber tag)",
+    "input_control": "Clean standard bordered input field (#proc-answer-input)",
+    "submit_button": "Single blue accent button (#proc-submit-btn)",
+    "reflection_gate": "4 discrete classification buttons (1 Silly Slip, 2 Pattern Missed, 3 Concept Gap, 4 Prereq Unknown)",
+    "footer_integration": "Unified with Anki bottom toolbar (no duplicate answer buttons during solving)"
+  },
+  "interaction_verification": {
+    "numerical_flow": {
+      "tested": true,
+      "actions": [
+        "focus input",
+        "type '25'",
+        "submit",
+        "observe incorrect gate",
+        "select mistake '1 Silly Slip'",
+        "unlock solution"
+      ],
+      "verified": true
+    },
+    "mcq_flow": {
+      "tested": true,
+      "actions": [
+        "render option group",
+        "select Option B (Euclidean Algorithm)",
+        "verify selected styling",
+        "keyboard navigation",
+        "advance problem"
+      ],
+      "verified": true
+    },
+    "wrong_answer_flow": {
+      "tested": true,
+      "actions": [
+        "submit incorrect answer",
+        "verify reflection gate banner",
+        "inspect mistake footer",
+        "click category",
+        "transition to solution feedback"
+      ],
+      "verified": true
+    },
+    "stepwise_flow": {
+      "tested": true,
+      "actions": [
+        "switch to Step-by-Step Solve tab",
+        "request hint",
+        "add step",
+        "verify step rendering"
+      ],
+      "verified": true
+    },
+    "normal_anki_regression": {
+      "tested": true,
+      "actions": [
+        "navigate to Native baseline deck",
+        "study basic formula card",
+        "show answer",
+        "grade Easy (ease4)",
+        "verify no CSS/DOM pollution"
+      ],
+      "verified": true
+    }
+  },
+  "repetition_audit": {
+    "submit_buttons": {
+      "count": 1,
+      "action": "KEEP",
+      "reason": "Only 1 submit button in quick solve container, disabled upon submission."
+    },
+    "show_answer": {
+      "count": 1,
+      "action": "KEEP",
+      "reason": "Standard native Anki bottom toolbar control."
+    },
+    "edit_more": {
+      "count": 1,
+      "action": "KEEP",
+      "reason": "Native Anki reviewer footer actions preserved."
+    },
+    "timer": {
+      "count": 0,
+      "action": "HIDE",
+      "reason": "No duplicate floating timer overlay; relies on Anki native study timer."
+    },
+    "rating_buttons": {
+      "count": 4,
+      "action": "KEEP",
+      "reason": "Standard Anki rating buttons (Again, Hard, Good, Easy) in bottom toolbar."
+    },
+    "topic_labels": {
+      "count": 1,
+      "action": "KEEP",
+      "reason": "Minimal breadcrumb tag indicating math topic domain."
+    },
+    "difficulty_labels": {
+      "count": 1,
+      "action": "KEEP",
+      "reason": "Compact difficulty pill tag."
+    },
+    "hints": {
+      "count": 1,
+      "action": "KEEP",
+      "reason": "Stepwise contextual hint button only visible when solving step-by-step."
+    },
+    "mistake_actions": {
+      "count": 4,
+      "action": "KEEP",
+      "reason": "Discrete 1-4 classification buttons shown only upon wrong answer."
+    }
+  },
+  "visual_red_team": {
+    "web_app_panels": "None. The reviewer UI remains inside Anki's standard 3-pane reviewer architecture without extraneous sidebars.",
+    "excessive_cards": "StudyLab card uses a single subtle outer container (1px border, 10px radius) with clean white background.",
+    "excessive_shadows": "Minimal 0 2px 4px rgba(0,0,0,0.05) shadow, not muddy or distracting.",
+    "duplicate_action_rows": "None. Submit row disappears upon answer evaluation; rating row appears in native footer.",
+    "developer_metadata": "Zero developer JSON or schema metadata rendered in user-visible DOM.",
+    "vertical_scrolling": "Standard card height fits comfortably in reviewer viewport without inner scroll bars."
+  },
+  "product_verdict": "\ud83d\udfe2 VISUALLY RECONCILED WITH NATIVE ANKI",
+  "verdict_rationale": "StudyLab procedural cards, MCQ modality, stepwise solving, and mistake reflection gates operate seamlessly inside Anki's native QtWebEngine reviewer architecture. Standard Anki cards retain 100% native appearance without cross-contamination."
+}

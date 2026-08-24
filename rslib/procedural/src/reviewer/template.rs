@@ -279,7 +279,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let context_html = if !problem_context.is_empty() {
-                format!(r#"<div class="proc-solution" style="margin-bottom: 12px;"><strong>Problem:</strong> {}</div>"#, escape_html(problem_context))
+                format!(r#"<div class="proc-solution"><strong>Problem:</strong> {}</div>"#, escape_html(problem_context))
             } else {
                 "".to_string()
             };
@@ -332,7 +332,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                         s.push_str(&format!("<li>{}</li>", escape_html(txt)));
                     }
                 }
-                format!("<ol style=\"margin: 8px 0; padding-left: 20px;\">{}</ol>", s)
+                format!("<ol class=\"proc-worked-steps\">{}</ol>", s)
             } else {
                 "".to_string()
             };
@@ -345,7 +345,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                             s.push_str(&format!("<li>{}</li>", escape_html(txt)));
                         }
                     }
-                    format!("<div class=\"proc-pitfall-box\"><strong>⚠️ Common Pitfalls:</strong><ul style=\"margin: 4px 0; padding-left: 18px;\">{}</ul></div>", s)
+                    format!("<div class=\"proc-pitfall-box\"><strong>⚠️ Common Pitfalls:</strong><ul>{}</ul></div>", s)
                 } else {
                     "".to_string()
                 }
@@ -357,11 +357,11 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 r#"<div class="proc-prompt">{prompt_text}</div>
                 <div class="proc-worked-example-card">
                     <div class="proc-decision-highlight">🎯 <strong>Key Decision:</strong> {}</div>
-                    <div style="font-weight: 600; margin-top: 10px;">Canonical Solution Steps:</div>
+                    <div class="proc-steps-header">Canonical Solution Steps:</div>
                     {steps_html}
-                    <div class="proc-solution" style="margin-top: 10px;"><strong>Method Rationale:</strong> {}</div>
+                    <div class="proc-solution"><strong>Method Rationale:</strong> {}</div>
                     {pitfalls_html}
-                    <div style="margin-top: 16px; display: flex; gap: 10px;">
+                    <div class="proc-controls">
                         <button type="button" id="proc-try-similar-btn" class="proc-btn">Try Similar Problem</button>
                     </div>
                 </div>"#,
@@ -376,9 +376,9 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
 
             format!(
                 r#"<div class="proc-prompt"><strong>Prerequisite Concept:</strong> {}</div>
-                <div class="proc-worked-example-card" style="text-align: center;">
-                    <div style="font-size: 1.15rem; font-weight: 700; margin: 12px 0;">{}</div>
-                    <div style="margin-top: 18px; display: flex; justify-content: center; gap: 12px;">
+                <div class="proc-worked-example-card proc-text-center">
+                    <div class="proc-formula-display">{}</div>
+                    <div class="proc-controls proc-controls-center">
                         <button type="button" id="proc-anki-recall-btn" class="proc-btn">Review in Anki</button>
                     </div>
                 </div>"#,
@@ -392,9 +392,9 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
 
             format!(
                 r#"<div class="proc-worked-example-card">
-                <div style="font-weight: 600; font-size: 1rem; color: #b91c1c;">⚠️ Foundational Skill Needed</div>
-                    <div style="margin-top: 8px; line-height: 1.5;">{}</div>
-                    <div style="margin-top: 16px; display: flex; gap: 10px;">
+                    <div class="proc-advisory-title">⚠️ Foundational Skill Needed</div>
+                    <div class="proc-advisory-body">{}</div>
+                    <div class="proc-controls">
                         <button type="button" id="proc-practice-prereq-btn" class="proc-btn">Practice Prerequisite</button>
                     </div>
                 </div>"#,
@@ -549,7 +549,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             <span><strong>Target Time:</strong> {target_time_secs}s</span>
             <div id="proc-actual-time"></div>
         </div>
-        <div class="proc-expected-row" style="margin-top: 6px;"><strong>Expected Answer:</strong> <span id="proc-expected-ans">{canonical_text}</span></div>
+        <div class="proc-expected-row"><strong>Expected Answer:</strong> <span id="proc-expected-ans">{canonical_text}</span></div>
 
         <!-- Mistake Classification (compact action strip seamlessly styled with native review actions) -->
         <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
@@ -572,7 +572,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
 
         <div id="proc-solution-container" class="proc-solution">
             <strong>Step-by-Step Solution:</strong>
-            <div style="margin-top: 6px;">{solution_text}</div>
+            <div class="proc-solution-body">{solution_text}</div>
         </div>
     </div>
 

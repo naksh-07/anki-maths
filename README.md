@@ -10,6 +10,9 @@ This repo contains the source code for the computer version of
 
 Anki is a spaced repetition program. Please see the [website](https://apps.ankiweb.net) to learn more.
 
+**Note on this Fork (StudyLab):**
+This repository contains an Anki fork featuring the **StudyLab procedural learning subsystem**. StudyLab provides a dedicated, adaptive problem-solving environment optimized for procedural STEM learning (Math, Physics, Chemistry, Reasoning). It intercepts standard Anki reviews to inject diagnostic problem-solving capabilities, while deferring entirely to Anki for flashcard scheduling and standard data persistence. For StudyLab-specific architecture and developer documentation, please refer to [docs/README.md](./docs/README.md).
+
 ## Getting Started
 
 ### Contributing

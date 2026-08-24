@@ -1,38 +1,55 @@
-# StudyLab Learning Model
+# Learning Model
 
-StudyLab explicitly tracks deep cognitive vectors rather than standard binary "pass/fail" flashcard logic. 
+The Learner Model is a cognitive model that tracks proficiency across a structured hierarchy and measures multidimensional diagnostic signals based on Domain Evidence.
 
-## 1. Learner Progression Pipeline
-A learner moves through a strict taxonomic progression:
-**Subject** $\rightarrow$ **Chapter** $\rightarrow$ **Topic** $\rightarrow$ **Problem Family** $\rightarrow$ **Pattern** $\rightarrow$ **Difficulty** $\rightarrow$ **Attempt** $\rightarrow$ **Error** $\rightarrow$ **Domain Evidence** $\rightarrow$ **Transfer** $\rightarrow$ **Remediation** $\rightarrow$ **Mastery**
+## Core Hierarchy
+1. Subject
+2. Chapter
+3. Topic
+4. Problem Family
+5. Pattern / Variant
+6. Difficulty
+7. Attempt
 
-### Mastery Phases
-Procedural progression is tracked in `SkillState` via distinct phases:
-- `New` $\rightarrow$ `Learning` $\rightarrow$ `Fluent` $\rightarrow$ `Variation` $\rightarrow$ `Transfer` $\rightarrow$ `Mastered` $\rightarrow$ `Hibernating`
+## Diagnostic Dimensions (Domain Evidence)
 
-## 2. Mastery Evidence & Speed Quadrant
-Every attempt logs a `PracticeAttempt` capturing `MasteryEvidence`. This includes:
-- **Decision Quality** & **Independence** (Did they need hints?)
-- **Speed Quadrant Evaluation:** Balances accuracy against latency benchmarks (`MovingLatencyStats`).
-  - ⚡ *Fluency Strength* (Accurate & Fast)
-  - ⏱ *Speed Opportunity* (Accurate but Slow)
-  - ⚠️ *Strategy Trap* (Fast but Incorrect)
-  - 💡 *Concept Setup* (Slow & Incorrect)
+The backend (`rslib/procedural/src/skills/domain_evidence.rs`) captures strongly-typed diagnostic signals.
 
-## 3. Domain-Specific Evidence Model
-StudyLab analyzes cognitive performance specific to the rules of four major disciplines:
+### Mathematics (`MathEvidence`)
+- **pattern_recognition**: Identifying the correct form or theorem.
+- **method_selection**: Choosing the right strategy.
+- **execution**: Accurate calculation (e.g., arithmetic slip).
+- **verification**: Checking answers against bounds.
+- **structural_transfer**: Applying the concept to an unfamiliar variant.
 
-1. **Mathematics (`MathEvidence`)**:
-   Evaluates `pattern_recognition`, `method_selection`, `execution`, and `structural_transfer`. Backed by a semantic `StepValidator` and symbolic CAS.
-2. **Reasoning (`ReasoningEvidence`)**:
-   Evaluates `constraint_extraction`, `decision_path`, `deduction`, and `trap_checking`.
-3. **Physics (`PhysicsEvidence`)**:
-   Evaluates `physical_model_selection`, `equation_setup`, `calculation`, and `unit_validity`. Pedagogically enforces dimensional analysis ($[M]^m [L]^l [T]^t$).
-4. **Chemistry (`ChemistryEvidence`)**:
-   Evaluates `conservation` (stoichiometry), `intermediate_quantity`, and `mechanism_pathway`.
+### Logical Reasoning (`ReasoningEvidence`)
+- **pattern_recognition**
+- **representation**
+- **constraint_extraction**
+- **decision_path**
+- **deduction**
+- **trap_checking**
+- **structural_transfer**
 
----
-### Traceability & Code Evidence
-- **Progression & States:** Defined in `rslib/procedural/src/skills/signals.rs`.
-- **Domain Vectors:** Structs defined in `rslib/procedural/src/skills/domain_evidence.rs` (`MathEvidence`, `PhysicsEvidence`, etc.).
-- **Evaluation Taxonomy:** Helper methods like `is_execution_error()` and `is_conceptual_error()` are actively used to drive state changes.
+### Physics (`PhysicsEvidence`)
+- **physical_model_selection**: Choosing correct principles (e.g., kinematics vs energy).
+- **representation**: Free-body diagrams, vectors.
+- **governing_principle**: Valid equation selection.
+- **equation_setup**: Accurate substitution.
+- **calculation**: Math execution.
+- **unit_validity**: Dimensional consistency.
+- **boundary_validity**: Physical realism.
+- **verification**: Sensibility checks.
+- **transfer**
+
+### Chemistry (`ChemistryEvidence`)
+*Divided into Physical, Organic, Inorganic subclasses.*
+- **Physical**: model_setup, equation_selection, intermediate_quantity, calculation, conservation, verification, transfer.
+- **Organic**: substrate_recognition, mechanism_pathway, reagent_interpretation, product_prediction, exception_handling, transfer.
+- **Inorganic**: trend_reasoning, exception_handling, qualitative_reasoning, transfer.
+
+## Interpretation of Signals
+
+- **What they mean:** They provide a precise cognitive taxonomy of *why* an attempt failed. An execution error (math slip) means the concept is understood but mechanics failed. A representation error means the concept itself is weak.
+- **What they are NOT:** They are not a second spaced repetition model. They do not dictate "when" a card is seen next (FSRS does that); they dictate "what" the learner sees next (Remediation).
+- **Downstream Consumer:** Consumed by `MasteryEvidence`, which feeds `SkillState` and `ProgressionPolicy`. For example, conceptual errors demote the state from `Fluent` to `Learning`, while execution errors might only trigger a `ProceduralVariant` with simpler numbers.

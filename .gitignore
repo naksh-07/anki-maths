@@ -24,3 +24,10 @@ ts/.svelte-kit
 docs/_build/
 docs/autoapi/
 .complexipy_cache
+*.log
+*.pid
+*_ws_url.txt
+desktop_window_info.json
+desktop_ownership.json
+evidence.json
+test_qt.py

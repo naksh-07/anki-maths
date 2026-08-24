@@ -1,20 +1,20 @@
-# StudyLab Architecture Invariants
+# Architecture Invariants
 
-To prevent product drift and maintain the strict two-system architecture, the following invariants are absolute. No AI agent, contributor, or future feature may violate these rules.
+These rules are strictly non-negotiable for anyone developing or modifying the StudyLab system.
 
-## The 10 Hard Invariants
-
-1. **StudyLab is not a flashcard system.** It is an environment for structured STEM problem-solving.
-2. **Anki's flashcard functionality is not duplicated.** Anki remains the host environment.
-3. **StudyLab does not create a second FSRS.** Anki’s FSRS/SM-2 remains the sole driver of *when* content is reviewed.
-4. **StudyLab does not create a second learner model.** All data aggregates back to the canonical `SkillState` and `DomainEvidence`.
-5. **Problem-solving intelligence belongs to StudyLab.** Generating, parsing, and validating procedural content is owned by the Rust core, entirely decoupled from Anki’s `render_card`.
-6. **Ordinary content expansion must remain declarative.** New topics are compiled via `study-source-core` into `.apkg` files (`inline_contract`).
-7. **New ordinary topics must not require topic-specific Rust generators.** The `DeclarativeArchetypeGenerator` serves as the universal procedural runtime.
-8. **Reviewer UI follows a problem-solving workflow.** The UI must never regress into simple "Show Answer" flipping. It must support stepwise checking, numerical analysis, and mistake taxonomy tracking.
-9. **Normal Anki cards remain untouched.** The interception layer (`render_procedural_anchor`) explicitly preserves all non-StudyLab notes.
-10. **Internal implementation concepts never define the learner-facing product.** Product definition dictates technical implementation, not the reverse.
-
-## Contradictions & Guardrails
-- *Guardrail (Front-end/Back-end Taxonomies):* Be aware of taxonomy naming mismatches between TypeScript telemetry (`silly_mistake`, `concept_not_known`) and Rust backend constraints (`ErrorCategory::Careless`, `ErrorCategory::Concept`). Ensure proper translation when serializing bridging telemetry.
-- *Guardrail (UI Validation Bypass):* The TS/Vite UI must rely on the Rust `StepValidator` for rich multi-step graph validation; local TS scalar evaluations must not replace authoritative backend parsing (`GAP-MOD-01` resolved in Phase 40).
+1. **StudyLab is not a flashcard system.** It is a procedural problem-solving engine.
+2. **Do not recreate Anki's responsibilities.** FSRS handles scheduling. Anki handles flashcards. `collection.anki2` holds standard data. StudyLab intelligence lives strictly in `procedural.db` and the procedural backend.
+3. **Reviewer UI follows problem-solving workflow.** It is a workspace (loading -> ready -> solving -> submitting -> feedback), not a card flip (front -> back).
+4. **Correct answer modality must match learning-object semantics.** `mcq` means actual options. `problem` implies calculation or derived steps.
+5. **Generic fill-in input is not a universal modality.** Text inputs must be semantically validated (math equivalence, unit equivalence), not just string matched.
+6. **Stepwise uses canonical semantic validation.** Intermediate steps are part of the `inline_contract` and must be validated, not just matched against static strings.
+7. **Learner state is unified.** `SkillState` tracking and progressions (`Learning` to `Mastered`) operate identically regardless of whether the content came via `inline_contract` or `content_ref`.
+8. **Domain evidence is diagnostic, not fake precision.** An execution error is fundamentally different from a conceptual representation error. Ensure mistakes map accurately to `DomainEvidence`.
+9. **APKG/content owns definitions; runtime owns learner history.** The APKG is the static declarative blueprint. The runtime instantiates it.
+10. **Ordinary new content should not require topic-specific Rust generators.** The `DeclarativeArchetypeGenerator` is the mold. All new STEM topics must use declarative constraints.
+11. **Internal IDs/debug/remediation identifiers never leak to learners.** The learner only sees the pedagogical content.
+12. **No duplicate interaction surfaces for one semantic action.** The TS frontend evaluates locally for speed, but canonical evaluation belongs to the Rust backend contract. Do not fork learning logic.
+13. **Normal Anki cards remain untouched.** The interception in `render.rs` strictly targets `"StudyLab Procedural Anchor"` notes. Standard cards render normally.
+14. **Diagnostic mode does not create a parallel learner model.** It is a measurement sweep to inform standard practice state.
+15. **Tier 1 `inline_contract` is the preferred content resolution path.** Unless file size is explicitly prohibitive, package constraints directly into the APKG.
+16. **`.agents/` is historical.** The `docs/` directory is the canonical source of truth for architecture.

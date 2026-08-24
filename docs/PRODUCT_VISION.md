@@ -1,28 +1,32 @@
-# StudyLab Product Vision
+# Product Vision
 
-## 1. Why does StudyLab exist?
-StudyLab exists to solve the problem of mastering complex procedural skills that cannot be acquired through rote memorization alone. It provides a dedicated, adaptive problem-solving environment where the focus is on *how* a learner solves a problem, rather than merely *whether* they remembered a static fact.
+## Why StudyLab Exists
+Anki already solves flashcards and spaced repetition. StudyLab exists to improve **problem-solving mastery**. 
 
-## 2. What problem does it solve?
-Traditional spaced repetition systems (like Anki) are optimized for declarative memory (vocabulary, facts, geography). However, procedural knowledge—such as deriving a mathematical proof, balancing a chemical equation, or applying physical laws—requires structured practice, step-by-step validation, and targeted cognitive remediation. StudyLab bridges this gap by offering a high-performance procedural engine inside a spaced repetition host.
+While standard Anki asks "whether the learner remembered an answer," StudyLab asks "how a learner solves a problem." It provides a dedicated, adaptive problem-solving environment optimized for procedural STEM learning (Math, Physics, Chemistry, Reasoning).
 
-## 3. Who is it for?
-StudyLab is for STEM learners, students, and autodidacts who are studying:
-- Mathematics (calculus, algebra)
-- Reasoning & Logic
-- Physics (numericals, dimensional analysis)
-- Chemistry (stoichiometry, organic mechanisms)
+### Core Learner Journey
+The learning process in StudyLab is an interactive loop:
+understand problem → recognize pattern → represent/model → choose strategy → execute → verify → transfer → diagnose failure → remediate → reattempt
 
-## 4. What does it help the learner get better at?
-It helps the learner develop **procedural mastery and transfer**. By tracking the exact nature of their mistakes (e.g., conceptual gaps vs. careless slips) and analyzing execution speed, StudyLab helps learners identify hidden weaknesses, improve their problem-solving fluency, and successfully transfer concepts to isomorphic or structurally novel problems.
+## Target Learner
+Students and self-learners engaging with procedural, quantitative, or logically rigorous subjects where mastery requires practicing skills, recognizing problem variants, and executing steps, rather than just memorizing facts.
 
-## 5. What does it deliberately NOT do?
-- **StudyLab is not an Anki replacement.** It relies entirely on Anki for user data persistence, deck organization, and top-level scheduling (FSRS/SM-2).
-- **StudyLab is not a flashcard app.** It does not test simple recall. It does not use standard text-based front/back flipping.
-- **StudyLab is not a generic quiz app.** It is a deep pedagogical instrument designed specifically for structured STEM problem solving.
+## Core Job-To-Be-Done
+To continuously evaluate a learner's ability to solve complex, multi-step problems, identify the exact cognitive point of failure (e.g., conceptual misunderstanding vs. careless execution error), and automatically provide targeted remediation (e.g., a simpler variant, a worked example, or a prerequisite drill).
 
----
-### Traceability & Code Evidence
-- **Two-System Architecture:** Detailed in `02_product_reconciliation.md`.
-- **Procedural Anchor Model:** Evidenced by the `StudyLab Procedural Anchor` note type which delegates rendering entirely to the Rust core (`rslib/src/notetype/render.rs:123`).
-- **Domain Specificity:** The procedural engine explicitly models Math, Reasoning, Physics, and Chemistry capabilities (`rslib/procedural/src/skills/domain_evidence.rs`).
+## Success Criteria
+- Learners overcome "wheel-spinning" on difficult concepts via timely circuit breakers and prerequisite remediation.
+- The system accurately categorizes errors (concept vs. execution) and adapts difficulty accordingly.
+- Mastery requires passing strict composite gates: high accuracy, structural diversity, transfer capability, longitudinal independence, delayed retention, and decision quality.
+
+## Non-Goals
+StudyLab is **NOT**:
+- A flashcard application.
+- A replacement for Anki or FSRS.
+- A generic quiz app.
+- A clone of the Anki reviewer.
+- A collection of generic fill-in-the-blank cards.
+
+## Long-Term Vision
+StudyLab aims to be the universal procedural learning engine embedded within spaced repetition ecosystems. It bridges the gap between rote memorization and deep, structural problem-solving capability, allowing learners to seamlessly transition between recalling facts and practicing complex cognitive skills.

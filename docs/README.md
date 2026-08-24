@@ -1,20 +1,51 @@
 # StudyLab Canonical Documentation
 
+Welcome to the StudyLab documentation. StudyLab is the procedural learning and problem-solving intelligence subsystem embedded within this Anki fork.
+
 ## What is StudyLab?
-StudyLab is a deep procedural problem-solving engine embedded inside Anki. It is designed for learners studying Mathematics, Reasoning, Physics, and Chemistry. It provides a structured workspace for problem-solving practice, error diagnosis, and adaptive remediation, measuring *how* a student solves a problem (accuracy, speed, conceptual gaps, transfer), not merely *whether* they remembered a static fact.
+StudyLab is an adaptive problem-solving environment optimized for procedural STEM learning (Math, Physics, Chemistry, Reasoning). It evaluates *how* a learner solves a multi-step problem, tracks diagnostic error taxonomies (e.g., conceptual misunderstanding vs. careless execution), and automatically triggers targeted remediation (like simpler variants, worked examples, or prerequisite drills).
 
 ## What is it NOT?
-- It is **NOT** a flashcard app or a generic quiz app.
-- It is **NOT** a replacement for Anki. Anki serves as the underlying host environment and spaced repetition scheduler.
-- It is **NOT** designed for declarative memory (e.g., vocabulary, geography).
+- It is **not** a flashcard application or an Anki replacement.
+- It is **not** a second spaced-repetition algorithm (it defers to FSRS).
+- It is **not** a generic quiz app. 
 
-## What should an AI agent read before changing it?
-Before attempting to modify the StudyLab architecture or UI, you must internalize the product definition to prevent product drift. Read the canonical documentation in this order:
+## Who is it for?
+Students and self-learners mastering quantitative or logically rigorous subjects where recognizing patterns and executing structural steps is required, rather than just memorizing static facts.
 
-1. [PRODUCT_VISION.md](./PRODUCT_VISION.md): Understand the core purpose and audience.
-2. [PRODUCT_BOUNDARIES.md](./PRODUCT_BOUNDARIES.md): Understand the division of labor between Anki and StudyLab.
-3. [LEARNING_MODEL.md](./LEARNING_MODEL.md): Review how mastery and domain-specific evidence are tracked.
-4. [CONTENT_MODEL.md](./CONTENT_MODEL.md): Understand the declarative `.apkg` contracts and the universal procedural runtime.
-5. [REVIEWER_PHILOSOPHY.md](./REVIEWER_PHILOSOPHY.md): Read the UI constraints, including the Mistake Taxonomy Strip and modality parsing.
-6. [DIAGNOSTIC_MODEL.md](./DIAGNOSTIC_MODEL.md): Learn how mock sessions measure weaknesses across four cognitive dimensions.
-7. [ARCHITECTURE_INVARIANTS.md](./ARCHITECTURE_INVARIANTS.md): The absolute hard rules that must not be broken under any circumstances.
+## What domains does it support?
+- Mathematics
+- Logical Reasoning
+- Physics numericals/problem solving
+- Chemistry (Physical, Organic, Inorganic)
+- Other structured problem-solving domains fitting the declarative mold.
+
+## How is it different from Anki?
+Anki asks: *"Did you remember this answer?"*
+StudyLab asks: *"Can you execute the steps to solve this problem, and if you failed, where exactly did your cognitive process break down?"*
+StudyLab defers all flashcard scheduling to Anki but intercepts the review session to inject a rich, diagnostic problem-solving workspace. Its state (`SkillState`, `DomainEvidence`) is kept entirely isolated in `procedural.db`, while Anki retains `collection.anki2`.
+
+## How does content enter?
+Content enters declaratively. Python tooling compiles constraints, parameter domains, and templates into `.apkg` files containing `inline_contract`s. No new Rust backend code is required for ordinary new topics; the universal `DeclarativeArchetypeGenerator` instantiates the problems dynamically.
+
+## How does learning state work?
+Learner attempts produce `DomainEvidence` (e.g., an execution math slip). This evidence informs `MasteryEvidence`, which updates long-term `SkillState`. A conceptual error heavily demotes state and triggers JIT remediation (like a `ConceptCheck`). Progression requires passing strict accuracy, speed, and transfer gates.
+
+## Where should an AI agent start reading?
+Agents should start by reading [ARCHITECTURE_INVARIANTS.md](ARCHITECTURE_INVARIANTS.md) to understand non-negotiable rules, and [DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md) to navigate the rest of this directory.
+
+---
+
+### Navigation
+- [PRODUCT_VISION.md](PRODUCT_VISION.md)
+- [PRODUCT_BOUNDARIES.md](PRODUCT_BOUNDARIES.md)
+- [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)
+- [LEARNING_MODEL.md](LEARNING_MODEL.md)
+- [CONTENT_AND_AUTHORING.md](CONTENT_AND_AUTHORING.md)
+- [LEARNING_OBJECTS.md](LEARNING_OBJECTS.md)
+- [REVIEWER_STATE_MACHINE.md](REVIEWER_STATE_MACHINE.md)
+- [FRONTEND_BACKEND_CONTRACT.md](FRONTEND_BACKEND_CONTRACT.md)
+- [DIAGNOSTIC_AND_REMEDIATION.md](DIAGNOSTIC_AND_REMEDIATION.md)
+- [ARCHITECTURE_INVARIANTS.md](ARCHITECTURE_INVARIANTS.md)
+- [DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md)
+- [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)
