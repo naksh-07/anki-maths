@@ -8,7 +8,7 @@ Content is packaged declaratively. An `.apkg` deck contains `ProceduralCardAncho
 - **Tooling:** Content is authored using the `study-source-core` authoring skill via Python scripts (`tools/studylab_content_factory.py`), which compile topics into `.apkg` contracts.
 
 ## 2. Universal Procedural Runtime
-The Rust backend operates as a generic interpretation engine (`DeclarativeArchetypeGenerator`). 
+The Rust backend operates as a generic interpretation engine (`DeclarativeProblemGenerator` in `rslib/procedural/src/problems/declarative.rs`). 
 It ingests declarative contracts, evaluates domain bounds (e.g., `IntegerRange`, `DerivedLinear`), applies parameter constraints (`NotEqual`, `NonZero`), and dynamically substitutes variables into a `template_ref` to create ephemeral `ProblemInstance`s.
 
 ## 3. Definitions

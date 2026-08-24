@@ -1,35 +1,64 @@
 # Frontend / Backend Contract
 
-StudyLab operates a dual-layer state machine where the TS/Vite frontend provides the problem-solving workspace, and the Python/Qt/Rust backend maintains canonical telemetry and scheduling integration.
+StudyLab operates a synchronized dual-layer architecture where the TypeScript/Vite webview provides the interactive problem-solving workspace (`ts/reviewer/procedural.ts`), and the Python/Qt/Rust backend maintains canonical evaluation, scheduling, and database persistence.
 
-## Communication Bridge
+---
 
-The TS frontend communicates with the Qt backend (`qt/aqt/reviewer.py`) using `bridgeCommand("<command>")`. The `_handle_procedural_command` function acts as the central router.
+## Communication Bridge Architecture
 
-### 1. Answer Submission
-- **Flow:** TS evaluates input → TS sends `bridgeCommand("procedural_attempt:{...JSON...}")` → TS sends `bridgeCommand("ans")`.
-- **Payload:** JSON containing latency, final correctness, step trace, and active mode.
-- **Qt Action:** `procedural_attempt` stores telemetry in instance variables (`self._last_procedural_attempt`). It forces `self.state = "answer"` and calls `self._showEaseButtons()` if native integration requires it. `ans` triggers Anki's native `_getTypedAnswer()` pipeline.
-- **Persistence:** TS uses `globalThis.anki.mutateNextCardStates` to inject telemetry into the v3 scheduler states, eventually flushing to `procedural.db` via Rust.
+Communication between the webview and native Anki runs through Anki's standard IPC channel via `bridgeCommand("<command>")`, routed directly in Python by `_handle_procedural_command` (`qt/aqt/reviewer.py:724-774`).
 
-### 2. Next Problem (Scheduling)
-- **Flow:** TS sends `bridgeCommand("procedural_answer:<ease>")`.
-- **Payload:** An integer ease calculation. `1` (Incorrect), `3` (Slow Correct), `4` (Fast Correct).
-- **Qt Action:** Maps to `self._answerCard(val)` to formally reschedule the procedural anchor using FSRS.
+```text
+Webview (TS) ──[bridgeCommand]──> Qt Reviewer (Python) ──[PyO3 IPC]──> Procedural Subsystem (Rust)
+     │                                    │                                      │
+     ▼                                    ▼                                      ▼
+Local Eval / UI State           Reviewer Lifecycle Sync                procedural.db Persistence
+```
 
-### 3. Hints & Mistakes
-- **Flow:** TS sends `bridgeCommand("procedural_hint:{...}")` or `bridgeCommand("procedural_mistake:{...}")`.
-- **Payload:** Metadata about the requested hint or self-classified mistake.
-- **Qt Action:** Modifies the pending telemetry payload. Mistake classifications are mapped into `DomainEvidence` (e.g. execution vs concept) when finalized.
+---
 
-### 4. Step Validation
-- **Flow:** TS sends `bridgeCommand("procedural_validate_steps:{...}")`.
-- **Payload:** The mathematical/logical expression of the current intermediate step.
-- **Qt Action:** Used for server-side evaluation if local TS evaluation requires heavy symbolic algebra offloading.
+## Comprehensive Event Trace Matrix
 
-### 5. Learning Object Injection
-- **Flow:** TS sends commands like `procedural_try_similar`, `procedural_declarative_recall`, or `procedural_practice_prerequisite`.
-- **Qt Action:** Intercepts standard FSRS queues to inject JIT remediation tasks before pulling the next scheduled card.
+| Frontend Event | Payload Schema | Bridge Command | Python Handler (`qt/aqt/reviewer.py`) | Evaluator Layer | Persistence Target | Response / UI Effect |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Answer Submission** | `{ latency_ms, is_correct, answer_raw, mode, steps }` | `procedural_attempt:{...}` + `ans` | `_handle_procedural_command`<br>(Lines 758, 783) | TS (inline contract derivations) + Rust `StepValidator` | Stored in `self._last_procedural_attempt` | Sets `self.state = "answer"`, triggers native typed answer pipeline, transitions UI to `feedback` or `mistake_classification`. |
+| **Reschedule / Next** | Integer ease: `1` (Again), `3` (Good), `4` (Easy) | `procedural_answer:<ease>` | `_handle_procedural_command`<br>(Lines 703, 735) | Python/Rust FSRS Engine | Flushes telemetry to `procedural.db` via Rust scheduler hook | Calls `self._answerCard(val)` to formally reschedule card and advance to next item. |
+| **Hint Requested** | `{ hint_index, step_id, timestamp }` | `procedural_hint:{...}` | `_handle_procedural_command`<br>(Lines 756, 779) | TS (`StepNodeSpec`) | Stored in `self._last_procedural_hint` | Renders pedagogical principle in UI; decrements attempt `independence` score. |
+| **Mistake Classified** | `{ category, reason, error_type }` | `procedural_mistake:{...}` | `_handle_procedural_command`<br>(Lines 762, 790) | Learner self-diagnosis | Stored in `self._last_procedural_mistake` | Unlocks `feedback` state; feeds diagnostic classifier in `domain_evidence.rs`. |
+| **Step Validation** | `{ step_id, input_expr, current_step }` | `procedural_validate_steps:{...}` | `_handle_procedural_command`<br>(Lines 760, 775) | Rust `StepValidator` (`rslib/procedural/src/problems/steps/step_validator.rs`) | Stored in `self._last_procedural_stepwise_validation` | Returns step correctness, updates step status indicator, enables next step input. |
+| **Try Similar Variant** | `{ family_id, seed_mode: "Random" }` | `procedural_try_similar:{...}` | `_handle_procedural_command`<br>(Lines 764, 794) | `DeclarativeProblemGenerator` | Emits `ProblemInstance` to DB | Calls `self._showQuestion()` to re-render fresh numerical variant without leaving review. |
+| **Practice Prerequisite** | `{ prerequisite_family_id, topic_id }` | `procedural_practice_prerequisite:{...}` | `_handle_procedural_command`<br>(Lines 766, 803) | `RemediationPolicy` | Queues JIT item in `remediation_queue_items` | Injects prerequisite drill into immediate queue. |
+| **Declarative Recall** | `{ fact_id, target_symbol }` | `procedural_declarative_recall:{...}` | `_handle_procedural_command`<br>(Lines 768, 810) | Direct string/value comparator | Updates `SkillState` recall latency | Injects formula recall prompt. |
 
-## Design Rule: Avoid Duplication
-- **Evaluation Ownership:** The Rust core owns canonical correctness rules (via the `inline_contract`). The TS frontend evaluates locally based on that contract to ensure zero latency during problem-solving, but Rust is the ultimate authority. Do not recreate learning logic exclusively in TS.
+---
+
+## Telemetry Persistence Pipeline
+
+Telemetry injection bypasses Anki collection pollution using a multi-stage transport pipeline:
+
+1. **Webview State Mutation:**
+   ```typescript
+   globalThis.anki.mutateNextCardStates((globalThis.anki as any)._state_mutation_key, async (states, customData) => {
+       for (const state of ["again", "hard", "good", "easy"]) {
+           if (customData[state]) {
+               customData[state].studylab = { ...customData[state].studylab, ...telemetry };
+           }
+       }
+   });
+   ```
+2. **Scheduler Hook & Database Flush:**
+   - When `_answerCard()` executes, the Rust answering pipeline (`rslib/src/scheduler/answering/mod.rs:350-435`) extracts the `studylab` custom data dictionary.
+   - It records `PracticeAttempt`, `ErrorEvent`, and updates `SkillState` directly in `procedural.db` (`rslib/procedural/src/storage/store.rs`).
+   - The custom data payload is consumed and cleared, keeping `collection.anki2` completely free of procedural telemetry schema clutter.
+
+---
+
+## Evaluation Boundaries: Convenience vs Authority
+
+- **UI-Level Evaluation (Zero Latency):**
+  - Executed client-side in TypeScript (`ts/reviewer/procedural.ts:788-842` and `ts/reviewer/components/numerical_container.ts`).
+  - Provides instantaneous UI state transitions, input error highlights, and dimensional unit checks based on values supplied in `inline_contract`.
+- **Canonical Semantic Authority (Rust Backend):**
+  - Executed in Rust (`rslib/procedural/src/problems/steps/step_validator.rs` and `rslib/procedural/src/problems/validator.rs`).
+  - Authoritatively computes mathematical equivalence, multi-step symbolic inferences, and domain diagnostic classifications (`DomainEvidence`).
+  - Frontend evaluation logic must never diverge from or replace backend contract verification.

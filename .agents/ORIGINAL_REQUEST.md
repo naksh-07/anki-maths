@@ -1,5 +1,8 @@
 # Original User Request
 
+> [!NOTE]
+> **Historical Artifact Notice:** This file contains historical planning and dispatch records from prior phases. The authoritative, frozen canonical documentation for the StudyLab architecture and contracts is located in [`docs/README.md`](../docs/README.md).
+
 ## Initial Request — 2026-08-24T12:00:48Z
 
 # STUDYLAB FINAL RECONCILIATION MISSION

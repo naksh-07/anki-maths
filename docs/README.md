@@ -26,7 +26,7 @@ StudyLab asks: *"Can you execute the steps to solve this problem, and if you fai
 StudyLab defers all flashcard scheduling to Anki but intercepts the review session to inject a rich, diagnostic problem-solving workspace. Its state (`SkillState`, `DomainEvidence`) is kept entirely isolated in `procedural.db`, while Anki retains `collection.anki2`.
 
 ## How does content enter?
-Content enters declaratively. Python tooling compiles constraints, parameter domains, and templates into `.apkg` files containing `inline_contract`s. No new Rust backend code is required for ordinary new topics; the universal `DeclarativeArchetypeGenerator` instantiates the problems dynamically.
+Content enters declaratively. Python tooling compiles constraints, parameter domains, and templates into `.apkg` files containing `inline_contract`s. No new Rust backend code is required for ordinary new topics; the universal `DeclarativeProblemGenerator` (`rslib/procedural/src/problems/declarative.rs`) instantiates the problems dynamically.
 
 ## How does learning state work?
 Learner attempts produce `DomainEvidence` (e.g., an execution math slip). This evidence informs `MasteryEvidence`, which updates long-term `SkillState`. A conceptual error heavily demotes state and triggers JIT remediation (like a `ConceptCheck`). Progression requires passing strict accuracy, speed, and transfer gates.
