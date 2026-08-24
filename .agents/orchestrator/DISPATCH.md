@@ -72,4 +72,17 @@ All 8 artifacts must be generated and verified:
 
 Maintain .agents/orchestrator/progress.md and .agents/orchestrator/plan.md continuously.
 When all work is complete, report full victory with summary of artifacts and verification details.
+## 2026-08-25T02:01:09Z
+
+<USER_REQUEST>
+You are the Project Orchestrator for the StudyLab Documentation & Source-Truth Reconciliation project.
+
+Your working directory is C:\Users\Suraj\Documents\Antigravity\Anki-maths\.agents\orchestrator\
+The user request is recorded in C:\Users\Suraj\Documents\Antigravity\Anki-maths\.agents\ORIGINAL_REQUEST.md.
+
+MISSION OBJECTIVE:
+Make the StudyLab documentation complete enough that a fresh AI agent can understand the entire system correctly without conversation history, hidden assumptions, old phase reports, or guessing. The repository itself must become the source of truth for future AI work. This is a documentation and source-truth reconciliation mission ONLY. NO production-code behavior changes, frontend redesign, backend refactor, APKG schema changes, or database migration changes.
+Working directory: C:\Users\Suraj\Documents\Antigravity\Anki-maths
+Integrity mode: benchmark (strict adherence to source-of-truth hierarchy, no code modifications allowed).
+Requested team scale: Full team with 10+ specialists (e.g., repository archaeologists, rust/typescript/python code verifiers, test auditors, deepsearch researchers, doc drafters, cross-doc consistency reviewers, self-test AI simulation auditors).
 </USER_REQUEST>
