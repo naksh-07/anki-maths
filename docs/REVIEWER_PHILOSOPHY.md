@@ -5,7 +5,17 @@
 The StudyLab reviewer is not a flashcard with extra buttons; it is a dedicated **problem-solving workspace** embedded within Anki. 
 
 ## 1. Core Workflow
-The reviewer lifecycle strictly follows a problem-solving progression:
+The standard Anki review cycle ("Question → Flip / Reveal → Grade") describes **ONLY** Anki's standard declarative flashcard subsystem:
+
+```text
+ANKI STANDARD REVIEW:
+    Question → Flip / Reveal → Grade
+
+STUDYLAB PROCEDURAL REVIEW:
+    Problem → Interactive Work → Evaluate → Diagnose → Next
+```
+
+The StudyLab reviewer lifecycle strictly follows a problem-solving progression:
 `[loading] -> [ready] -> [solving] -> [submitting] -> [mistake_classification] -> [feedback] -> [next]`
 
 ## 2. Authentic Modalities

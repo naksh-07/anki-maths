@@ -11,6 +11,14 @@
 
 The StudyLab Reviewer provides an interactive, multi-domain cognitive problem-solving environment embedded within Anki. It replaces Anki's standard binary declarative recall flip cycle with an **explicit, state-driven procedural learning machine**.
 
+```text
+ANKI STANDARD REVIEW:
+    Question → Flip / Reveal → Grade
+
+STUDYLAB PROCEDURAL REVIEW:
+    Problem → Interactive Work → Evaluate → Diagnose → Next
+```
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
 │                             PRIMARY PRODUCT TRUTH                                │

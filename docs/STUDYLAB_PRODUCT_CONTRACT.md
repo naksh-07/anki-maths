@@ -69,6 +69,19 @@ To prevent architectural drift and UI bloat, StudyLab is formally bounded by wha
 
 ---
 
+### 1.4 Canonical Review Lifecycle Contrast
+The traditional "Question → Flip / Reveal → Grade" interaction describes **ONLY** Anki's standard declarative flashcard subsystem (Basic, Cloze). It MUST NOT be interpreted as StudyLab's learner workflow.
+
+```text
+ANKI STANDARD REVIEW:
+    Question → Flip / Reveal → Grade
+
+STUDYLAB PROCEDURAL REVIEW:
+    Problem → Interactive Work → Evaluate → Diagnose → Next
+```
+
+---
+
 ## 2. Core Learning Loop (Section 2)
 
 ### 2.1 The 5-Stage Learner-Facing Interaction Priority

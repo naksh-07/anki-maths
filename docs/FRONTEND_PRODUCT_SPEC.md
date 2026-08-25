@@ -15,6 +15,15 @@
 
 It is NOT a flashcard card-flip UI, NOT a generic quiz page, and NOT a second Anki reviewer. The interface exists solely to facilitate active problem solving, step-level reasoning, and metacognitive reflection with zero extraneous cognitive load.
 
+The traditional Anki review interaction describes **ONLY** Anki's standard declarative flashcard subsystem:
+```text
+ANKI STANDARD REVIEW:
+    Question → Flip / Reveal → Grade
+
+STUDYLAB PROCEDURAL REVIEW:
+    Problem → Interactive Work → Evaluate → Diagnose → Next
+```
+
 ### 1.2 The Absolute Modality Invariant
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
