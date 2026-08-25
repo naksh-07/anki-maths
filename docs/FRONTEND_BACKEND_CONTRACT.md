@@ -57,8 +57,8 @@ All frontend-to-backend communication flows via `bridgeCommand("<command>")` (im
 
 | Command Protocol Signature | Sender (TypeScript) | Receiver (Python `reviewer.py`) | JSON Payload Schema | Side Effect & Target Subsystem |
 |---|---|---|---|---|
-| `procedural_answer:<ease>` | `ProceduralReviewer.handleNext()` (`procedural.ts:1228`) | `_linkHandler`<br>(Lines 703-708) | None (Integer `<ease>` in URL: `1`, `3`, or `4`) | Sets `self.state = "answer"`; invokes `self._answerCard(val)` to execute FSRS review and pull the next card. |
-| `procedural_attempt:<json>` | `ProceduralReviewer.finishAttempt()` (`procedural.ts:1183`) | `_on_procedural_attempt`<br>(Lines 758, 783-789) | `AttemptResultPayload` | Stores attempt snapshot in `self._last_procedural_attempt`; sets `state = "answer"`; reveals native ease buttons. |
+| `procedural_answer:<ease>` | `ProceduralReviewer.handleNext()` (`procedural.ts:1228`) | `_linkHandler`<br>(Lines 703-708) | None (Integer `<ease>` in URL: `1`, `2`, `3`, or `4`) | Sets `self.state = "answer"`; invokes `self._answerCard(val)` to execute FSRS review with calibrated or overridden ease and pull the next card. |
+| `procedural_attempt:<json>` | `ProceduralReviewer.finishAttempt()` (`procedural.ts:1183`) | `_on_procedural_attempt`<br>(Lines 758, 783-789) | `AttemptResultPayload` | Stores attempt snapshot in `self._last_procedural_attempt`; sets `state = "answer"`. |
 | `procedural_hint:<json>` | `ProceduralReviewer.requestHint()` (`procedural.ts:649`) | `_on_procedural_hint`<br>(Lines 756, 779-782) | `HintRequestPayload` | Stores in `self._last_procedural_hint`; tracks hint exposure level and latency. |
 | `procedural_validate_steps:<json>` | `StepwiseContainer.evaluateSteps()` (`stepwise_container.ts`) | `_on_procedural_validate_steps`<br>(Lines 760, 775-778) | `StepwiseValidationPayload` | Stores in `self._last_procedural_stepwise_validation`; records step error localization. |
 | `procedural_mistake:<json>` | `ProceduralReviewer.selectMistakeCategory()` (`procedural.ts:988`) | `_on_procedural_mistake`<br>(Lines 762, 790-793) | `MistakeSelectionPayload` | Stores in `self._last_procedural_mistake`; captures student self-attribution for `DomainEvidence`. |
@@ -66,8 +66,6 @@ All frontend-to-backend communication flows via `bridgeCommand("<command>")` (im
 | `procedural_practice_prerequisite:<json>` | `ProceduralReviewer.handlePracticePrerequisite()` (`procedural.ts:1214`) | `_on_procedural_practice_prerequisite`<br>(Lines 766, 803-809) | `PrerequisitePracticePayload` | Displays tooltip `"Practice Prerequisite: {target_skill_id}"`; triggers remedial navigation. |
 | `procedural_declarative_recall:<json>` | `ProceduralReviewer.handleDeclarativeRecallAction()` (`procedural.ts:1204`) | `_on_procedural_declarative_recall`<br>(Lines 768, 810-823) | `DeclarativeRecallPayload` | Resolves target Anki card from `collection.anki2` or displays tooltip `"Declarative recall requested (tag: {tag})"`. |
 | `statesMutated` | State mutation hook closure (`reviewer.py:1372`) | `_linkHandler`<br>(Lines 722-723) | None | Sets `self._states_mutated = True`, unblocking deferred ease button rendering. |
-| `ans` | `ProceduralReviewer.finishAttempt()` (`procedural.ts:1186`) | `_linkHandler`<br>(Lines 698-699) | None | Synchronizes Anki webview state to show bottom ease buttons. |
-| `ease<1..4>` | Native bottom ease buttons (`reviewer.py:1059`) | `_linkHandler`<br>(Lines 700-702) | None | Rates card with manual ease 1..4. |
 
 ---
 

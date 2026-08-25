@@ -480,6 +480,18 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
             return
         self.state = "answer"
         c = self.card
+
+        if self._is_procedural_card():
+            # For procedural cards, delegate to procedural handler without destroying webview DOM
+            self.web.eval(
+                "if (globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.handleNativeShowAnswer === 'function') { globalThis.anki.procedural.handleNativeShowAnswer(); }"
+            )
+            self._showEaseButtons()
+            self.mw.web.setFocus()
+            gui_hooks.reviewer_did_show_answer(c)
+            self._auto_advance_to_question_if_enabled()
+            return
+
         a = c.answer()
         # play audio?
         if c.autoplay():
@@ -971,17 +983,23 @@ timerStopped = false;
         )
 
     def _showAnswerButton(self) -> None:
-        middle = """
+        if self._is_procedural_card():
+            middle = (
+                "<table cellpadding=0><tr><td class=stat2 align=center><span class=stattxt>%s</span></td></tr></table>"
+                % self._remaining()
+            )
+        else:
+            middle = """
 <button title="{}" id="ansbut" onclick='pycmd("ans");'>{}<span class=stattxt>{}</span></button>""".format(
-            tr.actions_shortcut_key(val=tr.studying_space()),
-            tr.studying_show_answer(),
-            self._remaining(),
-        )
-        # wrap it in a table so it has the same top margin as the ease buttons
-        middle = (
-            "<table cellpadding=0><tr><td class=stat2 align=center>%s</td></tr></table>"
-            % middle
-        )
+                tr.actions_shortcut_key(val=tr.studying_space()),
+                tr.studying_show_answer(),
+                self._remaining(),
+            )
+            # wrap it in a table so it has the same top margin as the ease buttons
+            middle = (
+                "<table cellpadding=0><tr><td class=stat2 align=center>%s</td></tr></table>"
+                % middle
+            )
         if self.card.should_show_timer():
             maxTime = self.card.time_limit() / 1000
         else:
@@ -999,7 +1017,7 @@ timerStopped = false;
         )
 
     def _remaining(self) -> str:
-        if not self.mw.col.conf["dueCounts"]:
+        if not self.mw.col.conf.get("dueCounts", True):
             return ""
 
         counts: list[int | str]

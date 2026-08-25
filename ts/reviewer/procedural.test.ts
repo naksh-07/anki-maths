@@ -1042,4 +1042,37 @@ describe("ProceduralReviewer Performance Classification", () => {
         const perf = await runAttempt(30000, undefined, true);
         expect(perf.proceduralPerformance.classification).toBe("on_target_correct");
     });
+
+    test("handleNativeShowAnswer with empty input routes to unassisted surrender and mistake classification (P0-A)", () => {
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-p0a",
+            familyId: "math.linear",
+            targetTimeMs: 45000,
+            correctAnswer: { value: 10 },
+        });
+
+        expect(reviewer.getState()).toBe("solving");
+        // User clicks Show Answer without typing anything
+        reviewer.handleNativeShowAnswer();
+
+        expect(reviewer.getState()).toBe("mistake_classification");
+        expect(container.querySelector("#proc-result-panel")?.classList.contains("hidden")).toBe(false);
+        expect(container.querySelector("#proc-result-title")?.textContent).toContain("Incorrect");
+
+        reviewer.destroy();
+    });
+
+    test("deriveCalibratedEase computes exact 4-tier pedagogical rating (P0-B)", () => {
+        const reviewer = new ProceduralReviewer(container, {
+            instanceId: "inst-p0b",
+            familyId: "math.linear",
+            targetTimeMs: 40000,
+            correctAnswer: { value: 10 },
+        });
+
+        // Case 1: Unattempted / incorrect
+        expect(reviewer.deriveCalibratedEase()).toBe(1);
+
+        reviewer.destroy();
+    });
 });

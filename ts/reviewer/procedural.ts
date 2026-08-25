@@ -427,11 +427,15 @@ export class ProceduralReviewer {
                     return;
                 }
 
-                // If Space is pressed outside text input during solving, submit or reveal
-                if (kbEvent.key === " " || kbEvent.code === "Space") {
+                // If Space or Enter is pressed outside text input during solving, submit
+                if (kbEvent.key === " " || kbEvent.code === "Space" || kbEvent.key === "Enter" || kbEvent.code === "Enter") {
                     kbEvent.preventDefault();
                     kbEvent.stopPropagation();
-                    this.handleQuickSubmit();
+                    if (this.activeMode === "stepwise") {
+                        this.handleStepwiseSubmit();
+                    } else {
+                        this.handleQuickSubmit();
+                    }
                     return;
                 }
 
@@ -474,7 +478,7 @@ export class ProceduralReviewer {
                 }
 
                 // Space or Enter in mistake classification MUST NOT bypass reflection
-                if (kbEvent.key === " " || kbEvent.code === "Space" || kbEvent.key === "Enter") {
+                if (kbEvent.key === " " || kbEvent.code === "Space" || kbEvent.key === "Enter" || kbEvent.code === "Enter") {
                     const activeEl = document.activeElement as HTMLElement;
                     if (activeEl && (activeEl.classList.contains("proc-mistake-btn") || activeEl.classList.contains("proc-mistake-card"))) {
                         const val = activeEl.dataset.value || "";
@@ -490,10 +494,19 @@ export class ProceduralReviewer {
                     return;
                 }
             } else if (this.state === "feedback") {
-                if (kbEvent.key === "Enter" || kbEvent.key === " " || kbEvent.code === "Space") {
+                if (kbEvent.key === "Enter" || kbEvent.key === " " || kbEvent.code === "Space" || kbEvent.code === "Enter") {
                     kbEvent.preventDefault();
                     kbEvent.stopPropagation();
                     this.handleNext();
+                    return;
+                }
+                const keyNum = parseInt(kbEvent.key, 10);
+                if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= 4) {
+                    kbEvent.preventDefault();
+                    kbEvent.stopPropagation();
+                    this.state = "next";
+                    bridgeCommand(`procedural_answer:${keyNum}`);
+                    return;
                 }
             }
         });
@@ -1244,19 +1257,57 @@ export class ProceduralReviewer {
         if (this.state === "solving" || this.state === "ready") {
             if (this.activeMode === "stepwise") {
                 this.handleStepwiseSubmit();
+            } else if (this.mcqContainer) {
+                // If MCQ container, trigger selection or option check if option chosen
+                this.handleQuickSubmit();
             } else {
+                const answer = this.quickInput?.value.trim() || "";
+                if (!answer) {
+                    // Learner requested Show Answer / gave up without submitting an answer:
+                    // Treat as unassisted surrender / incorrect attempt, preserving mistake & learning telemetry
+                    this.state = "submitting";
+                    const evalResult = {
+                        isCorrect: false,
+                        reason: "Solution requested before submitting answer.",
+                        score: 0.0,
+                    };
+                    this.finishAttempt(evalResult, { answer: "(surrendered)", steps: [] }, "quick");
+                    return;
+                }
                 this.handleQuickSubmit();
             }
         }
     }
 
+    public deriveCalibratedEase(): 1 | 2 | 3 | 4 {
+        if (!this.lastAttemptIsCorrect) {
+            return 1; // Again
+        }
+        if (
+            this.mistakeType === "concept_not_known" ||
+            this.mistakeType === "formula_or_concept_misapplied" ||
+            this.hintsUsed >= 3
+        ) {
+            return 1; // Again
+        }
+        const targetMs = this.options.targetTimeMs || 45000;
+        const elapsedMs = this.pendingMistakeOutcome?.timeTakenMs || (Date.now() - this.startTime);
+        const isSlow = elapsedMs > targetMs * 1.25;
+        const isFast = elapsedMs <= targetMs * 0.75;
+
+        if (isSlow || this.hintsUsed > 0) {
+            return 2; // Hard
+        }
+        if (isFast && this.hintsUsed === 0) {
+            return 4; // Easy
+        }
+        return 3; // Good
+    }
+
     private handleNext(): void {
         if (this.state === "teardown") {return;}
         this.state = "next";
-        let ease = 1;
-        if (this.lastAttemptIsCorrect) {
-            ease = this.lastAttemptIsFast ? 4 : 3;
-        }
+        const ease = this.deriveCalibratedEase();
         bridgeCommand(`procedural_answer:${ease}`);
     }
 

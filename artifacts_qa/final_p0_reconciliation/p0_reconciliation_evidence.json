@@ -1,0 +1,45 @@
+{
+  "runtime": "PyQt6 / QtWebEngine Windows Desktop",
+  "pid": 26704,
+  "cdp_port": 9222,
+  "scenarios": {
+    "01_procedural_solving": {
+      "is_procedural_card": true,
+      "procedural_state": "solving",
+      "bottom_show_answer_visible": false,
+      "p0_a_bottom_bar_suppressed": true,
+      "screenshot": "01_procedural_solving.png"
+    },
+    "02_show_answer_attempt": {
+      "mistake_panel_visible": true,
+      "result_title": "",
+      "p0_a_bypass_prevented": true,
+      "screenshot": "02_show_answer_attempt.png"
+    },
+    "03_wrong_answer": {
+      "mistake_ui_active": true,
+      "submitted_answer": "99",
+      "screenshot": "03_wrong_answer.png"
+    },
+    "04_mistake_classification": {
+      "category_selected": "silly_mistake",
+      "anti_bypass_trapping_verified": true,
+      "screenshot": "04_mistake_classification.png"
+    },
+    "05_feedback": {
+      "feedback_visible": true,
+      "next_btn_visible": true,
+      "speed_quadrant": "?? Check Strategy / Trap (Fast but Incorrect)",
+      "single_interaction_surface": true,
+      "screenshot": "05_feedback.png"
+    },
+    "06_normal_anki": {
+      "is_normal_card": true,
+      "show_answer_button_present": true,
+      "ease_buttons_present": true,
+      "normal_anki_unaffected": true,
+      "screenshot": "06_normal_anki.png"
+    }
+  },
+  "verdict": "BOTH P0s PROVEN RESOLVED"
+}

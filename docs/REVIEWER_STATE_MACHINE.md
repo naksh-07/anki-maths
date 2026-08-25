@@ -280,7 +280,27 @@ this.disposables.push(
    }
    ```
 3. **`MutationObserver` Safety Net:** A `MutationObserver` on `document.body` monitors `#procedural-card`. If the container is removed from the DOM (e.g., Anki transitions to a standard flashcard), `reviewer.destroy()` is automatically invoked.
-4. **Zero Listener Leakage:** Tested across 1,000 continuous card transitions with 0 residual event listeners or memory growth (`desktop_validation_master_suite.rs`, Section 7).
+4. **Zero Listener Leakage:** Tested across continuous card transitions with 0 residual event listeners or memory growth.
+
+### 4.3 P0-A Reconciled Contract: Anti-Bypass "Show Answer" Surrender
+1. **Bottom Bar Button Suppression:** For procedural cards (`reviewer.py:_is_procedural_card()`), `_showAnswerButton()` suppresses Anki's standard `#ansbut` button so only remaining due counts are shown.
+2. **Native Shortcut Bridge Routing:** If the learner invokes native "Show Answer" via global shortcuts (`Space`, `Enter`) or menus, `reviewer.py:_showAnswer()` delegates to `globalThis.anki.procedural.handleNativeShowAnswer()` without executing DOM replacement.
+3. **Unassisted Surrender Semantics:**
+   - If `handleNativeShowAnswer()` is called when input is empty during `ready` or `solving`, it is treated as an intentional surrender (`isCorrect: false`, `reason: "Solution requested before submitting answer."`).
+   - The state machine immediately transitions to `mistake_classification`, requiring the learner to reflect on the conceptual or procedural gap before the step-by-step solution is unmasked.
+   - During `mistake_classification`, Space and Enter remain strictly trapped to prevent bypassing self-reflection.
+
+### 4.4 P0-B Reconciled Contract: Single Interaction Surface & Calibrated Rating
+1. **Single Post-Answer Ownership:** StudyLab exclusively owns the post-answer feedback surface inside `#proc-result-panel`. Anki's footer ease buttons remain suppressed during procedural reviews to prevent dual-surface confusion.
+2. **Deterministic Calibrated Ease Derivation:**
+   When the learner clicks "Next Problem" or presses `Space` / `Enter` in `feedback` state, `deriveCalibratedEase()` deterministically computes the ease rating matching Rust's `rating_policy.rs`:
+   - **Ease 1 (Again):** Incorrect attempt, surrender, severe mistake (`concept_not_known`, `formula_or_concept_misapplied`), or $\ge 3$ hints.
+   - **Ease 2 (Hard):** Correct but slow ($> 1.25\times$ target latency) or $1..2$ hints used.
+   - **Ease 3 (Good):** Standard independent on-target correct solve.
+   - **Ease 4 (Easy):** Fast solve ($\le 0.75\times$ target latency) with 0 hints on first attempt.
+3. **Hotkey Parity & Explicit Override:**
+   - In `feedback` state, pressing `Space` or `Enter` advances with the calibrated ease via `bridgeCommand("procedural_answer:<ease>")`.
+   - Numeric keys `1`..`4` allow explicit ease override when desired.
 
 ---
 

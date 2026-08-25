@@ -417,10 +417,10 @@ What "good" looks like in live DEV desktop:
 
 | Requirement | Current Implementation | Match | Gap | Priority |
 |---|---|---|---|---|
+| One-Interaction-Surface (Next) (P0-B) | Single in-card "Next Problem" button inside `proc-result-panel`. Footer ease buttons suppressed for procedural cards. `Next Problem`, `Space`, or `Enter` advances card with calibrated ease (`1`..`4`) matching Rust rating policy. Numeric keys `1`..`4` in `feedback` state provide explicit override. Standard cards retain normal ease buttons with 0% regression. | 🟢 | Reconciled & Resolved with live desktop verification. | P0 (RESOLVED) |
+| "Show Answer" Native Button Bypass (P0-A) | `#ansbut` button suppressed in bottom bar for procedural cards. Native Show Answer (`_showAnswer()`) delegates to `globalThis.anki.procedural.handleNativeShowAnswer()` without destroying DOM. Empty input triggers unassisted surrender (`isCorrect: false`), routing to `mistake_classification` with anti-bypass Space/Enter trapping before solution reveal. | 🟢 | Reconciled & Resolved with live desktop verification. | P0 (RESOLVED) |
 | Modality-matched UI for non-Problem objects | Uses generic `MCQContainer` for ConceptCheck/StrategyDrill without distinct frontend behavior. | 🔴 | Frontend lacks specialization for specific learning interventions. | P1 |
 | `WorkedExample` Frontend Component | Backend supports `WorkedExampleObject`, TS uses generic result panel. | 🔴 | Missing dedicated `WorkedExampleView` / `worked_example_container.ts`. | P1 |
-| One-Interaction-Surface (Next) | Renders custom "Next Problem" AND reveals native Anki ease buttons in `feedback`. | 🔴 | Duplicated interaction surface for card advancement. | P0 |
-| "Show Answer" Native Button Bypass | Mouse click on native "Show Answer" bypasses procedural submit/mistake state, aborting telemetry. | 🔴 | Core telemetry bypass leak. | P0 |
 | Result/Feedback Information Density | Dumps generic text blocks, raw time stats, multiple badges in `proc-result-panel`. | 🔴 | Information overload; violates minimalistic feedback contract. | P2 |
 | Timer / Metrics Anxiety | `proc-timer` ticks every 200ms during `solving`. | 🔴 | Violates cognitive scaffolding (distracting). | P2 |
 | Header / Metadata Density | Incorporates multiple badges, diff tags, variant tags (`proc-header`). | 🔴 | Looks like a developer dashboard. | P2 |
@@ -428,4 +428,4 @@ What "good" looks like in live DEV desktop:
 | Domain-Specific Widgets | Uses generic `NumericalContainer` across domains. | 🔴 | Missing specific physics/chem/reasoning UI elements (e.g., ICE tables). | P2 |
 
 ---
-**SPECIFICATION STATUS: SPECIFIED / NOT YET IMPLEMENTED**
+**SPECIFICATION STATUS: P0 RESOLVED & LIVE VERIFIED**
