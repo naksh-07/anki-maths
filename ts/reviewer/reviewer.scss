@@ -15,15 +15,12 @@ hr {
 body {
     margin: 20px;
     overflow-wrap: break-word;
-    // default background setting to fit with toolbar
     background-size: cover;
     background-repeat: no-repeat;
     background-position: top;
     background-attachment: fixed;
 }
 
-// explicit nightMode definition required
-// to override default .card styling
 body.nightMode {
     background-color: var(--canvas);
     color: var(--fg);
@@ -73,7 +70,6 @@ pre {
 
 #typeans {
     width: 100%;
-    // https://anki.tenderapp.com/discussions/beta-testing/1854-using-margin-auto-causes-horizontal-scrollbar-on-typesomething
     box-sizing: border-box;
     line-height: 1.75;
 }
@@ -137,37 +133,127 @@ button {
 }
 
 /* =========================================================================
- * Procedural Card & Exam Reviewer Experience
- * Built with native Anki design tokens
+ * StudyLab Open Canvas Design Tokens (Light & Dark Mode)
+ * Reference: docs/STUDYLAB_UI_COMPOSITION_CONTRACT.md & FRONTEND_VISUAL_DESIGN_SPEC.md
  * ========================================================================= */
 
+:root {
+    /* Base Backgrounds & Surfaces */
+    --proc-bg: #ffffff;
+    --proc-surface: #f8fafc;
+    --proc-surface-subtle: #f1f5f9;
+    --proc-surface-hover: #e2e8f0;
+
+    /* Typography & Foreground */
+    --proc-text-primary: #0f172a;
+    --proc-text-secondary: #475569;
+    --proc-text-muted: #94a3b8;
+
+    /* Borders & Dividers */
+    --proc-border: #e2e8f0;
+    --proc-border-focus: #3b82f6;
+    --proc-border-subtle: #cbd5e1;
+    --proc-divider: 1px solid var(--proc-border);
+
+    /* Semantic State Accents */
+    --proc-primary: #2563eb;
+    --proc-primary-hover: #1d4ed8;
+    --proc-primary-light: #eff6ff;
+
+    --proc-success: #059669;
+    --proc-success-bg: #ecfdf5;
+    --proc-success-border: #10b981;
+
+    --proc-error: #dc2626;
+    --proc-error-bg: #fef2f2;
+    --proc-error-border: #ef4444;
+
+    --proc-warning: #d97706;
+    --proc-warning-bg: #fffbeb;
+    --proc-warning-border: #f59e0b;
+
+    /* Open Canvas Callout & Accent Tokens */
+    --proc-accent-left-correct: 3px solid var(--proc-success);
+    --proc-accent-left-incorrect: 3px solid var(--proc-error);
+    --proc-accent-left-worked: 3px solid var(--proc-primary);
+    --proc-accent-left-decision: 3px solid #6366f1;
+    --proc-accent-left-warning: 3px solid var(--proc-warning);
+    --proc-pill-bg: var(--proc-surface-subtle);
+    --proc-pill-text: var(--proc-text-secondary);
+}
+
+/* Anki Dark Mode (Night Mode Integration) */
+body.nightMode {
+    --proc-bg: #1e1e2e;
+    --proc-surface: #252538;
+    --proc-surface-subtle: #2d2d44;
+    --proc-surface-hover: #363652;
+
+    --proc-text-primary: #f8fafc;
+    --proc-text-secondary: #cbd5e1;
+    --proc-text-muted: #64748b;
+
+    --proc-border: #334155;
+    --proc-border-focus: #60a5fa;
+    --proc-border-subtle: #475569;
+    --proc-divider: 1px solid var(--proc-border);
+
+    --proc-primary: #3b82f6;
+    --proc-primary-hover: #60a5fa;
+    --proc-primary-light: #1e293b;
+
+    --proc-success: #10b981;
+    --proc-success-bg: #064e3b;
+    --proc-success-border: #059669;
+
+    --proc-error: #f87171;
+    --proc-error-bg: #450a0a;
+    --proc-error-border: #dc2626;
+
+    --proc-warning: #fbbf24;
+    --proc-warning-bg: #451a03;
+    --proc-warning-border: #d97706;
+
+    /* Open Canvas Callout & Accent Tokens (Night Mode) */
+    --proc-accent-left-correct: 3px solid var(--proc-success);
+    --proc-accent-left-incorrect: 3px solid var(--proc-error);
+    --proc-accent-left-worked: 3px solid var(--proc-primary);
+    --proc-accent-left-decision: 3px solid #818cf8;
+    --proc-accent-left-warning: 3px solid var(--proc-warning);
+    --proc-pill-bg: var(--proc-surface-subtle);
+    --proc-pill-text: var(--proc-text-secondary);
+}
+
+/* =========================================================================
+ * Procedural Card Container (720px Open Canvas)
+ * ========================================================================= */
+
+#proc-root,
+#procedural-card,
 .procedural-card-container {
-    max-width: 760px;
+    max-width: 720px;
     margin: 0 auto;
-    padding: 0 4px;
+    padding: 16px 20px;
     background: transparent;
-    color: var(--fg, #1f2937);
+    color: var(--proc-text-primary);
     border: none;
     border-radius: 0;
     box-shadow: none;
     box-sizing: border-box;
-    transition: color var(--transition-default, 180ms);
+    transition: color 180ms ease;
 }
 
-.nightMode .procedural-card-container {
-    background: transparent;
-    color: var(--fg, #d7dae0);
-    border: none;
-    box-shadow: none;
-}
+/* =========================================================================
+ * Header, Breadcrumbs & Provenance Badges
+ * ========================================================================= */
 
 .proc-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-subtle, #e5e7eb);
+    border-bottom: var(--proc-divider);
     padding-bottom: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     gap: 12px;
 }
 
@@ -181,47 +267,27 @@ button {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--fg-subtle, #6b7280);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--proc-text-muted);
     flex-wrap: wrap;
 }
 
-.proc-crumb-domain {
-    font-weight: 600;
-    color: var(--fg-subtle, #6b7280);
-}
-
+.proc-crumb-domain,
 .proc-crumb-topic {
-    font-weight: 500;
-    color: var(--fg-subtle, #6b7280);
+    font-weight: 400;
+    color: var(--proc-text-muted);
 }
 
 .proc-crumb-skill {
     font-weight: 600;
-    color: var(--fg, #111827);
+    color: var(--proc-text-primary);
 }
 
 .proc-crumb-sep {
-    color: var(--fg-faint, #9ca3af);
-    font-size: 0.75rem;
+    color: var(--proc-text-muted);
+    font-size: 11px;
     user-select: none;
-}
-
-.nightMode .proc-crumb-domain {
-    color: var(--fg-subtle, #9ca3af);
-}
-
-.nightMode .proc-crumb-topic {
-    color: var(--fg-subtle, #9ca3af);
-}
-
-.nightMode .proc-crumb-skill {
-    color: var(--fg, #f3f4f6);
-}
-
-.nightMode .proc-crumb-sep {
-    color: var(--fg-faint, #6b7280);
 }
 
 .proc-badges {
@@ -232,69 +298,78 @@ button {
 }
 
 .proc-badge {
-    font-size: 0.7rem;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    background: var(--canvas-inset, #e0e7ff);
-    color: var(--fg-link, #3730a3);
-    border: 1px solid var(--border-subtle, rgba(59, 130, 246, 0.3));
+    background: var(--proc-primary-light);
+    color: var(--proc-primary);
+    border: 1px solid var(--proc-border-subtle);
     padding: 2px 8px;
-    border-radius: var(--border-radius, 5px);
-}
-
-.nightMode .proc-badge {
-    background: rgba(99, 102, 241, 0.15);
-    color: #a5b4fc;
-    border-color: rgba(99, 102, 241, 0.3);
+    border-radius: 4px;
 }
 
 .proc-diff-badge {
-    font-size: 0.7rem;
+    font-size: 11px;
     font-weight: 600;
-    background: rgba(245, 158, 11, 0.1);
-    color: #b45309;
-    border: 1px solid rgba(245, 158, 11, 0.2);
+    background: var(--proc-surface-subtle);
+    color: var(--proc-text-secondary);
+    border: 1px solid var(--proc-border-subtle);
     padding: 2px 7px;
-    border-radius: var(--border-radius, 5px);
-}
-
-.nightMode .proc-diff-badge {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fcd34d;
-    border-color: rgba(245, 158, 11, 0.3);
+    border-radius: 4px;
 }
 
 .proc-variant-tag {
-    font-size: 0.7rem;
+    font-size: 11px;
     font-weight: 500;
     text-transform: capitalize;
-    background: var(--canvas-inset, #f3f4f6);
-    color: var(--fg-subtle, #4b5563);
-    border: 1px solid var(--border-subtle, #d1d5db);
+    background: var(--proc-surface-subtle);
+    color: var(--proc-text-secondary);
+    border: 1px solid var(--proc-border-subtle);
     padding: 2px 7px;
-    border-radius: var(--border-radius, 5px);
+    border-radius: 4px;
 }
 
-.nightMode .proc-variant-tag {
-    background: var(--canvas-inset, #374151);
-    color: var(--fg, #d1d5db);
-    border-color: var(--border-subtle, #4b5563);
+.proc-pyq-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 4px;
+    background: var(--proc-primary-light);
+    color: var(--proc-primary);
+    border: 1px solid var(--proc-border-focus);
 }
 
 .proc-timer {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--fg-subtle, #4b5563);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--proc-text-muted);
 }
 
+/* =========================================================================
+ * Visual Hero (Problem Prompt)
+ * ========================================================================= */
+
 .proc-prompt {
-    font-size: 1.15rem;
+    font-size: 18px;
+    font-weight: 500;
     line-height: 1.6;
-    margin-bottom: 20px;
+    color: var(--proc-text-primary);
+    margin: 0 0 20px 0;
+    padding: 4px 0;
+    background: transparent;
     white-space: pre-wrap;
 }
+
+/* =========================================================================
+ * Mode Switcher Tabs
+ * ========================================================================= */
 
 .proc-mode-switch {
     display: flex;
@@ -304,25 +379,30 @@ button {
 
 .proc-tab {
     padding: 6px 14px;
-    font-size: 0.85rem;
+    font-size: 13px;
     font-weight: 600;
-    background: var(--button-bg, #f3f4f6);
-    border: 1px solid var(--border, #d1d5db);
-    border-radius: var(--border-radius-default, 5px);
+    background: var(--proc-surface);
+    border: 1px solid var(--proc-border);
+    border-radius: 5px;
     cursor: pointer;
-    color: var(--fg, #4b5563);
-    transition: all var(--transition-default, 180ms);
+    color: var(--proc-text-secondary);
+    transition: all 180ms ease;
 }
 
 .proc-tab:hover {
-    border-color: var(--button-hover-border, #9ca3af);
+    border-color: var(--proc-border-subtle);
+    background: var(--proc-surface-hover);
 }
 
 .proc-tab.active {
-    background: var(--button-primary-bg, #2563eb);
+    background: var(--proc-primary);
     color: #ffffff;
-    border-color: var(--button-primary-bg, #2563eb);
+    border-color: var(--proc-primary);
 }
+
+/* =========================================================================
+ * Stepwise & Numerical Workspace Inputs
+ * ========================================================================= */
 
 .proc-step-row {
     display: flex;
@@ -340,180 +420,197 @@ button {
 
 .proc-step-label {
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 13px;
     width: 60px;
-    color: var(--fg-subtle, #6b7280);
+    color: var(--proc-text-secondary);
     flex-shrink: 0;
 }
 
+.proc-step-desc {
+    font-size: 13px;
+    color: var(--proc-text-secondary);
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
 .proc-input {
+    width: 100%;
     flex: 1;
+    height: 44px;
     padding: 10px 14px;
-    font-size: 1rem;
-    background: var(--canvas-inset, #ffffff);
-    color: var(--fg, #111827);
-    border: 1.5px solid var(--border, #d1d5db);
-    border-radius: var(--border-radius-default, 6px);
+    font-size: 16px;
+    background: var(--proc-surface);
+    color: var(--proc-text-primary);
+    border: 1.5px solid var(--proc-border);
+    border-radius: 6px;
     outline: none;
     box-sizing: border-box;
-    transition: border-color var(--transition-default, 180ms);
+    transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .proc-input:focus {
-    border-color: var(--border-focus, #3b82f6);
+    border-color: var(--proc-border-focus);
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .proc-input.valid {
-    border-color: #10b981 !important;
-    background: rgba(16, 185, 129, 0.05);
+    border-color: var(--proc-success) !important;
 }
 
 .proc-input.invalid {
-    border-color: #ef4444 !important;
-    background: rgba(239, 68, 68, 0.05);
+    border-color: var(--proc-error) !important;
 }
 
 .proc-input.partial {
-    border-color: #f59e0b !important;
-    background: rgba(245, 158, 11, 0.05);
+    border-color: var(--proc-warning) !important;
+}
+
+.proc-num-preview-pill,
+#proc-num-preview {
+    display: inline-block;
+    font-size: 12px;
+    color: var(--proc-text-secondary);
+    background: var(--proc-surface-subtle);
+    border-radius: 4px;
+    padding: 3px 8px;
+    margin-top: 6px;
+    transition: opacity 150ms ease;
 }
 
 .proc-step-badge {
     position: absolute;
     right: 10px;
-    font-size: 0.75rem;
+    font-size: 11px;
     font-weight: 600;
     padding: 2px 8px;
-    border-radius: 9999px;
+    border-radius: 4px;
     pointer-events: none;
 }
 
 .proc-step-badge.valid {
-    background: rgba(16, 185, 129, 0.15);
-    color: #059669;
+    background: var(--proc-success-bg);
+    color: var(--proc-success);
+    border: 1px solid var(--proc-success-border);
 }
 
 .proc-step-badge.invalid {
-    background: rgba(239, 68, 68, 0.15);
-    color: #dc2626;
+    background: var(--proc-error-bg);
+    color: var(--proc-error);
+    border: 1px solid var(--proc-error-border);
 }
 
 .proc-step-badge.partial {
-    background: rgba(245, 158, 11, 0.15);
-    color: #d97706;
+    background: var(--proc-warning-bg);
+    color: var(--proc-warning);
+    border: 1px solid var(--proc-warning-border);
 }
 
 .proc-step-badge.unnecessary {
-    background: rgba(107, 114, 128, 0.15);
-    color: #4b5563;
+    background: var(--proc-surface-subtle);
+    color: var(--proc-text-muted);
 }
 
 .proc-step-feedback {
-    font-size: 0.8rem;
+    font-size: 12px;
     margin-top: 2px;
-    color: var(--text-muted, #6b7280);
+    color: var(--proc-text-secondary);
     padding-left: 2px;
 }
+
+/* =========================================================================
+ * Controls & Primary CTAs
+ * ========================================================================= */
 
 .proc-controls {
     display: flex;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 16px;
     margin-bottom: 16px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .proc-btn {
-    padding: 9px 18px;
-    font-size: 0.95rem;
+    padding: 10px 20px;
+    font-size: 14px;
     font-weight: 600;
-    background: var(--button-primary-bg, #2563eb);
+    background: var(--proc-primary);
     color: #ffffff;
     border: none;
-    border-radius: var(--border-radius-default, 5px);
+    border-radius: 6px;
     cursor: pointer;
-    transition: opacity var(--transition-default, 180ms);
+    transition: background-color 180ms ease, opacity 180ms ease;
 }
 
 .proc-btn:hover {
-    opacity: 0.9;
+    background: var(--proc-primary-hover);
+    opacity: 0.95;
 }
 
 .proc-btn:focus-visible {
-    outline: 2px solid var(--border-focus, #3b82f6);
+    outline: 2px solid var(--proc-border-focus);
     outline-offset: 2px;
 }
 
 .proc-btn-secondary {
-    background: var(--button-bg, #f3f4f6);
-    color: var(--fg, #374151);
-    border: 1px solid var(--border, #d1d5db);
+    background: var(--proc-surface);
+    color: var(--proc-text-primary);
+    border: 1px solid var(--proc-border);
 }
 
 .proc-btn-secondary:hover {
-    background: var(--canvas-inset, #e5e7eb);
-    border-color: var(--button-hover-border, #9ca3af);
+    background: var(--proc-surface-hover);
+    border-color: var(--proc-border-subtle);
 }
 
+#proc-next-btn {
+    padding: 10px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    background: var(--proc-primary);
+    color: #ffffff;
+    border-radius: 6px;
+}
+
+/* =========================================================================
+ * Hints & Scaffolding
+ * ========================================================================= */
+
 .proc-hint-box {
-    margin-top: 12px;
+    margin-top: 14px;
     margin-bottom: 16px;
     padding: 12px 16px;
-    background: var(--canvas-inset, #eff6ff);
-    border-left: 4px solid var(--border-focus, #3b82f6);
-    border-radius: 4px;
-    font-size: 0.9rem;
+    background: var(--proc-surface-subtle);
+    border-left: 3px solid var(--proc-primary);
+    border-radius: 0 4px 4px 0;
+    font-size: 14px;
     line-height: 1.5;
-    color: var(--fg, #1e40af);
+    color: var(--proc-text-primary);
 }
 
 .proc-hint-meta {
-    font-size: 0.75rem;
-    opacity: 0.8;
-    margin-top: 4px;
+    font-size: 12px;
+    color: var(--proc-text-muted);
+    margin-top: 6px;
 }
 
 .proc-transparency-banner {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 12px;
-    margin-bottom: 14px;
-    background: rgba(59, 130, 246, 0.08);
-    border: 1px solid rgba(59, 130, 246, 0.25);
-    border-radius: var(--border-radius-default, 6px);
-    font-size: 0.85rem;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    background: var(--proc-surface-subtle);
+    border-left: 3px solid var(--proc-primary);
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
     font-weight: 500;
-    color: var(--fg, #1e40af);
+    color: var(--proc-text-primary);
 }
 
-.nightMode .proc-transparency-banner {
-    background: rgba(59, 130, 246, 0.16);
-    border-color: rgba(59, 130, 246, 0.35);
-    color: #93c5fd;
-}
-
-.proc-pyq-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-radius: 6px;
-    background: rgba(99, 102, 241, 0.12);
-    color: #4338ca;
-    border: 1px solid rgba(99, 102, 241, 0.3);
-}
-
-.nightMode .proc-pyq-badge {
-    background: rgba(99, 102, 241, 0.22);
-    color: #a5b4fc;
-    border-color: rgba(99, 102, 241, 0.45);
-}
+/* =========================================================================
+ * MCQ, Concept Check & Strategy Option Groups
+ * ========================================================================= */
 
 .proc-option-group {
     display: flex;
@@ -526,55 +623,41 @@ button {
 .proc-option-item {
     display: flex;
     flex-direction: column;
-    padding: 8px 12px;
-    background: var(--button-bg, #fcfcfc);
-    border: 1px solid var(--border-subtle, #e5e7eb);
-    border-radius: var(--border-radius, 5px);
+    padding: 10px 14px;
+    min-height: 48px;
+    background: var(--proc-surface);
+    border: 1px solid var(--proc-border);
+    border-radius: 6px;
     cursor: pointer;
     transition: all 120ms ease-in-out;
     text-align: left;
-    color: var(--fg);
-}
-
-.nightMode .proc-option-item {
-    background: var(--button-bg, #3f3f3f);
-    border-color: var(--border-subtle, #252525);
-    color: var(--fg, #fcfcfc);
+    color: var(--proc-text-primary);
+    box-sizing: border-box;
 }
 
 .proc-option-item:hover:not(.disabled) {
-    border-color: var(--border-focus, #3b82f6);
-    background: var(--button-gradient-start, #ffffff);
-}
-
-.nightMode .proc-option-item:hover:not(.disabled) {
-    background: var(--button-gradient-start, #4a4a4a);
-    border-color: var(--border-focus, #3b82f6);
+    border-color: var(--proc-border-subtle);
+    background: var(--proc-surface-hover);
 }
 
 .proc-option-item:focus-visible {
-    outline: 2px solid var(--border-focus, #3b82f6);
+    outline: 2px solid var(--proc-border-focus);
     outline-offset: 1px;
 }
 
 .proc-option-item.selected {
-    border-color: var(--border-focus, #3b82f6);
-    background: rgba(59, 130, 246, 0.08);
-}
-
-.nightMode .proc-option-item.selected {
-    border-color: var(--border-focus, #3b82f6);
-    background: rgba(59, 130, 246, 0.2);
+    border: 2px solid var(--proc-primary);
+    background: var(--proc-primary-light);
 }
 
 .proc-option-item.correct {
-    border-color: #10b981 !important;
-    background: rgba(16, 185, 129, 0.12) !important;
+    border: 2px solid var(--proc-success-border) !important;
+    background: var(--proc-success-bg) !important;
 }
 
 .proc-option-item.incorrect {
-    border-color: #ef4444 !important;
-    background: rgba(239, 68, 68, 0.12) !important;
+    border: 2px solid var(--proc-error-border) !important;
+    background: var(--proc-error-bg) !important;
 }
 
 .proc-option-header {
@@ -588,203 +671,222 @@ button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    font-size: 0.75rem;
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
     font-weight: 700;
     border-radius: 4px;
-    background: var(--button-bg, #e5e7eb);
-    color: var(--fg, #4b5563);
+    background: var(--proc-surface-subtle);
+    color: var(--proc-text-secondary);
+    flex-shrink: 0;
 }
 
-.nightMode .proc-option-key {
-    background: #374151;
-    color: #d1d5db;
+.proc-option-label {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--proc-text-primary);
 }
 
 .proc-option-feedback {
     margin-top: 8px;
-    font-size: 0.85rem;
-    line-height: 1.4;
-    opacity: 0.9;
-    padding-left: 32px;
-}
-
-.proc-worked-example-card {
-    margin-top: 14px;
-    padding: 16px;
-    background: var(--canvas-inset, #f9fafb);
-    border: 1px solid var(--border, #e5e7eb);
-    border-radius: var(--border-radius-default, 8px);
-}
-
-.nightMode .proc-worked-example-card {
-    background: var(--canvas-elevated, #1f2937);
-    border-color: var(--border, #374151);
-    color: var(--fg, #e5e7eb);
-}
-
-.proc-decision-highlight {
-    margin: 12px 0;
-    padding: 10px 14px;
-    background: rgba(99, 102, 241, 0.08);
-    border-left: 3px solid #6366f1;
-    border-radius: 4px;
-    font-size: 0.9rem;
+    font-size: 13px;
     line-height: 1.45;
+    border-left: 3px solid var(--proc-error);
+    padding-left: 12px;
+    color: var(--proc-text-secondary);
 }
 
-.nightMode .proc-decision-highlight {
-    background: rgba(99, 102, 241, 0.18);
+/* =========================================================================
+ * Worked Examples & Solutions (ANTI-07 Flattened Open Canvas)
+ * ========================================================================= */
+
+.proc-worked-box,
+.proc-worked-example-card {
+    margin-top: 16px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: var(--proc-text-primary);
+}
+
+.proc-decision-highlight,
+.proc-decision-box {
+    margin: 14px 0;
+    padding: 12px 16px;
+    background: var(--proc-surface-subtle);
+    border-left: 3px solid #6366f1;
+    border-radius: 0 4px 4px 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--proc-text-primary);
+}
+
+.proc-steps-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--proc-text-secondary);
+    margin: 14px 0 6px 0;
+}
+
+.proc-worked-steps {
+    margin: 8px 0 14px 20px;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--proc-text-primary);
+}
+
+.proc-worked-rationale {
+    margin: 12px 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--proc-text-primary);
 }
 
 .proc-pitfall-box {
-    margin-top: 12px;
-    padding: 10px 14px;
-    background: rgba(239, 68, 68, 0.06);
-    border-left: 3px solid #ef4444;
-    border-radius: 4px;
-    font-size: 0.88rem;
-    line-height: 1.45;
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: var(--proc-warning-bg);
+    border-left: 3px solid var(--proc-warning);
+    border-radius: 0 4px 4px 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--proc-text-primary);
 }
 
-.nightMode .proc-pitfall-box {
-    background: rgba(239, 68, 68, 0.15);
+.proc-solution,
+#proc-solution-container {
+    margin-top: 16px;
+    padding: 16px 0;
+    background: transparent;
+    border: none;
+    border-top: var(--proc-divider);
+    border-radius: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--proc-text-primary);
+    white-space: pre-wrap;
+    overflow-x: auto;
 }
+
+.proc-solution-body {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--proc-text-primary);
+}
+
+/* =========================================================================
+ * Speed Quadrant Muted Status Pills (ANTI-04 Streamlined)
+ * ========================================================================= */
 
 .proc-speed-quadrant {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    border-radius: 4px;
-    margin-top: 6px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 9999px;
+    background: var(--proc-surface-subtle);
+    color: var(--proc-text-secondary);
+    border: 1px solid var(--proc-border-subtle);
+    margin-top: 0;
 }
 
-.proc-speed-fast-correct {
-    background: rgba(16, 185, 129, 0.15);
-    color: #065f46;
-}
-
-.nightMode .proc-speed-fast-correct {
-    background: rgba(16, 185, 129, 0.25);
-    color: #6ee7b7;
-}
-
-.proc-speed-slow-correct {
-    background: rgba(59, 130, 246, 0.15);
-    color: #1e40af;
-}
-
-.nightMode .proc-speed-slow-correct {
-    background: rgba(59, 130, 246, 0.25);
-    color: #93c5fd;
-}
-
-.proc-speed-fast-wrong {
-    background: rgba(245, 158, 11, 0.15);
-    color: #92400e;
-}
-
-.nightMode .proc-speed-fast-wrong {
-    background: rgba(245, 158, 11, 0.25);
-    color: #fcd34d;
-}
-
+.proc-speed-fast-correct,
+.proc-speed-slow-correct,
+.proc-speed-fast-wrong,
 .proc-speed-slow-wrong {
-    background: rgba(239, 68, 68, 0.15);
-    color: #991b1b;
+    background: var(--proc-surface-subtle);
+    color: var(--proc-text-secondary);
+    border-color: var(--proc-border-subtle);
 }
 
-.nightMode .proc-speed-slow-wrong {
-    background: rgba(239, 68, 68, 0.25);
-    color: #fca5a5;
-}
+/* =========================================================================
+ * Feedback & Result Panel (ANTI-01 Eliminated)
+ * ========================================================================= */
 
 .proc-result {
     margin-top: 16px;
-    padding: 12px 14px;
-    border-radius: var(--border-radius, 5px);
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    border-left: 3px solid var(--proc-border);
+    border-radius: 0 4px 4px 0;
+    color: var(--proc-text-primary);
     animation: procFadeIn 180ms ease-out;
 }
 
 .proc-result.correct {
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(16, 185, 129, 0.25);
-    color: var(--fg);
-}
-
-.nightMode .proc-result.correct {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: rgba(16, 185, 129, 0.35);
-    color: var(--fg);
+    border-left: 3px solid var(--proc-success);
+    background: var(--proc-surface-subtle);
 }
 
 .proc-result.incorrect {
-    background: rgba(239, 68, 68, 0.08);
-    border: 1px solid rgba(239, 68, 68, 0.25);
-    color: var(--fg);
-}
-
-.nightMode .proc-result.incorrect {
-    background: rgba(239, 68, 68, 0.15);
-    border-color: rgba(239, 68, 68, 0.35);
-    color: var(--fg);
+    border-left: 3px solid var(--proc-error);
+    background: var(--proc-surface-subtle);
 }
 
 .proc-result-title {
-    font-weight: 700;
-    font-size: 1.05rem;
+    font-weight: 600;
+    font-size: 16px;
     margin-bottom: 6px;
+}
+
+.proc-result.correct .proc-result-title {
+    color: var(--proc-success);
+}
+
+.proc-result.incorrect .proc-result-title {
+    color: var(--proc-error);
 }
 
 .proc-result-feedback {
     margin-bottom: 6px;
     line-height: 1.5;
+    font-size: 14px;
+    color: var(--proc-text-primary);
 }
 
-.proc-expected-row {
-    font-size: 0.9rem;
+.proc-expected-row,
+.proc-answer-comparison {
+    font-size: 14px;
+    color: var(--proc-text-secondary);
     margin-top: 4px;
 }
 
+.proc-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    margin-top: 8px;
+    color: var(--proc-text-muted);
+}
+
 /* =========================================================================
- * Mistake Classification Strip (Above Solution)
+ * Metacognitive Mistake Classification Reflection Strip
  * ========================================================================= */
 
 .proc-mistake-panel {
-    margin-top: 12px;
-    margin-bottom: 12px;
-    padding: 10px 12px;
-    background: var(--canvas-inset, rgba(0, 0, 0, 0.02));
-    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
-    border-radius: var(--border-radius, 5px);
-}
-
-.nightMode .proc-mistake-panel {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: var(--border-subtle, rgba(255, 255, 255, 0.08));
+    margin-top: 14px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    background: var(--proc-surface-subtle);
+    border-left: 3px solid var(--proc-warning);
+    border-radius: 0 4px 4px 0;
 }
 
 .proc-mistake-heading {
-    font-size: 0.8rem;
+    font-size: 13px;
     font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--fg-subtle, #374151);
+    margin-bottom: 10px;
+    color: var(--proc-text-primary);
 }
 
-.nightMode .proc-mistake-heading {
-    color: var(--fg-subtle, #9ca3af);
-}
-
-.proc-mistake-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
+.proc-mistake-grid,
 .proc-mistake-footer {
     display: flex;
     flex-wrap: wrap;
@@ -792,105 +894,105 @@ button {
     margin-top: 6px;
 }
 
-.proc-mistake-btn {
-    padding: 6px 12px;
-    font-size: 0.8rem;
+.proc-mistake-btn,
+.proc-mistake-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    font-size: 13px;
     font-weight: 500;
-    background: var(--button-bg, #fcfcfc);
-    color: var(--fg, #374151);
-    border: 1px solid var(--border-subtle, #c4c4c4);
-    border-radius: var(--border-radius-large, 15px);
+    background: var(--proc-surface);
+    color: var(--proc-text-primary);
+    border: 1px solid var(--proc-border);
+    border-radius: 6px;
     cursor: pointer;
     transition: all 120ms ease-in-out;
     white-space: nowrap;
-    box-shadow: rgba(20, 20, 20, 0.08) 0px 1px 1px 0px;
+    box-shadow: none;
 }
 
-.proc-mistake-btn:hover {
-    background: rgba(239, 68, 68, 0.08);
-    border-color: #ef4444;
-    color: #b91c1c;
+.proc-mistake-btn:hover,
+.proc-mistake-card:hover {
+    background: var(--proc-surface-hover);
+    border-color: var(--proc-border-focus);
+    color: var(--proc-text-primary);
 }
 
-.nightMode .proc-mistake-btn {
-    background: var(--button-bg, #3f3f3f);
-    color: var(--fg, #fcfcfc);
-    border-color: var(--border-subtle, #252525);
-}
-
-.nightMode .proc-mistake-btn:hover {
-    background: rgba(239, 68, 68, 0.18);
-    border-color: #f87171;
-    color: #fca5a5;
-}
-
-.proc-mistake-btn.selected {
-    background: #ef4444 !important;
+.proc-mistake-btn.selected,
+.proc-mistake-card.selected {
+    background: var(--proc-primary) !important;
     color: #ffffff !important;
-    border-color: #dc2626 !important;
-}
-
-.proc-step-desc {
-    font-size: 0.85rem;
-    color: var(--fg, #374151);
-    margin-bottom: 4px;
-    line-height: 1.4;
-}
-
-.nightMode .proc-step-desc {
-    color: var(--fg, #e5e7eb);
+    border-color: var(--proc-primary) !important;
 }
 
 .proc-key-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
-    font-size: 0.7rem;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
     font-weight: 700;
-    background: var(--button-bg, #e5e7eb);
-    color: var(--fg, #374151);
+    background: var(--proc-surface-subtle);
+    color: var(--proc-text-secondary);
     border-radius: 3px;
     flex-shrink: 0;
 }
 
-.nightMode .proc-key-badge {
-    background: #374151;
-    color: #f3f4f6;
+.proc-mistake-btn.selected .proc-key-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
 }
 
-.proc-solution {
-    margin-top: 12px;
-    padding: 12px;
-    background: var(--canvas-inset, rgba(0, 0, 0, 0.02));
-    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
-    border-radius: var(--border-radius, 5px);
-    font-size: 0.9rem;
+/* =========================================================================
+ * Declarative Recall & Prerequisite Objects
+ * ========================================================================= */
+
+.proc-text-center {
+    text-align: center;
+}
+
+.proc-formula-display {
+    font-size: 18px;
+    padding: 16px;
+    margin: 12px 0;
+    background: var(--proc-surface-subtle);
+    border-radius: 6px;
+}
+
+.proc-controls-center {
+    justify-content: center;
+}
+
+.proc-advisory-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--proc-warning);
+    margin-bottom: 8px;
+}
+
+.proc-advisory-body {
+    font-size: 14px;
     line-height: 1.5;
-    white-space: pre-wrap;
-    overflow-x: auto;
+    color: var(--proc-text-primary);
 }
 
-.nightMode .proc-solution {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: var(--border-subtle, rgba(255, 255, 255, 0.06));
-}
-
-.proc-meta-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.8rem;
-    margin-top: 4px;
-    color: var(--fg-subtle);
-}
+/* =========================================================================
+ * Utilities & Animation
+ * ========================================================================= */
 
 .hidden {
     display: none !important;
 }
 
 @keyframes procFadeIn {
-    from { opacity: 0; transform: translateY(3px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(2px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

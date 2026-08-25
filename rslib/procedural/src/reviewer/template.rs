@@ -31,7 +31,7 @@ pub fn escape_json_for_script(json: &str) -> String {
 /// Renders native HTML/CSS/JS for displaying procedural learning objects inside an Anki webview.
 /// Seamlessly handles standard procedural practice, ConceptChecks, StrategyDrills, WorkedExamples,
 /// DeclarativeRecall bridges, and Prerequisite reviews, hooking directly into Anki's design tokens
-/// and `globalThis.anki.procedural` API.
+/// and `globalThis.anki.procedural` API according to STUDYLAB_UI_COMPOSITION_CONTRACT.md.
 pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     let prompt_text = escape_html(&session.instance.rendered_prompt);
     let family_id_attr = escape_html(session.instance.family_id.as_str());
@@ -93,53 +93,6 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     };
     let difficulty_badge_text = escape_html(difficulty_badge_text);
 
-    let raw_variant = session
-        .selected_variant
-        .as_deref()
-        .or_else(|| {
-            session
-                .instance
-                .parameters
-                .get("variant")
-                .and_then(|v| v.as_str())
-        })
-        .unwrap_or("standard")
-        .replace('_', " ");
-    
-    let variant_badge_html = if !raw_variant.is_empty() 
-        && raw_variant.to_lowercase() != "standard" 
-        && raw_variant.to_lowercase() != "practice variant" 
-    {
-        format!("<span class=\"proc-variant-tag\">{}</span>", escape_html(&raw_variant))
-    } else {
-        "".to_string()
-    };
-
-    let canonical_str = if let Some(f) = session.instance.correct_answer.get("formatted").and_then(|v| v.as_str()) {
-        f.to_string()
-    } else if let Some(co) = session.instance.correct_answer.get("correct_option").and_then(|v| v.as_str()) {
-        co.to_string()
-    } else if let Some(val) = session.instance.correct_answer.get("value") {
-        if let Some(s) = val.as_str() {
-            s.to_string()
-        } else if let Some(n) = val.as_f64() {
-            format!("{n}")
-        } else {
-            val.to_string()
-        }
-    } else if let Some(ans) = session.instance.correct_answer.get("answer") {
-        if let Some(s) = ans.as_str() {
-            s.to_string()
-        } else if let Some(n) = ans.as_f64() {
-            format!("{n}")
-        } else {
-            ans.to_string()
-        }
-    } else {
-        "".to_string()
-    };
-    let _canonical_text = escape_html(&canonical_str);
-
     let raw_solution = session
         .instance
         .correct_answer
@@ -162,12 +115,11 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         &serde_json::to_string(&session.instance.parameters).unwrap_or_default(),
     );
 
-    // Optional provenance badge
+    // ANTI-05: Only authentic competitive exam provenance tags are rendered
     let provenance_badge = if let Some(prov) = session.instance.metadata.get("provenance") {
         let exam = prov.get("exam").and_then(|v| v.as_str());
         let year = prov.get("year").and_then(|v| v.as_u64());
         let shift = prov.get("shift").and_then(|v| v.as_str());
-        let variant_type = prov.get("variant_type").and_then(|v| v.as_str()).unwrap_or("");
         
         let prov_label = match (exam, year) {
             (Some(e), Some(y)) => {
@@ -178,13 +130,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 }
             }
             (Some(e), None) => format!("PYQ: {}", e),
-            _ => {
-                if !variant_type.is_empty() && variant_type != "standard" {
-                    format!("Variant: {}", variant_type.replace('_', " "))
-                } else {
-                    "".to_string()
-                }
-            }
+            _ => "".to_string(),
         };
 
         if !prov_label.is_empty() {
@@ -203,7 +149,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         "".to_string()
     };
 
-    // Body content according to learning object type
+    // Body content according to learning object modality
     let main_body_html = match object_type {
         "mcq" => {
             let options_html = if let Some(opts) = session.instance.parameters.get("options").and_then(|v| v.as_array())
@@ -283,7 +229,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let context_html = if !problem_context.is_empty() {
-                format!(r#"<div class="proc-solution"><strong>Problem:</strong> {}</div>"#, escape_html(problem_context))
+                format!(r#"<div class="proc-strategy-context"><strong>Context:</strong> {}</div>"#, escape_html(problem_context))
             } else {
                 "".to_string()
             };
@@ -326,6 +272,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             )
         }
         "worked_example" => {
+            // ANTI-07: Open Canvas sequential layout without nested card-in-a-card syndrome
             let we = session.instance.metadata.get("worked_example");
             let decision_point = we.and_then(|w| w.get("highlighted_decision_point")).and_then(|v| v.as_str()).unwrap_or("");
             let rationale = we.and_then(|w| w.get("method_rationale")).and_then(|v| v.as_str()).unwrap_or("");
@@ -359,14 +306,14 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
 
             format!(
                 r#"<div class="proc-prompt">{prompt_text}</div>
-                <div class="proc-worked-example-card">
+                <div class="proc-worked-box proc-worked-example-card">
                     <div class="proc-decision-highlight">🎯 <strong>Key Decision:</strong> {}</div>
                     <div class="proc-steps-header">Canonical Solution Steps:</div>
                     {steps_html}
-                    <div class="proc-solution"><strong>Method Rationale:</strong> {}</div>
+                    <div class="proc-worked-rationale"><strong>Method Rationale:</strong> {}</div>
                     {pitfalls_html}
-                    <div class="proc-controls">
-                        <button type="button" id="proc-try-similar-btn" class="proc-btn">Try Similar Problem</button>
+                    <div class="proc-controls" style="margin-top: 16px;">
+                        <button type="button" id="proc-try-similar-btn" class="proc-btn proc-btn-primary">Try Similar Problem</button>
                     </div>
                 </div>"#,
                 escape_html(decision_point),
@@ -380,10 +327,10 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
 
             format!(
                 r#"<div class="proc-prompt"><strong>Prerequisite Concept:</strong> {}</div>
-                <div class="proc-worked-example-card proc-text-center">
+                <div class="proc-recall-box proc-text-center">
                     <div class="proc-formula-display">{}</div>
-                    <div class="proc-controls proc-controls-center">
-                        <button type="button" id="proc-anki-recall-btn" class="proc-btn">Review in Anki</button>
+                    <div class="proc-controls proc-controls-center" style="margin-top: 16px;">
+                        <button type="button" id="proc-anki-recall-btn" class="proc-btn proc-btn-primary">Review in Anki</button>
                     </div>
                 </div>"#,
                 escape_html(concept_name),
@@ -395,11 +342,11 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             let advisory = pr.and_then(|p| p.get("advisory_message")).and_then(|v| v.as_str()).unwrap_or(&prompt_text);
 
             format!(
-                r#"<div class="proc-worked-example-card">
+                r#"<div class="proc-advisory-box">
                     <div class="proc-advisory-title">⚠️ Foundational Skill Needed</div>
                     <div class="proc-advisory-body">{}</div>
-                    <div class="proc-controls">
-                        <button type="button" id="proc-practice-prereq-btn" class="proc-btn">Practice Prerequisite</button>
+                    <div class="proc-controls" style="margin-top: 16px;">
+                        <button type="button" id="proc-practice-prereq-btn" class="proc-btn proc-btn-primary">Practice Prerequisite</button>
                     </div>
                 </div>"#,
                 escape_html(advisory)
@@ -439,7 +386,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                         <button type="button" id="proc-add-step-btn" class="proc-btn proc-btn-secondary">+ Add Step</button>
                         <button type="button" id="proc-hint-btn" class="proc-btn proc-btn-secondary">💡 Request Hint</button>
                         <button type="button" id="proc-reset-steps-btn" class="proc-btn proc-btn-secondary">Reset</button>
-                        <button type="button" id="proc-check-steps-btn" class="proc-btn">Check Solution</button>
+                        <button type="button" id="proc-check-steps-btn" class="proc-btn proc-btn-primary">Check Solution</button>
                     </div>
                 </div>
 
@@ -480,7 +427,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 <div id="proc-quick-container">
                     <div class="proc-step-row">
                         <input type="text" id="proc-answer-input" class="proc-input" placeholder="Type final answer..." autocomplete="off" />
-                        <button type="button" id="proc-submit-btn" class="proc-btn">Submit</button>
+                        <button type="button" id="proc-submit-btn" class="proc-btn proc-btn-primary">Submit</button>
                     </div>
                 </div>
 
@@ -493,7 +440,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                         <button type="button" id="proc-add-step-btn" class="proc-btn proc-btn-secondary">+ Add Step</button>
                         <button type="button" id="proc-hint-btn" class="proc-btn proc-btn-secondary">💡 Request Hint</button>
                         <button type="button" id="proc-reset-steps-btn" class="proc-btn proc-btn-secondary">Reset</button>
-                        <button type="button" id="proc-check-steps-btn" class="proc-btn">Check Solution</button>
+                        <button type="button" id="proc-check-steps-btn" class="proc-btn proc-btn-primary">Check Solution</button>
                     </div>
                 </div>
 
@@ -503,7 +450,6 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         _ => String::new(),
     };
 
-    let target_time_secs = target_time_ms / 1000;
     let full_metadata_json = escape_json_for_script(
         &serde_json::to_string(&session.instance.metadata).unwrap_or_else(|_| "{}".to_string()),
     );
@@ -524,15 +470,23 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         "StudyLab"
     };
 
+    // ANTI-06: Robust schema title normalization preventing internal version leakages
     let title_clean = {
         let raw = session.schema.title.trim();
-        let cleaned = if raw.to_lowercase().starts_with("dynamic practice schema for ") {
+        let mut cleaned = if raw.to_lowercase().starts_with("dynamic practice schema for ") {
             &raw["dynamic practice schema for ".len()..]
         } else if raw.to_lowercase().starts_with("schema.") {
             &raw["schema.".len()..]
         } else {
             raw
         };
+
+        if let Some(pos) = cleaned.rfind(".v") {
+            if pos + 2 < cleaned.len() && cleaned[pos + 2..].chars().all(|c| c.is_ascii_digit()) {
+                cleaned = &cleaned[..pos];
+            }
+        }
+
         let last_part = cleaned.split('.').last().unwrap_or(cleaned).replace('_', " ");
         last_part
             .split_whitespace()
@@ -573,14 +527,13 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     };
 
     format!(
-        r#"<div class="procedural-card-container" id="procedural-card" data-instance-id="{instance_id_attr}" data-family-id="{family_id_attr}" data-target-time="{target_time_ms}">
+        r#"<div class="procedural-card-container" id="procedural-card" data-instance-id="{instance_id_attr}" data-family-id="{family_id_attr}" data-target-time="{target_time_ms}" data-object-type="{object_type}">
     {transparency_html}
     <div class="proc-header">
         <div class="proc-header-left">
             {breadcrumbs_html}
             <div class="proc-badges">
                 <span class="proc-diff-badge">{difficulty_badge_text}</span>
-                {variant_badge_html}
                 {provenance_badge}
             </div>
         </div>
@@ -591,12 +544,13 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     <div id="proc-result-panel" class="proc-result hidden">
         <div id="proc-result-title" class="proc-result-title"></div>
         <div id="proc-result-feedback" class="proc-result-feedback"></div>
+        
+        <!-- ANTI-03: Consolidated speed row without static target time telemetry dump -->
         <div class="proc-meta-row">
-            <span><strong>Target Time:</strong> {target_time_secs}s</span>
-            <div id="proc-actual-time"></div>
+            <div id="proc-actual-time" class="proc-actual-time"></div>
         </div>
 
-        <!-- Mistake Classification (compact action strip seamlessly styled with native review actions) -->
+        <!-- Mistake Classification (1-4 Metacognitive Reflection Gate) -->
         <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
             <div class="proc-mistake-heading">Classify error (1-4) to reflect and optimize spaced repetition:</div>
             <div class="proc-mistake-footer">
@@ -615,12 +569,13 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             </div>
         </div>
 
-        <div id="proc-solution-container" class="proc-solution">
+        <!-- ANTI-08: Solution container is strictly hidden initially to prevent premature exposure during reflection -->
+        <div id="proc-solution-container" class="proc-solution hidden">
             <strong>Step-by-Step Solution:</strong>
             <div class="proc-solution-body">{solution_text}</div>
         </div>
 
-        <div class="proc-action-row" style="margin-top: 16px; display: flex; justify-content: flex-end;">
+        <div class="proc-action-row hidden" style="margin-top: 16px; display: flex; justify-content: flex-end;">
             <button type="button" id="proc-next-btn" class="proc-btn proc-btn-primary" style="padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer;">Next Problem ➔</button>
         </div>
     </div>
@@ -653,14 +608,18 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             return;
         }}
 
-        // Standalone fallback
+        // Standalone browser fallback
         var inputEl = document.getElementById('proc-answer-input');
         var submitBtn = document.getElementById('proc-submit-btn');
         var resultPanel = document.getElementById('proc-result-panel');
+        var solutionContainer = document.getElementById('proc-solution-container');
+        var actionRow = document.querySelector('.proc-action-row');
 
         if (submitBtn && inputEl) {{
             submitBtn.addEventListener('click', function() {{
                 if (resultPanel) resultPanel.classList.remove('hidden');
+                if (solutionContainer) solutionContainer.classList.remove('hidden');
+                if (actionRow) actionRow.classList.remove('hidden');
             }});
         }}
     }})();
@@ -700,6 +659,15 @@ mod tests {
         assert!(html.contains("Step-by-Step Solve"));
         assert!(html.contains("proc-hint-btn"));
         assert!(html.contains("window.anki.procedural.setup"));
+
+        // ANTI-03: Static "Target Time: 45s" dump must NOT exist in the result panel
+        assert!(!html.contains("<strong>Target Time:</strong>"));
+
+        // ANTI-05: Generic variant tags must NOT exist
+        assert!(!html.contains("proc-variant-tag"));
+
+        // ANTI-08: Solution container must be initially hidden
+        assert!(html.contains("id=\"proc-solution-container\" class=\"proc-solution hidden\""));
     }
 
     #[test]
@@ -739,6 +707,7 @@ mod tests {
         assert!(html.contains("a + b + ab/100"));
         assert!(html.contains("proc-transparency-banner"));
         assert!(html.contains("💡 Concept Check: Verify the core formula."));
+        assert!(!html.contains("id=\"proc-answer-input\""));
     }
 
     #[test]
@@ -773,11 +742,12 @@ mod tests {
         let session = PracticeSessionObject::new(schema, instance, Some(103), None);
         let html = render_reviewer_html(&session);
 
-        assert!(html.contains("proc-worked-example-card"));
+        assert!(html.contains("proc-worked-box"));
         assert!(html.contains("proc-decision-highlight"));
         assert!(html.contains("Subtract constant term before dividing coefficient"));
         assert!(html.contains("proc-try-similar-btn"));
         assert!(html.contains("proc-pitfall-box"));
+        assert!(!html.contains("id=\"proc-answer-input\""));
     }
 
     #[test]
@@ -800,6 +770,7 @@ mod tests {
 
         assert!(html.contains("proc-pyq-badge"));
         assert!(html.contains("PYQ: JEE Main 2024 · Shift 1"));
+        assert!(!html.contains("Variant: practice variant"));
     }
 
     #[test]

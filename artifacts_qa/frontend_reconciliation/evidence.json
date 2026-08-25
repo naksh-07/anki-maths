@@ -1,0 +1,483 @@
+{
+  "audit_version": "2.0.0-recon",
+  "timestamp": "2026-08-25T22:54:58Z",
+  "hwnd": 17434252,
+  "pid": 10776,
+  "window_title": "User 1 - Anki StudyLab",
+  "window_class": "Qt6110QWindowIcon",
+  "window_geometry": {
+    "x": -7,
+    "y": -7,
+    "width": 1295,
+    "height": 687,
+    "left": -7,
+    "top": -7,
+    "right": 1288,
+    "bottom": 680
+  },
+  "cdp_port": 9222,
+  "cdp_target": {
+    "id": "A84D9E0899B96BB6FDFDE133E58E4A68",
+    "title": "main webview",
+    "url": "http://127.0.0.1:62150/_anki/legacyPageData?id=2188353729104"
+  },
+  "states": {
+    "01_numerical_solving": {
+      "state_key": "01_numerical_solving",
+      "state_name": "Mathematics Numerical Solving (Problem stem hero & Quick Solve)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Prompt rendered with LaTeX formula hero",
+          "pass": true
+        },
+        {
+          "desc": "Quick solve container visible with text input and submit button",
+          "pass": true
+        },
+        {
+          "desc": "Zero MCQ options present (modality purity)",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\01_numerical_solving_cdp.png",
+          "sha256": "60d1c8a8e13708781e412513be026dd1211ca209048edf5bf89a4c9390022ccd",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\01_numerical_solving_native.png",
+          "sha256": "f0c65271625d80b3aa8a587fa690cb899ecf01b19e9950e1d386c82a0ca31799",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "02_numerical_correct": {
+      "state_key": "02_numerical_correct",
+      "state_name": "Mathematics Numerical Correct Outcome (Subtle \u2713 status, deduplicated row, Next CTA)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Subtle \u2713 Correct result banner on open canvas (ANTI-01 eliminated)",
+          "pass": true
+        },
+        {
+          "desc": "Single consolidated comparison row (ANTI-02 eliminated)",
+          "pass": true
+        },
+        {
+          "desc": "Muted speed quadrant pill active (ANTI-04 streamlined)",
+          "pass": true
+        },
+        {
+          "desc": "Single Next Problem \u2794 CTA visible",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\02_numerical_correct_cdp.png",
+          "sha256": "ff57c38e9d73491380dce2f529fd6f3a884e023f9a9436d60165fde3453bd91d",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\02_numerical_correct_native.png",
+          "sha256": "3222c9392c52374c2610bf7c96024a9feff34b7eccd54329c267c59529ac6bb3",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "03_numerical_wrong": {
+      "state_key": "03_numerical_wrong",
+      "state_name": "Mathematics Numerical Wrong Answer (Subtle \u2717 status, solution hidden, reflection gate active)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Subtle \u2717 Incorrect result indicator rendered",
+          "pass": true
+        },
+        {
+          "desc": "Mistake classification footer armed with 4 categories",
+          "pass": true
+        },
+        {
+          "desc": "Solution derivation strictly hidden during reflection (ANTI-08 deferred reveal)",
+          "pass": true
+        },
+        {
+          "desc": "Next button strictly suppressed until classification (Anti-Bypass)",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\03_numerical_wrong_cdp.png",
+          "sha256": "617db1b12e33887dbe76f4ab94a43490a88dd485cc80ad46bbad8eef01ea73c2",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\03_numerical_wrong_native.png",
+          "sha256": "53862fc8282ce69d38ae2b628ee04e1415e91112222c5d9900422af37403e216",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "04_mistake_classification": {
+      "state_key": "04_mistake_classification",
+      "state_name": "4-Category Mistake Reflection Gate ([1 Silly Slip] active, Space/Enter lock)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "All 4 cognitive mistake categories present (1-4)",
+          "pass": true
+        },
+        {
+          "desc": "Category 1 (Silly Slip) actively selected and highlighted",
+          "pass": true
+        },
+        {
+          "desc": "Space/Enter anti-bypass lock active",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\04_mistake_classification_cdp.png",
+          "sha256": "8d0c241e12e2ec5abe8be70c96a289b2a351cb7bd0a92c4792e507fd82b73cbb",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\04_mistake_classification_native.png",
+          "sha256": "53862fc8282ce69d38ae2b628ee04e1415e91112222c5d9900422af37403e216",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "05_numerical_feedback": {
+      "state_key": "05_numerical_feedback",
+      "state_name": "Numerical Feedback & Derivation (LaTeX derivation trace, speed pill, Next CTA)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Full canonical step-by-step LaTeX derivation revealed",
+          "pass": true
+        },
+        {
+          "desc": "Streamlined speed pill displayed (ANTI-04)",
+          "pass": true
+        },
+        {
+          "desc": "Single Next Problem \u2794 CTA visible and armed",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\05_numerical_feedback_cdp.png",
+          "sha256": "347ed8caed3bc693a3badd81b70721ab2cbab708a2d59b4f4b4127b793d075e0",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\05_numerical_feedback_native.png",
+          "sha256": "b635f6a6b063928ae81c243dd569ab5472146ae2e7f9969795ed4f3edd3bab45",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "06_mcq": {
+      "state_key": "06_mcq",
+      "state_name": "Multiple Choice Question (4 discrete radio cards, zero textboxes)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "4 discrete radio options rendered (A-D)",
+          "pass": true
+        },
+        {
+          "desc": "Zero free-text input field (#proc-answer-input is absent)",
+          "pass": true
+        },
+        {
+          "desc": "Zero quick solve container present",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\06_mcq_cdp.png",
+          "sha256": "b275f27213910d585506f96849d8002a2c4955c7c8aa7ba86542111a0ce40be9",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\06_mcq_native.png",
+          "sha256": "cc74cc361af6c05214de6945a6551bab303cadefa9293c157abad2a8c2a8a103",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "07_concept_check": {
+      "state_key": "07_concept_check",
+      "state_name": "ConceptCheck (Qualitative choice & targeted distractor misconception text)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "4 conceptual options rendered with numerical keys (1-4)",
+          "pass": true
+        },
+        {
+          "desc": "Targeted distractor feedback shown on Option 2 ('Additive Fallacy')",
+          "pass": true
+        },
+        {
+          "desc": "Zero free-text input field present",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\07_concept_check_cdp.png",
+          "sha256": "1b758a02a5bf5072fe32a00d891425939e778fce655da4043b40f1c9c3feb650",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\07_concept_check_native.png",
+          "sha256": "7a8fa704ab42b1070a8379fa11d4d7df45a236bd37d2471362c1788b414cc7cd",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "08_strategy_drill": {
+      "state_key": "08_strategy_drill",
+      "state_name": "StrategyDrill (Method comparison cards & optimality analysis)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Problem context and strategy prompt rendered",
+          "pass": true
+        },
+        {
+          "desc": "Strategy options displayed with optimality explanation",
+          "pass": true
+        },
+        {
+          "desc": "Zero free-text input field present",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\08_strategy_drill_cdp.png",
+          "sha256": "173e4e1fde18e118d40d8f3ac23d8e18cae7a79e1087677c598a53663316f8f5",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\08_strategy_drill_native.png",
+          "sha256": "7a4b686bb9ed07fc86300e75cefec1da79667f823501367ffdb0f053260723aa",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "09_stepwise_workspace": {
+      "state_key": "09_stepwise_workspace",
+      "state_name": "Stepwise CAS Derivation (Multi-step rows, CAS evaluation, Check Solution CTA)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "2 derivation step rows active with first step entered",
+          "pass": true
+        },
+        {
+          "desc": "Stepwise controls visible (+ Add Step, Hint, Reset, Check Solution)",
+          "pass": true
+        },
+        {
+          "desc": "Zero quick solve fallback box present",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\09_stepwise_workspace_cdp.png",
+          "sha256": "01a0ea5635202bd48211b57db0fb096244aba7fe6bb811b426ba9af6b4e7a5ba",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\09_stepwise_workspace_native.png",
+          "sha256": "000e06a9b3285088f4cc6e8ce3aeedd92a84164c2561a55d283319e737b52f31",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "10_worked_example": {
+      "state_key": "10_worked_example",
+      "state_name": "WorkedExample (Flattened Open Canvas, Key Decision box, Acknowledgment Gate)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Key decision highlight and 3 canonical steps displayed (ANTI-07 flattened)",
+          "pass": true
+        },
+        {
+          "desc": "Mandatory 'I Have Understood' acknowledgment gate present",
+          "pass": true
+        },
+        {
+          "desc": "Zero solving input boxes or MCQ options present",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\10_worked_example_cdp.png",
+          "sha256": "bc7e515b8d329bbab5d330fa3f2ae5fd8e4fcbae5f9dfa8dfa75cf7b0a2029f1",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\10_worked_example_native.png",
+          "sha256": "b5dd6ee3e3c0977a2eea3cbd0af4e7fa7acaebe47ee954f7cf506ff09906056c",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "11_physics_numerical": {
+      "state_key": "11_physics_numerical",
+      "state_name": "Physics Numerical (5D physical unit vector parsing [L]^1[T]^-1, 30 m/s)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Domain badge is 'Physics'",
+          "pass": true
+        },
+        {
+          "desc": "Physical unit input '30 m/s' entered and parsed",
+          "pass": true
+        },
+        {
+          "desc": "Submit action armed for dimensional vector evaluation",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\11_physics_numerical_cdp.png",
+          "sha256": "b8469610067fedd08dd075e485008de2a4118fffa33a4371c1b65d73b42385d7",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\11_physics_numerical_native.png",
+          "sha256": "9d4da4ebd9336c245270bd24a9469fffec6084db164a923f60175260d3934018",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "12_chemistry_numerical": {
+      "state_key": "12_chemistry_numerical",
+      "state_name": "Chemistry Numerical (Mole / Molar mass parsing, 1.0 mol AST evaluation)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Domain badge is 'Chemistry'",
+          "pass": true
+        },
+        {
+          "desc": "Molar unit input '1.0 mol' entered",
+          "pass": true
+        },
+        {
+          "desc": "Submit action armed for chemical stoichiometry evaluation",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\12_chemistry_numerical_cdp.png",
+          "sha256": "9aef33a655896c89227d97a3e419bd6fb21b05b53b7d100c55c170fe88376e46",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\12_chemistry_numerical_native.png",
+          "sha256": "7221db526e0eab9858285ca799fc88b6ea726a6e2f9c3ed62ada1e618de3473c",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "13_normal_basic": {
+      "state_key": "13_normal_basic",
+      "state_name": "Normal Basic Flashcard (100% untouched native Anki card rendering & runtime isolation)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Standard Mustache front/back cards rendered normally",
+          "pass": true
+        },
+        {
+          "desc": "Procedural card container is 100% absent (#procedural-card is null)",
+          "pass": true
+        },
+        {
+          "desc": "Native Anki review workflow untouched",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\13_normal_basic_cdp.png",
+          "sha256": "8ac76eb36fcd68c13a4d3a7c631b5260a76ff9300a9623162a10e72499b7223e",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\13_normal_basic_native.png",
+          "sha256": "c471523d188c10d2baa0dd32beee1617f761bb357409ee872b7ce94f860fe8dc",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    },
+    "14_normal_cloze": {
+      "state_key": "14_normal_cloze",
+      "state_name": "Normal Cloze Flashcard (100% untouched native Anki cloze rendering & runtime isolation)",
+      "verdict": "PASS",
+      "assertions": [
+        {
+          "desc": "Standard Anki cloze deletion span rendered with native styling",
+          "pass": true
+        },
+        {
+          "desc": "Procedural card container is 100% absent",
+          "pass": true
+        },
+        {
+          "desc": "Zero procedural DOM injection on standard cloze notes",
+          "pass": true
+        }
+      ],
+      "screenshots": {
+        "cdp_webview": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\14_normal_cloze_cdp.png",
+          "sha256": "82ee0893c2a7d1f827161f9fef491b8132c832f8481d44c1ff1f5792e357b612",
+          "type": "cdp_page_capture"
+        },
+        "native_desktop": {
+          "path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\artifacts_qa\\frontend_reconciliation\\14_normal_cloze_native.png",
+          "sha256": "ed4808d3e539d9a73a06ab294ddacce63b1b9e97fbcfe6607bd06a5d9cb64873",
+          "type": "native_desktop_os"
+        }
+      },
+      "visual_notes": ""
+    }
+  },
+  "verdict": "PASS"
+}

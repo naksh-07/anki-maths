@@ -1,9 +1,10 @@
 # StudyLab Frontend Acceptance Matrix & "Perfect Window" Contract
 
-**Document Version:** 1.0.0 (Canonical)  
+**Document Version:** 1.1.0 (Reconciled with STUDYLAB_UI_COMPOSITION_CONTRACT.md)  
 **Target Subsystem:** Frontend Reviewer (`ts/reviewer/`), Desktop Host (`qt/aqt/reviewer.py`), and QA Verification Harness (`tools/live_modality_verifier.py`)  
-**Status:** AUTHORITATIVE CANONICAL SPECIFICATION (Mission Sections 21 & 23)  
+**Status:** AUTHORITATIVE CANONICAL SPECIFICATION  
 **Integrity Mode:** 100% Grounded in Live Desktop Forensic Evidence, WCAG 2.1 AA, and Performance Benchmarks  
+**Authoritative Reference:** `docs/STUDYLAB_UI_COMPOSITION_CONTRACT.md`, `PROJECT.md`
 
 ---
 
@@ -18,16 +19,16 @@ This document establishes the definitive, testable acceptance criteria for every
 │   "A StudyLab review window is perfect when the problem statement is the         │
 │    uncluttered visual hero, micro-interactions respond in under 50ms,            │
 │    the interface is 100% operable by keyboard alone, error reflection is         │
-│    metacognitively unskippable, and zero raw engine telemetry leaks to the       │
-│    learner surface."                                                             │
+│    metacognitively unskippable, all 8 visual anti-patterns are eliminated,       │
+│    and zero raw engine telemetry leaks to the learner surface."                  │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Section 21: Screen-by-Screen Acceptance Contract
+## 2. Section 21: Screen-by-Screen Acceptance Contract (14 Canonical Verification States)
 
-Below is the exhaustive acceptance contract across all 12 canonical reviewer screens and modalities:
+Below is the exhaustive acceptance contract across all 14 canonical reviewer screens and modalities:
 
 ---
 
@@ -40,14 +41,15 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
   - `#proc-submit-btn` (`Submit Answer`) is visible and active.
   - `.proc-mode-tabs` displays `Quick Solve` (active) and `Step-by-Step` (inactive) pills.
   - `#proc-mcq-container` is **STRICTLY ABSENT** from the DOM.
+  - Zero ticking stopwatch counter (`ANTI-03`).
 - **Interaction Assertions:**
   - Typing `7` updates input value in < 16ms.
   - Pressing `Enter` triggers `handleQuickSubmit()` immediately.
   - Pressing `Alt+S` switches seamlessly to Stepwise workspace without losing typed input.
 - **Evaluation Assertions:**
-  - Evaluates algebraic equivalence ($x = 7$, $7$, $+7$ are all valid).
-  - Submitting `7` advances to `feedback` with green `✓ Correct Solution` banner.
-  - Submitting `9` transitions to `mistake_classification` with red outcome notification.
+  - Evaluates algebraic equivalence ($x = 7$, `7`, `+7` are all valid).
+  - Submitting `7` advances to `feedback` with subtle inline `✓ Correct` status on open canvas.
+  - Submitting `9` transitions to `mistake_classification` with inline status and deferred solution.
 - **Pass / Fail Verdict Criteria:** **PASS** if zero MCQ options appear, input receives auto-focus, and evaluation responds in < 200ms.
 
 ---
@@ -61,7 +63,7 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
   - Each card displays key badge (`A`, `B`, `C`, `D`) and formatted label (e.g., `A: ₹450`).
   - `#proc-answer-input`, `#proc-quick-container`, and `.proc-mode-tabs` are **STRICTLY ABSENT**.
 - **Interaction Assertions:**
-  - Pressing `A` or `1` immediately selects Option A with active highlight border and `aria-checked="true"`.
+  - Pressing `A` or `1` immediately selects Option A with active 2px highlight border and `aria-checked="true"`.
   - Arrow keys (`Up` / `Down`) cycle focus smoothly with roving tabindex.
   - Clicking an option or pressing `Enter` confirms choice and evaluates instantly.
 - **Evaluation Assertions:**
@@ -73,12 +75,12 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
 
 ### Screen 3: Logical Reasoning MCQ (Blood Relations / Seating Arrangements)
 - **Modality:** `MCQContainer` with Structured Logic Stem.
-- **Target Skill:** Deductive relationship reasoning (e.g., *"Pointing to a photograph..."*).
+- **Target Skill:** Deductive relationship reasoning.
 - **Visual Assertions:**
   - Clear narrative problem prompt formatted for readability.
   - 4 discrete relationship option cards (e.g., `A: Sister`, `B: Mother`, `C: Aunt`, `D: Daughter`).
-  - Active selection highlighted with 2px primary accent border and elevated shadow.
-  - Zero raw schema names (`family.reasoning.*`) or internal generator IDs visible.
+  - Active selection highlighted with 2px primary accent border.
+  - Zero raw schema names (`family.reasoning.*`) or internal generator IDs visible (`ANTI-06`).
 - **Interaction Assertions:**
   - Hotkeys `1`..`4` / `A`..`D` operate without mouse dependency.
   - Double clicking does not trigger duplicate submission.
@@ -98,7 +100,6 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
   - Accepts compound unit aliases: `m/s`, `m s^-1`, `m/sec`, `meters per second`.
   - Handles unit prefixes (e.g., `0.03 km/s` $\rightarrow$ converted to `30 m/s`).
   - Tolerance check: Accepts $30.0 \pm 0.5\,\text{m/s}$ (relative tolerance 1.5%).
-  - Dimension mismatch warning: Typing `30 m` or `30 s` warns of dimension mismatch before penalty.
 - **Pass / Fail Verdict Criteria:** **PASS** if single preview pill appears, dimensional units are validated, and unit conversions execute correctly.
 
 ---
@@ -122,14 +123,10 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
 - **Target Skill:** Diagnosing the additive fallacy in successive percentage changes.
 - **Visual Assertions:**
   - Prompt: *"A price increases by 10% and then increases again by 10%. What is the net percentage increase?"*
-  - 4 Conceptual Choices:
-    1. `+21% (Multiplicative compounding)`
-    2. `+20% (Additive sum)`
-    3. `+100%`
-    4. `+19%`
+  - 4 Conceptual Choices (`role="radio"`).
   - Free text input field is **STRICTLY ABSENT**.
 - **Interaction & Diagnostic Assertions:**
-  - Selecting Distractor 2 (`+20%`) reveals immediate targeted diagnostic callout:
+  - Selecting Distractor 2 (`+20%`) reveals immediate targeted diagnostic callout with 3px left accent:
     *"⚠️ Additive Fallacy: The second 10% increase acts on the already-increased base (1.10), giving $1.10 \times 1.10 = 1.21$ (+21%), not +20%."*
   - Misconception tag `misconception.percentage.additive_fallacy` recorded in telemetry.
 - **Pass / Fail Verdict Criteria:** **PASS** if distractor-specific feedback appears immediately without revealing generic solution text.
@@ -141,13 +138,9 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
 - **Target Skill:** Selecting optimal problem-solving strategy (Alligation Cross vs Algebraic Equations).
 - **Visual Assertions:**
   - Context box detailing mixture pricing scenario.
-  - Option cards representing distinct solving strategies:
-    1. `Alligation Cross Rule (Speed: Fast, Mental Steps: 1)`
-    2. `Simultaneous Linear Equations (Speed: Moderate, Steps: 4)`
-    3. `Trial and Error Substitution`
+  - Option cards representing distinct solving strategies with compact step counts and speed ratings.
 - **Interaction & Feedback Assertions:**
-  - Selecting Option 1 reveals optimality rationale:
-    *"⭐ Optimal Strategy: Direct cross subtraction gives $12 : 8 = 3 : 2$ in one mental calculation step without setting up multi-variable equations."*
+  - Selecting Option 1 reveals optimality rationale with 3px left accent rule.
   - Evaluated against `preferred_option_id`.
 - **Pass / Fail Verdict Criteria:** **PASS** if strategy comparison feedback renders clearly and encourages optimal cognitive path.
 
@@ -156,13 +149,13 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
 ### Screen 8: WorkedExample (Commercial / Dishonest Shopkeeper)
 - **Modality:** `WorkedExample` (Expert Modeling & Solution Trace).
 - **Target Skill:** Expert solution trace modeling for high-recurrence failure loops.
-- **Visual Assertions:**
-  - Setup context card summarizing problem parameters.
-  - Highlighted Key Decision Point card:
+- **Visual Assertions (`ANTI-07`):**
+  - Open canvas layout with subtle horizontal dividers (zero nested boxed containers).
+  - Highlighted Key Decision Point card with 3px left accent rule:
     *"⭐ Key Decision: The base of the percentage calculation is the actual weight dispensed (900g), not the advertised 1000g."*
-  - 3 sequentially numbered canonical derivation steps with MathJax formatting.
+  - Sequentially numbered canonical derivation steps with MathJax formatting.
   - Method rationale and common pitfalls callout.
-  - Primary Action Gate button: `[ ✔ I Have Reviewed and Understood This Solution ]` (`#proc-try-similar-btn`).
+  - Primary Action Gate button: `[ ✔ I Have Reviewed and Understood This Solution — Try Similar Problem ]` (`#proc-try-similar-btn`).
   - Solving input boxes and MCQ options are **STRICTLY ABSENT**.
 - **Interaction Assertions:**
   - Pressing `Enter`, `Space`, or clicking the gate button dispatches `procedural_try_similar` and loads a fresh practice variant (`TransferRetry`).
@@ -180,7 +173,7 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
   - Quick solve single input box is **STRICTLY ABSENT**.
 - **Interaction & CAS Validation Assertions:**
   - Typing `5x = 30` in Step 1 and pressing `Enter` validates the step as `✓ Valid` (green badge) and automatically appends/focuses Step 2.
-  - If a student makes an intermediate calculation error in Step 1 but logically deduces Step 2 from that error, Step 2 is marked `⚠️ Partially Valid` (`is_downstream_consistent = true`), preventing unfair cascading penalties.
+  - Downstream consistency: If a student makes an intermediate calculation error in Step 1 but logically deduces Step 2 from that error, Step 2 is marked `⚠️ Consistent with Prior Error` (`is_downstream_consistent = true`), preventing double-penalty.
   - Pressing `Ctrl+Enter` or clicking `[ Check Solution ]` evaluates all steps against the Rust `StepValidator`.
 - **Pass / Fail Verdict Criteria:** **PASS** if individual step validation badges render properly and downstream consistency logic prevents cascading failure.
 
@@ -190,7 +183,8 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
 - **Modality:** Evaluation Failure & Metacognitive Trigger.
 - **Visual Assertions:**
   - Inputs disabled (`.proc-input-locked`).
-  - Concise error notification banner: *"❌ Incorrect: Result does not satisfy equation (Expected: 7, Submitted: 9)"*.
+  - Concise inline outcome indicator: `✗ Incorrect` (`.proc-status-incorrect`).
+  - Giant red full-bleed banners (`ANTI-01`) are **STRICTLY FORBIDDEN**.
   - Primary `Next Problem` button is **STRICTLY HIDDEN**.
   - Mistake classification strip `#proc-mistake-panel` is displayed immediately.
 - **Interaction & Anti-Bypass Assertions:**
@@ -203,32 +197,63 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
 ### Screen 11: Mistake Classification Reflection Gate
 - **Modality:** `MistakeFooter` Metacognitive Reflection Strip.
 - **Visual Assertions:**
-  - Compact horizontal strip with 4 classification buttons:
-    1. `[1 Silly]` (`silly_mistake`: Calculation or sign slip)
-    2. `[2 Pattern]` (`pattern_not_recognized`: Unfamiliar problem structure)
-    3. `[3 Concept]` (`formula_or_concept_misapplied`: Wrong formula applied)
-    4. `[4 Unknown]` (`concept_not_known`: Missing prerequisite knowledge)
+  - Compact horizontal strip with 4 classification buttons (`data-key="1..4"`):
+    1. `[1 Silly Slip]` (`silly_mistake`: Calculation or sign slip)
+    2. `[2 Pattern Missed]` (`pattern_not_recognized`: Unfamiliar problem structure)
+    3. `[3 Concept Gap]` (`formula_or_concept_misapplied`: Wrong formula applied)
+    4. `[4 Prereq Unknown]` (`concept_not_known`: Missing prerequisite knowledge)
+  - Full solution derivation (`#proc-solution-container`) is **STRICTLY HIDDEN** during reflection (`ANTI-08`).
 - **Interaction Assertions:**
-  - Pressing numeric key `1`, `2`, `3`, or `4` highlights the selected button in red/accent and triggers transition after 150ms delay.
+  - Pressing numeric key `1`, `2`, `3`, or `4` highlights the selected button and triggers transition after 150ms delay.
   - Emits `bridgeCommand("procedural_mistake:<json>")`.
-- **Pass / Fail Verdict Criteria:** **PASS** if all 4 categories respond to keyboard shortcuts 1–4 and emit valid JSON telemetry.
+  - Reveals canonical solution only upon selection.
+- **Pass / Fail Verdict Criteria:** **PASS** if all 4 categories respond to keyboard shortcuts 1–4, Space/Enter remain trapped, and solution is deferred.
 
 ---
 
 ### Screen 12: Clean Result Feedback & Next Action State
 - **Modality:** Consolidated Outcome & Derivation Review.
 - **Visual Assertions:**
-  - Green (Correct) or Red (Incorrect) outcome header.
-  - Single, deduplicated expected answer row `.proc-expected-row` (rendered exactly once).
-  - Complete canonical MathJax derivation trace `.proc-derivation-trace`.
-  - Speed quadrant performance badge `.proc-speed-quadrant` (e.g., `⚡ Fluency Strength`).
-  - Single primary action button: `[ Next Problem (Space / Enter) ]` (`#proc-next-btn`).
-  - Native Anki bottom ease buttons remain hidden/suppressed (enforcing One-Interaction-Surface).
-  - Raw engine telemetry (`attempt_id`, `loss_score`, `raw_seed`, `schema_id`) is **STRICTLY HIDDEN**.
+  - Open canvas layout without full-bleed red/green containers (`ANTI-01`).
+  - Single, deduplicated expected answer row (`Your answer: 30 m/s · Correct answer: 30 m/s`) rendered exactly once (`ANTI-02`).
+  - Complete canonical MathJax derivation trace `.proc-derivation-trace` (`ANTI-07`).
+  - Performance speed pill: compact muted badge (e.g. `⚡ Fast & Accurate · 8.4s`) (`ANTI-04`).
+  - Single primary action button: `[ Next Problem ➔ (Space / Enter) ]` (`#proc-next-btn`).
+  - Native Anki bottom ease buttons remain hidden/suppressed.
+  - Raw engine telemetry (`attempt_id`, `loss_score`, `raw_seed`, `schema_id`) is **STRICTLY HIDDEN** (`ANTI-06`).
 - **Interaction Assertions:**
   - Pressing `Space` or `Enter` executes `handleNext()`, dispatching `procedural_answer:<ease>` with calibrated FSRS ease.
   - Pressing keys `1`..`4` provides explicit ease override (`1: Again`, `2: Hard`, `3: Good`, `4: Easy`).
-- **Pass / Fail Verdict Criteria:** **PASS** if zero duplicate text exists, speed quadrant renders, and Space/Enter smoothly advances the deck.
+- **Pass / Fail Verdict Criteria:** **PASS** if zero duplicate text exists, speed pill renders, and Space/Enter smoothly advances the deck.
+
+---
+
+### Screen 13: Normal Basic Card (Native Reviewer Isolation)
+- **Modality:** Native Anki Reviewer (non-procedural Basic flashcard).
+- **Target Card:** Standard Basic flashcard (Front / Back).
+- **Visual Assertions:**
+  - Rendered via standard Anki template without `#procedural-card` or `#proc-root` wrappers.
+  - Native `#ansbut` (`Show Answer`) displayed in question state.
+  - Native `Again (1)`, `Hard (2)`, `Good (3)`, `Easy (4)` rating buttons displayed in answer state.
+  - Zero StudyLab UI chrome, zero procedural styles, zero procedural DOM injection.
+- **Interaction Assertions:**
+  - `Space` flips card to answer side natively.
+  - `1`, `2`, `3`, `4` keys rate card natively via standard Anki scheduler.
+  - Zero procedural interception, zero procedural IPC bridge dispatch.
+- **Pass / Fail Verdict Criteria:** **PASS** if standard Basic flashcards are 100% untouched native Anki reviews.
+
+---
+
+### Screen 14: Normal Cloze Card (Native Reviewer Isolation)
+- **Modality:** Native Anki Reviewer (non-procedural Cloze card).
+- **Target Card:** Standard Cloze flashcard (`{{c1::term}}`).
+- **Visual Assertions:**
+  - Standard Cloze formatting with blue highlight on `[...]`.
+  - Standard Anki question/answer lifecycle.
+  - Native `#ansbut` and ease rating buttons operating normally.
+- **Interaction Assertions:**
+  - Spacebar flips card; 1–4 keys rate card natively.
+- **Pass / Fail Verdict Criteria:** **PASS** if native Cloze review is 100% untouched.
 
 ---
 
@@ -237,19 +262,17 @@ Below is the exhaustive acceptance contract across all 12 canonical reviewer scr
 | Scenario / Edge Case | Acceptance Standard | Failure Invalidation Condition |
 |---|---|---|
 | **Compact Mobile Viewport (320px – 480px)** | All inputs, buttons, and text wrap vertically without horizontal overflow. Option cards stack in a single column with min tap target 44x44px. | Horizontal scrollbar appears on card body; buttons clip outside viewport. |
-| **Standard Desktop Viewport (600px – 1200px)** | Card centered with max-width 780px. Clear 16px padding between panels. Two-column layout permitted for option grids if width $\ge 700\text{px}$. | Excessive whitespace; elements stretched unreadably across entire screen. |
-| **Ultra-Wide Viewport (1440px – 4K)** | Content remains contained within 800px max-width container with subtle margin. Font sizes scale harmoniously. | Problem text spans 3000px horizontally; reading lines exceed 120 characters. |
-| **Complex MathJax Formula Overflow** | Long mathematical equations (e.g., $\int \frac{x^3 + 2x^2}{\sqrt{1 - x^2}} dx$) wrap smoothly or enable localized horizontal scroll on formula container only. | Equation breaks card boundary or forces global webview horizontal scroll. |
-| **High-Precision Decimals & Scientific Notation** | Accepts $3.14$, $3.14159$, and $1.5 \times 10^5$ (or `1.5e5`, `1.5*10^5`). Trailing zeros (e.g., `2.50` vs `2.5`) handled accurately based on significant figures. | Floating point precision errors ($0.1 + 0.2 = 0.30000000000000004$) rejected as incorrect. |
+| **Standard Desktop Viewport (600px – 1200px)** | Card centered with max-width 720px (`#proc-root`). Clear 16px padding between panels. | Excessive whitespace; elements stretched unreadably across entire screen. |
+| **Ultra-Wide Viewport (1440px – 4K)** | Content remains contained within 720px max-width container with subtle margin. Font sizes scale harmoniously. | Problem text spans 3000px horizontally; reading lines exceed 120 characters. |
+| **Complex MathJax Formula Overflow** | Long mathematical equations wrap smoothly or enable localized horizontal scroll on formula container only. | Equation breaks card boundary or forces global webview horizontal scroll. |
+| **High-Precision Decimals & Scientific Notation** | Accepts `3.14`, `3.14159`, and `1.5e5`. Trailing zeros handled accurately based on significant figures. | Floating point precision errors ($0.1 + 0.2 = 0.30000000000000004$) rejected as incorrect. |
 | **Physical Unit Whitespace Resilience** | Accepts `30m/s`, `30 m/s`, `30  m/s`, `30 m / s`, `30 meter/second`. | Missing space between number and unit causes parsing crash. |
 | **Rapid Double Click / Keypress Debounce** | Submitting answer or clicking options twice in < 100ms triggers exactly one evaluation and one IPC event. | Duplicate attempts logged in `procedural.db`; race condition crashes state machine. |
-| **Webview Navigation / Card Teardown** | Navigating to a standard Anki card unmounts container via `MutationObserver`, disconnects all listeners, and restores native Anki shortcuts. | Memory leak; orphaned keydown listeners intercepting spacebar on standard flashcards. |
+| **Webview Navigation / Card Teardown** | Navigating to a standard Anki card unmounts container, disconnects all listeners, and restores native Anki shortcuts. | Memory leak; orphaned keydown listeners intercepting spacebar on standard flashcards. |
 
 ---
 
 ## 4. Section 23: "Perfect Window" Definition & Quantitative Thresholds
-
-To achieve the "Perfect Window" certification, a StudyLab build must satisfy all quantitative latency, accessibility, and visual quality thresholds:
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
@@ -267,6 +290,7 @@ To achieve the "Perfect Window" certification, a StudyLab build must satisfy all
 │ Keyboard Operability          │ 100% Mouse-Free Operable  │ Any required mouse click    │
 │ Visual Duplication Count      │ Exactly 0 Duplications    │ $\ge 1$ Duplicate Element   │
 │ Engine Telemetry Leak Count   │ Exactly 0 Leaks           │ $\ge 1$ Raw Schema Leak     │
+│ Anti-Pattern Count (01..08)   │ Exactly 0 Violations      │ $\ge 1$ Anti-Pattern Active │
 └───────────────────────────────┴───────────────────────────┴─────────────────────────────┘
 ```
 
@@ -279,21 +303,15 @@ To achieve the "Perfect Window" certification, a StudyLab build must satisfy all
 1. **Contrast Ratio ($\ge 4.5:1$):** All text elements, option labels, and button text must maintain a minimum contrast ratio of $4.5:1$ against their background ($3:1$ for large headings) in both Light and Dark themes.
 2. **Visible Focus Rings:** Every interactive input, option card, and button must display a high-visibility focus outline ($2\text{px solid } \text{var(--proc-primary-color)}$) when focused via keyboard navigation.
 3. **Semantic ARIA Structure:**
-   - MCQ option container: `role="radiogroup"`, `aria-label="Multiple Choice Options"`.
+   - MCQ option container: `role="radiogroup"`, `aria-label="Multiple choice options"`.
    - MCQ option items: `role="radio"`, `aria-checked="true|false"`, `tabindex="0|-1"`.
-   - Stepwise workspace: `role="region"`, `aria-label="Step-by-Step Derivation Workspace"`.
+   - Stepwise workspace: `role="region"`, `aria-label="Step-by-step derivation workspace"`.
    - Error notification banner: `role="alert"`, `aria-live="assertive"`.
 
 ### 4.3 Keyboard Navigation Standards (100% Mouse-Free)
-- A student must be able to complete a 50-problem review session using **only the keyboard**:
-  - Enter numbers/units $\rightarrow$ Press `Enter` to submit.
-  - Select options $\rightarrow$ Press `1`..`4` or `A`..`D` $\rightarrow$ Press `Enter`.
-  - Classify errors $\rightarrow$ Press `1`..`4` in `mistake_classification`.
-  - Advance to next card $\rightarrow$ Press `Space` or `Enter` in `feedback`.
-  - Open hint $\rightarrow$ Press `H` $\rightarrow$ Close hint with `Esc`.
-
-### 4.4 Visual Calmness & Zero-Leakage Standards
-1. **The Problem is the Visual Hero:** The problem statement occupies the top and center of the workspace with prominent typography (18px–22px).
-2. **Zero Raw Schema Leaks:** Strings like `schema.phys.kinematics.v_squared`, `family.math.algebra`, `attempt_id: 9942`, `loss_score: 0.85`, or `instance_seed: 18274` must **NEVER** appear in learner-facing HTML.
-3. **Zero Visual Duplication:** No repeated expected answer rows, no duplicate unit pills, no duplicate submit/next buttons.
-4. **No Flashcard Illusion:** The UI must feel like an authentic, native procedural problem-solving canvas, not a card-flip simulation.
+A student must be able to complete a 50-problem review session using **only the keyboard**:
+- Enter numbers/units $\rightarrow$ Press `Enter` to submit.
+- Select options $\rightarrow$ Press `1`..`4` or `A`..`D` $\rightarrow$ Press `Enter`.
+- Classify errors $\rightarrow$ Press `1`..`4` in `mistake_classification`.
+- Advance to next card $\rightarrow$ Press `Space` or `Enter` in `feedback`.
+- Open hint $\rightarrow$ Press `H` $\rightarrow$ Close hint with `Esc`.

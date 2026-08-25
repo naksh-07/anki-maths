@@ -1,17 +1,17 @@
 # StudyLab Frontend Visual Design Specification
 
-**Document Version:** 1.0.0 (Canonical Master Specification)  
+**Document Version:** 1.1.0 (Reconciled with STUDYLAB_UI_COMPOSITION_CONTRACT.md)  
 **Target Repository:** `Anki-maths` (StudyLab Subsystem)  
 **Status:** AUTHORITATIVE SPECIFICATION  
 **Integrity Mode:** Benchmark Mode (100% Grounded in Executable Styles, QtWebEngine Renders, and UI Audits)  
-**Authoritative Sections Covered:** Section 9 of `ORIGINAL_REQUEST.md`
+**Authoritative Reference:** `docs/STUDYLAB_UI_COMPOSITION_CONTRACT.md`, `PROJECT.md`
 
 ---
 
 ## 1. Visual Product Contract & Core Philosophy
 
 ### 1.1 The Problem Is the Visual Hero
-In StudyLab, the mathematical or scientific problem statement is the **primary visual hero** of the interface. The user interface is completely subordinate to the learner's cognitive problem-solving task.
+In StudyLab, the mathematical, physical, or logical problem statement is the **primary visual hero** of the interface. The user interface is completely subordinate to the learner's cognitive problem-solving task.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
@@ -22,41 +22,36 @@ In StudyLab, the mathematical or scientific problem statement is the **primary v
 │    mathematical reasoning without visual noise or web-widget chrome."            │
 │                                                                                  │
 │   • Blends seamlessly into Anki's native desktop light and dark themes.          │
-│   • Replaces web-app widget clutter with clean, restrained typography.           │
+│   • Replaces web-app widget clutter with clean, restrained Open Canvas layout.   │
 │   • Elevates mathematical equations (LaTeX/MathJax) to primary contrast.         │
 │   • Maintains a single focused interaction surface per state.                    │
+│   • Eliminates giant colored containers, nested cards, and telemetry dumps.      │
 │                                                                                  │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Prohibited Visual Anti-Patterns
+## 2. Prohibited Visual Anti-Patterns Ledger
 
-To ensure StudyLab never degenerates into a noisy web application, the frontend enforces strict visual prohibitions:
+To ensure StudyLab never degenerates into a noisy web application, the frontend strictly enforces the elimination of all 8 visual anti-patterns (`ANTI-01` through `ANTI-08`):
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                         PROHIBITED VISUAL ANTI-PATTERNS                          │
-├──────────────────────────────┬───────────────────────────────────────────────────┤
-│ Prohibited Anti-Pattern      │ Design Violation & Mandated Correction            │
-├──────────────────────────────┼───────────────────────────────────────────────────┤
-│ ❌ **Giant Card Wrappers**   │ Avoid multi-layered nested cards with heavy outer │
-│                              │ borders and 30px padding. Use flat, clean flows.  │
-│ ❌ **Web-Widget Appearance** │ Avoid floating action buttons, animated gradients,│
-│                              │ or colorful SaaS banners inside the reviewer.     │
-│ ❌ **Excessive Shadows**     │ Eliminate deep elevation drop-shadows (`box-shadow│
-│                              │ 0 20px 25px...`). Use crisp 1px borders.         │
-│ ❌ **Rainbow Badge Spam**    │ Do not decorate the header with 5 different       │
-│                              │ colored badges. Use muted monochrome tags.        │
-│ ❌ **Raw Schema Leakage**    │ Never display internal engine strings like        │
-│                              │ `math.algebra.linear.one_variable_v2`.            │
-│ ❌ **Telemetry Dumps**       │ Never display raw floats (`mastery: 0.841`), BKT  │
-│                              │ Markov probabilities, or SQLite primary keys.     │
-│ ❌ **Stacked Panel Monsters**│ Never stack 4 large independent boxes on a single │
-│                              │ screen. Use progressive collapse and replace.     │
-└──────────────────────────────┴───────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                VISUAL ANTI-PATTERN LEDGER                                        │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+| ID | Anti-Pattern | Design Violation Description | Mandated Open Canvas Correction |
+|---|---|---|---|
+| **ANTI-01** | **Giant Feedback Containers** | Full-bleed saturated red/green colored background wrappers covering the card surface | Replaced by open canvas typography with subtle inline status indicator (`✓ Correct` / `✗ Incorrect`) and a 3px left accent border |
+| **ANTI-02** | **Duplicate Expected Answer Labels** | Displaying "Expected Answer" and "You answered" multiple times across template and script | Consolidated single comparison row (`Your answer: X · Correct answer: Y`) rendered exactly once |
+| **ANTI-03** | **Ticking Stopwatch During Solving** | Active numeric clock updating every 200ms during problem solving | Stopwatch runs silently in telemetry background; total elapsed time displayed calmly post-submission alongside speed pill |
+| **ANTI-04** | **Competing Speed Badges** | Multi-badge speed quadrant clutter competing with results (e.g. `⚡ Fluency Strength (Accurate & Fast)`) | Single compact muted status pill (`⚡ Fast & Accurate · 8.4s`) using subdued surface tokens |
+| **ANTI-05** | **Generic Practice / Variant Chrome** | "VARIANT: PRACTICE" badges and generic practice headers | Suppressed; preserve only verified competitive exam provenance (`[ JEE Main 2024 ]`) |
+| **ANTI-06** | **Raw Internal Schema & Generator IDs** | Internal schema strings (`schema.phys.kinematics...`, `family_id`) | Strictly forbidden from learner view; retained 100% in HTML data attributes |
+| **ANTI-07** | **Nested Card Boxes in Worked Examples & Solutions** | Box-in-a-box nested containers with heavy borders and background insets | Flat open canvas layout with 1px subtle horizontal dividers and 3px left accent rules |
+| **ANTI-08** | **Premature Solution Reveal in Reflection Gate** | Displaying full solution derivation while learner is in mistake classification | `#proc-solution-container` strictly hidden in DOM until mistake category (1–4) is selected |
 
 ---
 
@@ -64,9 +59,9 @@ To ensure StudyLab never degenerates into a noisy web application, the frontend 
 
 StudyLab utilizes CSS custom properties that inherit dynamically from Anki's native desktop theme (`body.nightMode` vs. default light mode).
 
-### 3.1 Color Palette Tokens
+### 3.1 Color Palette & Surface Tokens
 
-```css
+```scss
 /* Canonical Design Tokens (ts/reviewer/reviewer.scss) */
 :root {
     /* Base Backgrounds & Surfaces */
@@ -84,6 +79,7 @@ StudyLab utilizes CSS custom properties that inherit dynamically from Anki's nat
     --proc-border: #e2e8f0;
     --proc-border-focus: #3b82f6;
     --proc-border-subtle: #cbd5e1;
+    --proc-divider: 1px solid var(--proc-border);
     
     /* Semantic State Accents */
     --proc-primary: #2563eb;
@@ -101,6 +97,14 @@ StudyLab utilizes CSS custom properties that inherit dynamically from Anki's nat
     --proc-warning: #d97706;
     --proc-warning-bg: #fffbeb;
     --proc-warning-border: #f59e0b;
+
+    /* Open Canvas Callout & Accent Tokens */
+    --proc-accent-left-correct: 3px solid var(--proc-success);
+    --proc-accent-left-incorrect: 3px solid var(--proc-error);
+    --proc-accent-left-worked: 3px solid var(--proc-primary);
+    --proc-accent-left-decision: 3px solid #6366f1;
+    --proc-pill-bg: var(--proc-surface-subtle);
+    --proc-pill-text: var(--proc-text-secondary);
 }
 
 /* Anki Dark Mode (Night Mode) */
@@ -117,6 +121,7 @@ body.nightMode {
     --proc-border: #334155;
     --proc-border-focus: #60a5fa;
     --proc-border-subtle: #475569;
+    --proc-divider: 1px solid var(--proc-border);
     
     --proc-primary: #3b82f6;
     --proc-primary-hover: #60a5fa;
@@ -133,6 +138,14 @@ body.nightMode {
     --proc-warning: #fbbf24;
     --proc-warning-bg: #451a03;
     --proc-warning-border: #d97706;
+
+    /* Open Canvas Callout & Accent Tokens (Night Mode) */
+    --proc-accent-left-correct: 3px solid var(--proc-success);
+    --proc-accent-left-incorrect: 3px solid var(--proc-error);
+    --proc-accent-left-worked: 3px solid var(--proc-primary);
+    --proc-accent-left-decision: 3px solid #818cf8;
+    --proc-pill-bg: var(--proc-surface-subtle);
+    --proc-pill-text: var(--proc-text-secondary);
 }
 ```
 
@@ -175,11 +188,12 @@ StudyLab uses a strict **4px/8px incremental grid system**:
 
 ### Container Max-Width Constraint
 To optimize reading velocity and reduce eye-travel fatigue during complex multi-line math derivations, the reviewer container `#proc-root` enforces:
-```css
+
+```scss
 #proc-root {
-    max-width: 680px;
+    max-width: 720px;
     margin: 0 auto;
-    padding: 16px 20px;
+    padding: 16px 24px;
     box-sizing: border-box;
 }
 ```
@@ -193,18 +207,18 @@ To optimize reading velocity and reduce eye-travel fatigue during complex multi-
 │                         REVIEWER COMPONENT WIREFRAME                             │
 ├──────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
-│   Physics › Mechanics › 1D Kinematics                       [ Exam: JEE 2024 ]   │
+│   Physics › Kinematics › 1D Free Fall                     [ JEE Main 2024 ]      │
 │   ────────────────────────────────────────────────────────────────────────────   │
 │                                                                                  │
-│   A car accelerates uniformly from rest at $2\,\text{m/s}^2$ for $10\,\text{s}$. │
-│   What is the final velocity of the car?                                         │
+│   A stone is dropped from a height of $45\,\text{m}$. Taking $g = 10\,\text{m/s}^2$,│
+│   calculate the speed of the stone just before striking the ground.             │
 │                                                                                  │
 │   ┌────────────────────────────────────────────────────────────────────────┐     │
-│   │  20 m/s                                                                │     │
+│   │  30 m/s                                                                │     │
 │   └────────────────────────────────────────────────────────────────────────┘     │
-│   [ Parsed: 20 m/s (Dimension: [Length]¹ [Time]⁻¹) ]                             │
+│   [ Parsed: 30 m/s (Dimension: [Length]¹ [Time]⁻¹) ]                             │
 │                                                                                  │
-│   [ 💡 Request Hint (1/3) ]                                [ Submit Answer ]     │
+│   [ 💡 Request Hint ]                                      [ Submit Answer ]     │
 │                                                                                  │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -212,8 +226,8 @@ To optimize reading velocity and reduce eye-travel fatigue during complex multi-
 ### 6.1 Header & Breadcrumbs
 - **Position:** Top of the card container.
 - **Styling:** Subdued text color (`--proc-text-muted`), font size `12px`.
-- **Format:** `Subject › Chapter › Topic` on the left; optional single compact badge on the right (e.g. `[ JEE Main 2024 ]`).
-- **Forbidden:** No bright colored banners, no large avatar icons, no streak counters.
+- **Format:** `Subject › Topic › Skill` on the left; optional authentic competitive exam badge on the right (e.g. `[ JEE Main 2024 ]`).
+- **Forbidden (`ANTI-05`, `ANTI-06`):** Generic practice tags (`Variant: practice`), raw schema IDs (`schema.phys.kinematics...`), and rainbow badge spam are **strictly prohibited**.
 
 ### 6.2 Problem Area (Visual Hero)
 - **Styling:** High contrast (`--proc-text-primary`), font size `18px`, line height `1.6`.
@@ -239,31 +253,46 @@ To optimize reading velocity and reduce eye-travel fatigue during complex multi-
   - *Correct Outcome:* Border `2px solid var(--proc-success-border)`, background `--proc-success-bg`.
   - *Incorrect Outcome:* Border `2px solid var(--proc-error-border)`, background `--proc-error-bg`.
 
-#### C. Stepwise Derivation Nodes
+#### C. Concept Check Diagnostic Cards
+- **Layout:** 3–4 statement cards focusing on qualitative mental models.
+- **Distractor Callout:** Selecting a distractor reveals an inline diagnostic callout with a 3px left accent border (`--proc-accent-left-incorrect`) explaining the exact misconception.
+
+#### D. Strategy Drill Comparison Cards
+- **Layout:** 2–4 strategy candidate cards with compact step count and speed ratings.
+- **Optimality Callout:** Highlights optimal strategy with 3px left accent rule.
+
+#### E. Stepwise Derivation Workspace
 - **Row Container:** `1px solid var(--proc-border)`, border-radius `6px`, padding `10px 14px`, margin-bottom `10px`.
 - **Step Label:** Font size `12px`, bold, `--proc-text-secondary`.
 - **Validation Badge:** Compact right-aligned pill (`✔ Valid` green / `❌ Invalid` red / `⚠️ Consistent` yellow).
 
+#### F. Worked Example Open Canvas Trace
+- **Card Styling (`ANTI-07`):** Open canvas layout with subtle horizontal dividers.
+- **Key Decision Point:** 3px solid left accent border (`--proc-accent-left-decision`) with transparent/subtle background.
+- **Common Pitfalls:** 3px solid left accent border (`--proc-warning-border`).
+- **Action Gate:** Single prominent primary button: `[ ✔ I Have Reviewed and Understood This Solution — Try Similar Problem ]`. Zero textboxes or radio inputs.
+
 ---
 
-### 6.4 The Mistake Classification Footer (`MistakeFooter`)
+### 6.4 Mistake Classification Reflection Strip
 - **Position:** Appears directly below the evaluated input upon incorrect answer.
 - **Layout:** Compact 4-button horizontal flex strip (`gap: 8px`).
-- **Button Styling:**
-  - Height `36px`, font size `13px`, font weight `500`.
-  - Keyboard badge (`1`, `2`, `3`, `4`) styled in a subtle rounded square on the left of the button label.
-  - Subdued background with crisp hover state.
-- **Anti-Bypass Visual Lock:** Primary progression button is hidden; the strip is the only active visual focus.
+- **Buttons (`data-key="1..4"`):**
+  - `[1 Silly Slip]` (`silly_mistake`)
+  - `[2 Pattern Missed]` (`pattern_not_recognized`)
+  - `[3 Concept Gap]` (`formula_or_concept_misapplied`)
+  - `[4 Prereq Unknown]` (`concept_not_known`)
+- **Anti-Bypass Visual Lock (`ANTI-08`):** `#proc-next-btn` is strictly hidden. `#proc-solution-container` remains strictly hidden until 1–4 classification is chosen. Space/Enter keys are trapped.
 
 ---
 
-### 6.5 Solution & Canonical Feedback Box
+### 6.5 Open Canvas Solution & Feedback Area
 - **Position:** Displayed below the interaction surface in `feedback` state.
-- **Border:** `1px solid var(--proc-border)`.
-- **Background:** `--proc-surface`.
-- **Padding:** `16px 18px`.
-- **Content:** Step-by-step LaTeX derivation with crisp mathematical formatting and clear final result highlighting.
-- **Next Action Button:** High-contrast primary button (`background: var(--proc-primary)`), height `40px`, text `Next Problem [Enter]`.
+- **Open Canvas Layout (`ANTI-01`, `ANTI-07`):** No giant red/green wrapper boxes. Uses subtle inline status (`✓ Correct` or `✗ Incorrect (Categorized: Concept Gap)`).
+- **Deduplicated Answer Row (`ANTI-02`):** `Your answer: 30 m/s · Correct answer: 30 m/s` rendered exactly once.
+- **Speed Pill (`ANTI-04`):** Compact muted status pill (e.g. `⚡ Fast & Accurate · 8.4s`).
+- **Derivation Trace:** Clean LaTeX step progression with 1px dividers.
+- **Next Action Button:** High-contrast primary CTA: `Next Problem ➔ (Space / Enter)` (`#proc-next-btn`). Native Anki ease buttons suppressed.
 
 ---
 
@@ -274,5 +303,7 @@ Before any frontend template or style modification is certified:
 - [x] **Zero Chrome:** No dashboard headers, web navbars, or decorative gradients.
 - [x] **Contrast:** All text satisfies WCAG AAA contrast ratio ($\ge 7:1$ for body text).
 - [x] **Focus States:** Every interactive element exhibits a crisp keyboard focus ring.
-- [x] **No Layout Shifts:** Transitioning between `solving`, `evaluating`, and `feedback` causes zero sudden horizontal or vertical jumping.
+- [x] **No Layout Shifts:** Transitioning between states causes zero sudden jumping.
 - [x] **Single Input Surface:** Exactly one input modality is visible per screen.
+- [x] **Anti-Pattern Compliance:** Zero occurrences of `ANTI-01` through `ANTI-08`.
+- [x] **14 Target States:** Satisfies all 14 visual verification states (including native Basic/Cloze isolation).

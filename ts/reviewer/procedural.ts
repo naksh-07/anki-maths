@@ -330,6 +330,58 @@ export class ProceduralReviewer {
                 targetTimeMs: this.options.targetTimeMs,
             });
         }
+
+        // Centralized Modality Invariant Enforcement
+        this.enforceModalityInvariants();
+    }
+
+    /**
+     * Enforces semantic modality purity across all 6 learning object types (ANTI-07, Zero-Textbox Fallback).
+     */
+    private enforceModalityInvariants(): void {
+        const objType = this.options.objectType || "problem";
+
+        if (objType === "worked_example" || objType === "declarative_recall" || objType === "prerequisite_review") {
+            // Worked Example / Pedagogical Reading: strictly zero interactive solving textboxes or tabs
+            this.quickContainer?.classList.add("hidden");
+            if (this.quickContainer) {this.quickContainer.style.display = "none";}
+            this.stepwiseContainer?.classList.add("hidden");
+            if (this.stepwiseContainer) {this.stepwiseContainer.style.display = "none";}
+            const modeSwitch = this.container.querySelector<HTMLElement>(".proc-mode-switch");
+            modeSwitch?.classList.add("hidden");
+            if (modeSwitch) {modeSwitch.style.display = "none";}
+            if (this.quickInput) {
+                this.quickInput.disabled = true;
+                this.quickInput.setAttribute("aria-hidden", "true");
+            }
+        } else if (objType === "mcq" || objType === "concept_check" || objType === "strategy_drill") {
+            // Structured Choice: strictly radio cards, zero text input fallback
+            this.quickContainer?.classList.add("hidden");
+            if (this.quickContainer) {this.quickContainer.style.display = "none";}
+            this.stepwiseContainer?.classList.add("hidden");
+            if (this.stepwiseContainer) {this.stepwiseContainer.style.display = "none";}
+            const modeSwitch = this.container.querySelector<HTMLElement>(".proc-mode-switch");
+            modeSwitch?.classList.add("hidden");
+            if (modeSwitch) {modeSwitch.style.display = "none";}
+            if (this.quickInput) {
+                this.quickInput.disabled = true;
+                this.quickInput.setAttribute("aria-hidden", "true");
+            }
+        } else if (objType === "stepwise") {
+            // Dedicated Stepwise Derivation Workspace
+            this.quickContainer?.classList.add("hidden");
+            if (this.quickContainer) {this.quickContainer.style.display = "none";}
+            this.stepwiseContainer?.classList.remove("hidden");
+            if (this.stepwiseContainer) {this.stepwiseContainer.style.display = "";}
+        } else if (objType === "quick" || objType === "problem") {
+            // Numerical / Quick Solve
+            if (!this.options.solutionGraph || this.options.solutionGraph.steps.length === 0) {
+                // Single-mode problem: suppress mode switch tabs
+                const modeSwitch = this.container.querySelector<HTMLElement>(".proc-mode-switch");
+                modeSwitch?.classList.add("hidden");
+                if (modeSwitch) {modeSwitch.style.display = "none";}
+            }
+        }
     }
 
     private addListener(
@@ -480,7 +532,7 @@ export class ProceduralReviewer {
                     return;
                 }
 
-                // Space or Enter in mistake classification MUST NOT bypass reflection
+                // Space or Enter in mistake classification MUST NOT bypass reflection (ANTI-08 Lock)
                 if (kbEvent.key === " " || kbEvent.code === "Space" || kbEvent.key === "Enter" || kbEvent.code === "Enter") {
                     const activeEl = document.activeElement as HTMLElement;
                     if (activeEl && (activeEl.classList.contains("proc-mistake-btn") || activeEl.classList.contains("proc-mistake-card"))) {
@@ -542,16 +594,19 @@ export class ProceduralReviewer {
         }, 50);
     }
 
+    /**
+     * ANTI-03: Timer runs silently in memory without DOM ticking during active solving.
+     */
     private startTimer(): void {
-        this.timerInterval = setInterval(() => {
-            if (this.state === "feedback" || this.state === "next" || this.state === "teardown") {return;}
-            const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-            const m = String(Math.floor(elapsed / 60)).padStart(2, "0");
-            const s = String(elapsed % 60).padStart(2, "0");
-            if (this.timerEl) {
-                this.timerEl.textContent = `${m}:${s}`;
-            }
-        }, 200);
+        this.startTime = Date.now();
+        if (this.timerEl) {
+            this.timerEl.classList.add("hidden");
+            this.timerEl.style.display = "none";
+        }
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
     }
 
     public switchMode(mode: "quick" | "stepwise"): void {
@@ -860,6 +915,9 @@ export class ProceduralReviewer {
         };
     }
 
+    /**
+     * ANTI-04: Streamline speed quadrant labels into compact, muted status pills.
+     */
     public computeSpeedQuadrant(isCorrect: boolean, timeTakenMs: number, targetTimeMs: number): {
         quadrant: "fluency_strength" | "speed_opportunity" | "strategy_trap" | "concept_setup";
         label: string;
@@ -869,25 +927,25 @@ export class ProceduralReviewer {
         if (isCorrect && isFast) {
             return {
                 quadrant: "fluency_strength",
-                label: "⚡ Fluency Strength (Accurate & Fast)",
+                label: "⚡ Fast & Accurate",
                 className: "proc-speed-quadrant proc-speed-fast-correct",
             };
         } else if (isCorrect && !isFast) {
             return {
                 quadrant: "speed_opportunity",
-                label: "⏱ Speed Opportunity (Accurate but Slow)",
+                label: "⏱ Accurate · Paced",
                 className: "proc-speed-quadrant proc-speed-slow-correct",
             };
         } else if (!isCorrect && isFast) {
             return {
                 quadrant: "strategy_trap",
-                label: "⚠️ Check Strategy / Trap (Fast but Incorrect)",
+                label: "⚠️ Strategy Trap",
                 className: "proc-speed-quadrant proc-speed-fast-wrong",
             };
         } else {
             return {
                 quadrant: "concept_setup",
-                label: "💡 Review Concept / Setup (Slow & Incorrect)",
+                label: "💡 Concept Gap",
                 className: "proc-speed-quadrant proc-speed-slow-wrong",
             };
         }
@@ -955,6 +1013,10 @@ export class ProceduralReviewer {
         this.finalizeAndShowFeedback(outcome, data, mode, timeTakenMs);
     }
 
+    /**
+     * ANTI-08: Defer solution reveal until mistake category is selected.
+     * ANTI-02: Deduplicate answer labels; withhold expected answer during reflection.
+     */
     private showMistakeClassificationUI(
         outcome: { isCorrect: boolean; reason?: string; score: number },
         data: { answer: string; steps: string[] },
@@ -968,6 +1030,18 @@ export class ProceduralReviewer {
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
         this.nextBtn?.classList.add("hidden");
+
+        // ANTI-08: Explicitly ensure solution container remains strictly hidden during reflection
+        const solutionContainer = this.container.querySelector<HTMLElement>("#proc-solution-container");
+        solutionContainer?.classList.add("hidden");
+        if (solutionContainer) {
+            solutionContainer.style.display = "none";
+        }
+        const actionRow = this.container.querySelector<HTMLElement>(".proc-action-row");
+        actionRow?.classList.add("hidden");
+        if (actionRow) {
+            actionRow.style.display = "none";
+        }
 
         if (this.mistakeFooter) {
             this.mistakeFooter.show((val) => {
@@ -984,16 +1058,11 @@ export class ProceduralReviewer {
             this.resultTitle.textContent = "✗ Incorrect Answer";
         }
 
-        const canonicalFormatted = this.options.correctAnswer?.formatted || 
-            this.options.correctAnswer?.correct_option || 
-            this.options.correctAnswer?.value || 
-            this.options.correctAnswer?.answer || "";
-
+        // ANTI-02: Withhold correct answer during reflection; prompt learner to classify error
         if (this.resultFeedback) {
             this.resultFeedback.innerHTML = `
-                <div><strong>You answered:</strong> ${escapeHtml(data.answer)}</div>
-                <div><strong>Correct answer:</strong> ${escapeHtml(canonicalFormatted)}</div>
-                <div style="margin-top: 8px; color: var(--text-muted, #6b7280);"><em>Please classify this error to optimize your spaced repetition schedule.</em></div>
+                <div class="proc-expected-row"><span class="proc-comparison-item"><strong>Your answer:</strong> ${escapeHtml(data.answer)}</span></div>
+                <div class="proc-mistake-hint-msg" style="margin-top: 6px; font-size: 0.85rem; color: var(--proc-text-muted, #94a3b8);"><em>Classify your error below to reflect and review canonical derivation.</em></div>
             `;
         }
         this.typesetMathJax(this.resultPanel);
@@ -1027,6 +1096,12 @@ export class ProceduralReviewer {
         }, 150);
     }
 
+    /**
+     * ANTI-01: Outcome screen on open canvas with left accent borders.
+     * ANTI-02: Deduplicated answer comparison row (`Your answer: X · Correct answer: Y`).
+     * ANTI-03 / ANTI-04: Streamlined speed pill alongside elapsed time.
+     * ANTI-08: Reveal solution container post-reflection.
+     */
     private finalizeAndShowFeedback(
         outcome: { isCorrect: boolean; reason?: string; score: number },
         data: { answer: string; steps: string[] },
@@ -1036,22 +1111,34 @@ export class ProceduralReviewer {
         this.state = "feedback";
         this.lastAttemptIsCorrect = outcome.isCorrect;
 
-        // Hide input containers, show result panel and next button
+        // Hide input containers, show result panel, solution, and next button
         this.quickContainer?.classList.add("hidden");
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
         this.resultPanel?.classList.remove("hidden");
         this.nextBtn?.classList.remove("hidden");
 
+        // Reveal solution container and action row post-reflection
+        const solutionContainer = this.container.querySelector<HTMLElement>("#proc-solution-container");
+        solutionContainer?.classList.remove("hidden");
+        if (solutionContainer) {
+            solutionContainer.style.display = "";
+        }
+        const actionRow = this.container.querySelector<HTMLElement>(".proc-action-row");
+        actionRow?.classList.remove("hidden");
+        if (actionRow) {
+            actionRow.style.display = "";
+        }
+
         const quadrantInfo = this.computeSpeedQuadrant(outcome.isCorrect, timeTakenMs, this.options.targetTimeMs);
         const isFast = timeTakenMs <= this.options.targetTimeMs;
         this.lastAttemptIsFast = isFast;
 
         if (this.actualTimeEl) {
+            const elapsedSecs = (timeTakenMs / 1000).toFixed(1);
             this.actualTimeEl.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <strong>Time: ${(timeTakenMs / 1000).toFixed(1)}s</strong>
-                    <div class="${quadrantInfo.className}">${quadrantInfo.label}</div>
+                <div class="proc-feedback-time-row" style="display: flex; align-items: center; gap: 8px;">
+                    <span class="${quadrantInfo.className}">${quadrantInfo.label} · ${elapsedSecs}s</span>
                 </div>
             `;
         }
@@ -1074,12 +1161,12 @@ export class ProceduralReviewer {
                     }
                 }
                 
-                let msg = ``;
+                let msg = "";
                 if (this.hintsUsed > 0) {
                     msg += `<span class="proc-hint-chip">${this.hintsUsed} hint(s) used</span>`;
                 }
-                if (data.answer.trim().toLowerCase() !== String(canonicalFormatted).trim().toLowerCase()) {
-                    msg += `<div><strong>You answered:</strong> ${escapeHtml(data.answer)}</div>`;
+                if (data.answer.trim().toLowerCase() !== String(canonicalFormatted).trim().toLowerCase() && String(canonicalFormatted).length > 0) {
+                    msg += `<div class="proc-expected-row"><span class="proc-comparison-item"><strong>Your answer:</strong> ${escapeHtml(data.answer)}</span> <span class="proc-crumb-sep">·</span> <span class="proc-comparison-item"><strong>Canonical:</strong> ${escapeHtml(canonicalFormatted)}</span></div>`;
                 }
                 if (this.resultFeedback) {this.resultFeedback.innerHTML = msg;}
             } else {
@@ -1094,16 +1181,13 @@ export class ProceduralReviewer {
                     }
                 }
                 if (this.resultFeedback) {
-                    let msg = ``;
+                    let msg = "";
                     if (this.hintsUsed > 0) {
                         msg += `<span class="proc-hint-chip">${this.hintsUsed} hint(s) used</span>`;
                     }
-                    msg += `
-                        <div><strong>You answered:</strong> ${escapeHtml(data.answer)}</div>
-                        <div><strong>Correct answer:</strong> ${escapeHtml(canonicalFormatted)}</div>
-                    `;
+                    msg += `<div class="proc-expected-row"><span class="proc-comparison-item"><strong>Your answer:</strong> ${escapeHtml(data.answer)}</span> <span class="proc-crumb-sep">·</span> <span class="proc-comparison-item"><strong>Correct answer:</strong> ${escapeHtml(canonicalFormatted)}</span></div>`;
                     if (outcome.reason) {
-                        msg += `<div style="margin-top: 8px;">${escapeHtml(outcome.reason)}</div>`;
+                        msg += `<div class="proc-outcome-reason" style="margin-top: 6px; font-size: 0.88rem;">${escapeHtml(outcome.reason)}</div>`;
                     }
                     this.resultFeedback.innerHTML = msg;
                 }
@@ -1223,9 +1307,6 @@ export class ProceduralReviewer {
         // Bridge notification for Python/Qt backend telemetry recording
         bridgeCommand(`procedural_attempt:${JSON.stringify(attemptResult)}`);
 
-        // Synchronize with native Anki reviewer answer state to show footer ease buttons
-        // bridgeCommand("ans"); // Removed to prevent native ease buttons from duplicating the custom "Next Problem" flow.
-
         // Focus next button if present
         this.nextBtn?.focus();
     }
@@ -1264,13 +1345,10 @@ export class ProceduralReviewer {
             if (this.activeMode === "stepwise") {
                 this.handleStepwiseSubmit();
             } else if (this.mcqContainer) {
-                // If MCQ container, trigger selection or option check if option chosen
                 this.handleQuickSubmit();
             } else {
                 const answer = this.quickInput?.value.trim() || "";
                 if (!answer) {
-                    // Learner requested Show Answer / gave up without submitting an answer:
-                    // Treat as unassisted surrender / incorrect attempt, preserving mistake & learning telemetry
                     this.state = "submitting";
                     const evalResult = {
                         isCorrect: false,
