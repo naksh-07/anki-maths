@@ -1,0 +1,235 @@
+{
+  "session_id": "session_5a4e783c0c7f",
+  "verdict": "UNVERIFIED",
+  "verdict_reason": "No top-level window handle (HWND) found for application process tree.",
+  "hwnd": null,
+  "pid": 10548,
+  "executable": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\out\\pyenv\\Scripts\\python.exe",
+  "window_title": "",
+  "window_visible": false,
+  "window_geometry": {},
+  "cdp_port": 9222,
+  "cdp_target": {
+    "id": "review_target",
+    "type": "page",
+    "title": "main webview",
+    "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=1858121937328",
+    "engine": "qtwebengine",
+    "framework": null,
+    "process_id": null,
+    "debug_endpoint": null,
+    "websocket_endpoint": "ws://127.0.0.1:9222/devtools/page/D1AB492790D8A8B6C54FE56C95EA74BD",
+    "is_application": true,
+    "rank_score": 0,
+    "filter_reason": null,
+    "metadata": {},
+    "desktop_capture_path": null,
+    "native_capture_path": null,
+    "webview_capture_path": null,
+    "user_confirmation": false,
+    "input_delivery_verified": false
+  },
+  "screenshot_type": "cdp_page_capture",
+  "screenshot_hash": "4de7f934c8ab72b576d1801c827ff63c64309e55d2a1e76ccc1f9a57299d2e37",
+  "window_forensics": {
+    "hwnd": null,
+    "pid": 10548,
+    "executable": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\out\\pyenv\\Scripts\\python.exe",
+    "cmdline": [
+      "out\\pyenv\\Scripts\\python.exe",
+      "tools\\run.py",
+      "dist\\apkgs\\StudyLab_Full_Universe_175.apkg"
+    ],
+    "window_title": "",
+    "class_name": "",
+    "window_visible": false,
+    "is_iconic": false,
+    "is_cloaked": false,
+    "is_real_gui": false,
+    "geometry": {},
+    "hwnd_pid_matched": false,
+    "foreground_hwnd": null,
+    "foreground_match": false,
+    "monitor_rect": {},
+    "intersection_area": 0,
+    "notes": [
+      "No top-level window found for process tree",
+      "Port 9222 confirmed listening on process tree PID 16680"
+    ]
+  },
+  "screenshots": {
+    "webview": {
+      "screenshot_type": "cdp_page_capture",
+      "screenshot_hash": "4de7f934c8ab72b576d1801c827ff63c64309e55d2a1e76ccc1f9a57299d2e37",
+      "path": "artifacts_qa\\final_frontend_audit\\webview_initial.png",
+      "source": "cdp_page_capture (internal webview rendering surface, not native desktop OS capture)",
+      "dimensions": {},
+      "timestamp": 1787683787.670071
+    },
+    "primary": {
+      "screenshot_type": "cdp_page_capture",
+      "screenshot_hash": "4de7f934c8ab72b576d1801c827ff63c64309e55d2a1e76ccc1f9a57299d2e37",
+      "path": "artifacts_qa\\final_frontend_audit\\webview_initial.png",
+      "source": "cdp_page_capture",
+      "dimensions": {},
+      "timestamp": 1787683787.684735
+    }
+  },
+  "framework": null,
+  "engine": "qtwebengine",
+  "platform": "win32",
+  "verification_level": "runtime_verified",
+  "target": {
+    "id": "review_target",
+    "type": "page",
+    "title": "main webview",
+    "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=1858121937328",
+    "engine": "qtwebengine",
+    "framework": null,
+    "process_id": null,
+    "debug_endpoint": null,
+    "websocket_endpoint": "ws://127.0.0.1:9222/devtools/page/D1AB492790D8A8B6C54FE56C95EA74BD",
+    "is_application": true,
+    "rank_score": 0,
+    "filter_reason": null,
+    "metadata": {},
+    "desktop_capture_path": null,
+    "native_capture_path": null,
+    "webview_capture_path": null,
+    "user_confirmation": false,
+    "input_delivery_verified": false
+  },
+  "engine_info": {
+    "engine": "qtwebengine",
+    "backend": "QtWebEngine (Embedded Chromium)",
+    "version": "6.x / 5.x",
+    "protocol": "cdp",
+    "framework": null,
+    "confidence": "high",
+    "signals": [],
+    "capabilities": {
+      "DOM": "supported",
+      "INPUT": "supported",
+      "KEYBOARD": "supported",
+      "MOUSE": "supported",
+      "RUNTIME": "supported",
+      "SCREENSHOT": "supported",
+      "CONSOLE": "supported",
+      "NETWORK": "degraded",
+      "TARGETS": "degraded",
+      "MULTI_TARGET": "degraded",
+      "NAVIGATION": "supported",
+      "JS": "supported"
+    },
+    "probed_capabilities": {},
+    "notes": [
+      "Remote debugging enabled via QTWEBENGINE_REMOTE_DEBUGGING environment variable.",
+      "Does not support Browser.* domain context management (e.g. Browser.setDownloadBehavior).",
+      "Direct page-level WebSocket attachment is required.",
+      "Child process 'QtWebEngineProcess' must be recursively terminated during cleanup."
+    ],
+    "verification_level": "runtime_verified"
+  },
+  "actions": [],
+  "dom_snapshot_length": 23165,
+  "screenshot_path": "artifacts_qa\\final_frontend_audit\\webview_initial.png",
+  "screenshot_sha256": "4de7f934c8ab72b576d1801c827ff63c64309e55d2a1e76ccc1f9a57299d2e37",
+  "console_messages": [
+    {
+      "type": "warning",
+      "text": "No version information available for component [tex]/noerrors",
+      "timestamp": 1787683730429.243,
+      "raw": {
+        "type": "warning",
+        "args": [
+          {
+            "type": "string",
+            "value": "No version information available for component [tex]/noerrors"
+          }
+        ],
+        "executionContextId": 7,
+        "timestamp": 1787683730429.243,
+        "stackTrace": {
+          "callFrames": [
+            {
+              "functionName": "",
+              "scriptId": "74",
+              "url": "http://127.0.0.1:40000/_anki/js/vendor/mathjax/tex-chtml-full.js",
+              "lineNumber": 0,
+              "columnNumber": 16470
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "warning",
+      "text": "No version information available for component [tex]/mathtools",
+      "timestamp": 1787683730429.382,
+      "raw": {
+        "type": "warning",
+        "args": [
+          {
+            "type": "string",
+            "value": "No version information available for component [tex]/mathtools"
+          }
+        ],
+        "executionContextId": 7,
+        "timestamp": 1787683730429.382,
+        "stackTrace": {
+          "callFrames": [
+            {
+              "functionName": "",
+              "scriptId": "74",
+              "url": "http://127.0.0.1:40000/_anki/js/vendor/mathjax/tex-chtml-full.js",
+              "lineNumber": 0,
+              "columnNumber": 16470
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "state_assertions": [
+    {
+      "description": "JavaScript Runtime Arithmetic Test",
+      "passed": true,
+      "expected": "2",
+      "actual": "2",
+      "error": null,
+      "timestamp": 1787683787.4374182
+    },
+    {
+      "description": "Document Body Presence",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787683787.4393094
+    }
+  ],
+  "process_ownership": {
+    "pid": 10548,
+    "create_time": null,
+    "launched_by_reviewer": false,
+    "command": null,
+    "port": 9222
+  },
+  "diagnostics": {
+    "framework": "native",
+    "engine": "qtwebengine",
+    "confidence": "high",
+    "platform": "win32",
+    "target_url": "http://127.0.0.1:40000/_anki/legacyPageData?id=1858121937328",
+    "target_title": "main webview"
+  },
+  "metadata": {
+    "collection_time": 1787683787.6847878,
+    "collection_iso": "2026-08-25T18:49:47Z"
+  },
+  "desktop_capture_path": null,
+  "native_capture_path": null,
+  "webview_capture_path": null,
+  "user_confirmation": false,
+  "input_delivery_verified": false
+}

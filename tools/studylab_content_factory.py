@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-tools/studylab_content_factory.py — StudyLab Phase 36C Universal Content Factory
+tools/studylab_content_factory.py â€” StudyLab Phase 36C Universal Content Factory
 
 Generates release-quality, source-grounded APKG packages and declarative contracts
 for the complete Phase 36A target universe of 175 topics:
@@ -128,7 +128,7 @@ def get_math_59_topics() -> List[Dict[str, Any]]:
                 "step_nodes": [
                     {
                         "id": "step_div_sum",
-                        "step_type": "logical_inference",
+                        "step_type": "make_inference",
                         "label": "Sum of Digits",
                         "description_template": "Sum the known digits and set equal to 9k",
                         "expected_expression_template": "19 + x = 27",
@@ -182,7 +182,7 @@ def get_math_59_topics() -> List[Dict[str, Any]]:
                 "step_nodes": [
                     {
                         "id": "step_isolate_constant",
-                        "step_type": "algebraic_manipulation",
+                        "step_type": "equation_rearrangement",
                         "label": "Isolate Constant Term",
                         "description_template": "Subtract {b_val} from both sides to isolate the variable term",
                         "expected_expression_template": "{a_val}x = {c_val} - {b_val}",
@@ -193,7 +193,7 @@ def get_math_59_topics() -> List[Dict[str, Any]]:
                     },
                     {
                         "id": "step_isolate_x",
-                        "step_type": "algebraic_manipulation",
+                        "step_type": "equation_rearrangement",
                         "label": "Isolate Variable",
                         "description_template": "Divide both sides by coefficient {a_val}",
                         "expected_expression_template": "x = {answer}",
@@ -262,7 +262,7 @@ def get_math_59_topics() -> List[Dict[str, Any]]:
                 "step_nodes": [
                     {
                         "id": "step_concept",
-                        "step_type": "conceptual_verification",
+                        "step_type": "verify_conclusion",
                         "label": "Multiplier Principle",
                         "description_template": "Verify multiplicative nature of successive percentages",
                         "expected_expression_template": "1.10 * 1.10 = 1.21",
@@ -314,7 +314,7 @@ def get_math_59_topics() -> List[Dict[str, Any]]:
                     ]}},
                 ],
                 "constraints": [],
-                "prompt_template": "In what ratio must rice at ₹40/kg be mixed with rice at ₹60/kg to produce a mixture worth ₹48/kg? Which strategy achieves the fastest, error-resilient solution?",
+                "prompt_template": "In what ratio must rice at â‚¹40/kg be mixed with rice at â‚¹60/kg to produce a mixture worth â‚¹48/kg? Which strategy achieves the fastest, error-resilient solution?",
                 "answer_derivation": {"type": "direct_string_param", "param_name": "correct_option"},
                 "answer_formatted_template": "{correct_option}",
                 "solution_template": "Using Alligation: (Dearer - Mean) : (Mean - Cheaper) = (60 - 48) : (48 - 40) = 12 : 8 = 3 : 2. Alligation eliminates equation manipulation and solves in under 10 seconds.",
@@ -332,7 +332,7 @@ def get_math_59_topics() -> List[Dict[str, Any]]:
                 "step_nodes": [
                     {
                         "id": "step_strat",
-                        "step_type": "strategic_decision",
+                        "step_type": "select_strategy",
                         "label": "Method Selection",
                         "description_template": "Evaluate Alligation vs Algebraic methods",
                         "expected_expression_template": "Ratio = 3 : 2",
@@ -401,7 +401,7 @@ def get_math_59_topics() -> List[Dict[str, Any]]:
                 "step_nodes": [
                     {
                         "id": "step_worked_trace",
-                        "step_type": "conceptual_verification",
+                        "step_type": "verify_conclusion",
                         "label": "Solution Walkthrough",
                         "description_template": "Review and acknowledge canonical cost base determination",
                         "expected_expression_template": "Profit = 25%",
@@ -507,7 +507,7 @@ def get_math_59_topics() -> List[Dict[str, Any]]:
             ]
             prompt = f"Solve for \\(x\\): \\({{a_val}}x + {{b_val}} = {{c_val}}\\)"
         elif deriv == "pythagoras_hypotenuse":
-            d_obj = {"type": "pythagoras_hypotenuse", "leg_a_param": "base_a", "leg_b_param": "height_b"}
+            d_obj = {"type": "pythagoras_hypotenuse", "a_param": "base_a", "b_param": "height_b"}
             params = [
                 {"name": "base_a", "domain": {"type": "integer_range", "min": pmin, "max": pmax, "step": None, "non_zero": None}},
                 {"name": "height_b", "domain": {"type": "integer_range", "min": pmin, "max": pmax, "step": None, "non_zero": None}},
@@ -568,7 +568,7 @@ def get_math_59_topics() -> List[Dict[str, Any]]:
                     "step_nodes": [
                         {
                             "id": "step_math_solve",
-                            "step_type": "algebraic_manipulation" if obj_type == "stepwise" else "arithmetic",
+                            "step_type": "equation_rearrangement" if obj_type == "stepwise" else "arithmetic",
                             "label": f"{title} Execution",
                             "description_template": f"Solve {title}",
                             "expected_expression_template": "{answer}",
@@ -770,7 +770,7 @@ def get_reasoning_30_topics() -> List[Dict[str, Any]]:
                     "step_nodes": [
                         {
                             "id": "step_reason",
-                            "step_type": "logical_inference",
+                            "step_type": "make_inference",
                             "label": f"{title} Deduction",
                             "description_template": f"Perform deductive reasoning for {title}",
                             "expected_expression_template": "{correct_option}",
@@ -938,7 +938,7 @@ def get_physics_40_topics() -> List[Dict[str, Any]]:
             "step_nodes": [
                 {
                     "id": "step_phys",
-                    "step_type": "physical_law_application",
+                    "step_type": "select_equation",
                     "label": f"{title} Governing Equation",
                     "description_template": f"Apply governing physical law for {title}",
                     "expected_expression_template": "{answer}",
@@ -1105,7 +1105,7 @@ def get_chemistry_46_topics() -> List[Dict[str, Any]]:
             "step_nodes": [
                 {
                     "id": "step_chem",
-                    "step_type": "chemical_stoichiometry" if "stoichiomet" in deriv else "conceptual_verification",
+                    "step_type": "apply_stoichiometric_ratio" if "stoichiomet" in deriv else "verify_conclusion",
                     "label": f"{title} Derivation",
                     "description_template": f"Solve {title}",
                     "expected_expression_template": "{answer}",
@@ -1485,3 +1485,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

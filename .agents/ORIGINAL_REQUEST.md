@@ -1,79 +1,297 @@
 # Original User Request
 
-## 2026-08-24T20:30:44Z
+## 2026-08-25T19:08:00Z
 
-# Teamwork Project Prompt — Draft
+# STUDYLAB — CANONICAL PRODUCT + FRONTEND + APKG + DATA CONTRACT
+# DOCUMENTATION-FIRST / NO CODE CHANGES
 
-> Status: Step 9 — Ready for launch — awaiting user approval
-> Goal: Craft prompt → get user approval → delegate to teamwork_preview
-> Requested team: Use a very large team of agents (Full team requested with 10+ specialists).
+Working directory: c:/Users/Suraj/Documents/Antigravity/Anki-maths
+Integrity mode: development
 
-Make the StudyLab documentation complete enough that a fresh AI agent can understand the entire system correctly without conversation history, hidden assumptions, old phase reports, or guessing. The repository itself must become the source of truth for future AI work. This is a documentation and source-truth reconciliation mission ONLY. NO production-code behavior changes, frontend redesign, backend refactor, APKG schema changes, or database migration changes.
+## MISSION
 
-Working directory: C:\Users\Suraj\Documents\Antigravity\Anki-maths
-Integrity mode: benchmark (strict adherence to source-of-truth hierarchy, no code modifications allowed)
+Create the definitive documentation for StudyLab's:
+- product vision
+- learner UX
+- frontend states and controls
+- learning-object modalities
+- APKG/content contract
+- database/data ownership
+- frontend ↔ backend ↔ APKG ↔ DB boundaries
+- acceptance criteria
 
-## Core Directives & Source of Truth
+Backend/procedural engine is considered largely implemented and stable.
+Do NOT redesign or rewrite the backend unless the documentation audit finds a real contract contradiction that must be documented.
 
-**Source-of-Truth Hierarchy:**
-Resolve claims in this order:
-1. current executable source code
-2. current tests
-3. current schemas / contracts / migrations
-4. current verified artifacts
-5. explicit product requirements
-6. current canonical docs
-7. historical phase reports
-8. general assumptions
+THIS MISSION IS DOCUMENTATION ONLY.
 
-*Existing docs are NOT automatically correct. Existing code is NOT automatically product intent. If intent and implementation disagree: DOCUMENT THE DRIFT. Do not silently rewrite either.*
+DO NOT MODIFY:
+- TypeScript
+- Rust
+- Python
+- Qt reviewer
+- database schema
+- APKG generation
+- CSS
 
-**DeepSearch Integration:**
-You must use the `deepsearch` capability/skill for external research, historical/architectural reconciliation, difficult technical questions, primary-source verification, and identifying claims that cannot be established from repository source. Do not use DeepSearch merely to produce generic prose.
+First make the product contract unambiguous.
+Implementation comes later.
 
-## Requirements
+============================================================
+1. STUDYLAB NORTH STAR
+============================================================
 
-### R1. Full Repository Archaeology
-Inspect the following before writing: `docs/`, `.agents/`, `ORIGINAL_REQUEST`, all StudyLab procedural Rust, scheduler/answering integration, skills, SkillState, MasteryEvidence, DomainEvidence, remediation, adaptive difficulty, ProblemFamilyContract, declarative runtime, learning objects, reviewer template, TypeScript reviewer, Python/Qt bridge, persistence/store, migrations, APKG tooling, diagnostic/mock engine, tests, release/hardening artifacts, and relevant git history.
+Canonical definition:
+StudyLab is a procedural learning and problem-solving engine hosted inside Anki.
 
-### R2. Documentation Gap Matrix
-Before editing docs, build `docs/DOCUMENTATION_TRUTH_MATRIX.md`.
-Columns: AREA, CURRENT CLAIM, ACTUAL CODE EVIDENCE, TEST EVIDENCE, PRODUCT INTENT, STATUS (GREEN/YELLOW/RED), REQUIRED DOC CHANGE.
-Areas MUST include: product identity, Anki boundary, content architecture, APKG boundary, procedural runtime, learning objects, frontend state machine, frontend/backend bridge, learner state, database persistence, domain evidence, adaptive difficulty, remediation, diagnostic sessions, security, performance, developer workflow, release workflow.
+StudyLab is NOT:
+- a flashcard application
+- a card-flip/reveal system
+- a generic quiz app
+- a web application embedded inside Anki
+- a replacement for Anki's spaced-repetition system
+- a second flashcard database
+- a dashboard that exposes backend telemetry
 
-### R3. Final Canonical Document Set Production
-Keep this structure unless evidence proves it insufficient. You MUST add `DATA_AND_PERSISTENCE.md`.
-Produce/Update: `docs/README.md`, `docs/PRODUCT_VISION.md`, `docs/PRODUCT_BOUNDARIES.md`, `docs/SYSTEM_ARCHITECTURE.md`, `docs/LEARNING_MODEL.md`, `docs/CONTENT_AND_AUTHORING.md`, `docs/LEARNING_OBJECTS.md`, `docs/REVIEWER_STATE_MACHINE.md`, `docs/FRONTEND_BACKEND_CONTRACT.md`, `docs/DATA_AND_PERSISTENCE.md`, `docs/DIAGNOSTIC_AND_REMEDIATION.md`, `docs/ARCHITECTURE_INVARIANTS.md`, `docs/DOCUMENTATION_MAP.md`, `docs/OPEN_QUESTIONS.md`, `docs/DOCUMENTATION_TRUTH_MATRIX.md`, and `docs/DEEPSEARCH_EVIDENCE.md`.
-*Refer to the original user request for the exact required contents of each of these files.*
+Anki already handles:
+- declarative flashcards
+- recall
+- card scheduling
+- FSRS
+- collection management
+- standard Basic/Cloze review
 
-### R4. DeepSearch Research Track
-Use DeepSearch to answer these specific questions and reconcile with code:
-A. What exactly should a problem-solving learning system measure beyond correctness?
-B. How should diagnostic practice separate: concept, execution, transfer, speed?
-C. What evidence supports structured/stepwise problem-solving assessment?
-D. What should be considered a learning-object modality versus a flashcard?
-E. What are the cleanest boundaries between a host SRS system and a procedural learning engine?
-F. For Math/Reasoning/Physics/Chemistry, what failure dimensions are pedagogically meaningful and which are weak proxies?
-G. Which current StudyLab architectural claims are unsupported by external evidence and must be treated as product decisions rather than research facts?
+StudyLab handles:
+- procedural problem solving
+- parameterized problems
+- numerical solving
+- MCQ reasoning
+- structured reasoning
+- step-by-step solving
+- conceptual diagnosis
+- strategy diagnosis
+- mistake classification
+- remediation
+- skill evidence
+- weakness detection
+- adaptive next-problem selection
 
-### R5. Architecture Invariants & Open Questions
-Freeze non-negotiables in `ARCHITECTURE_INVARIANTS.md` (e.g., StudyLab is not a flashcard product, do not recreate Anki's flashcards/FSRS, etc.). Update `OPEN_QUESTIONS.md` to remove anything answered by code/research, keeping only genuine unknowns (unresolved product choices, ambiguous architecture intent).
+The learner should feel:
+"This is Anki, but it understands how I solve problems."
 
-## Acceptance Criteria
+============================================================
+2. CORE LEARNING LOOP
+============================================================
 
-### Documentation Consistency Audit
-- [ ] No contradictory definitions exist across canonical docs for core terms: Anki, StudyLab, flashcard, reviewer, learning object, evaluation, SkillState, DomainEvidence, APKG, procedural.db, diagnostic, remediation, FSRS.
-- [ ] "StudyLab is not a flashcard system" is strictly upheld and never drifts into "StudyLab is an enhanced flashcard reviewer."
+The learner-facing experience MUST follow this priority:
+1. PROBLEM
+2. ONE CORRECT INTERACTION
+3. MINIMAL FEEDBACK
+4. DIAGNOSIS ONLY WHEN USEFUL
+5. ONE CLEAR NEXT ACTION
 
-### Documentation Self-Test (Verification)
-- [ ] A clean-context AI agent given ONLY `docs/README.md` and the canonical docs can answer the 16 core questions defined in the mission brief (What is StudyLab, What does Anki own, Trace a problem, Explain remediation, etc.) without conversation history.
+Behind the scenes the engine additionally performs:
+6. LEARN FROM THE ATTEMPT
+   → update skill evidence
+   → update weakness signals
+   → update remediation evidence
+   → select the next useful problem
 
-### Documentation Quality Score
-- [ ] Every individual canonical document scores >= 90/100 (Accuracy, Completeness, Traceability, Clarity, AI usefulness).
-- [ ] The overall documentation suite scores >= 95/100.
+The sixth stage is primarily engine/data behavior, NOT permanent UI clutter.
 
-### Final Freeze Check
-- [ ] ALL 18 items in the "FINAL FREEZE CHECK" list (from vision explicit to fresh-AI self-test succeeds) are verified GREEN.
+============================================================
+3. WHAT STUDYLAB IS ACTUALLY TRYING TO LEARN ABOUT THE USER
+============================================================
 
-### Final Report Delivery
-- [ ] Deliver a Final Report matching the requested structure (Executive Verdict, Vision vs Code Alignment, Missing/Corrected, Statuses for all areas, DeepSearch findings, Scorecard, Open Questions, Self-Test, and FINAL FREEZE VERDICT).
+The documentation must explicitly define that StudyLab is not primarily tracking "Did the user remember a card?"
+It is trying to understand:
+- Which subject is weak?
+- Which chapter is weak?
+- Which topic is weak?
+- Which concept/skill is weak?
+- Which problem family is weak?
+- Which solving strategy is weak?
+- Is the error conceptual?
+- Is it calculation-related?
+- Is the reasoning/transfer step weak?
+- Is the user too slow?
+- Is the user fast but unreliable?
+- Which prerequisites are missing?
+- Which remediation should come next?
+- Which similar/different problem should be shown next?
+
+This hierarchy should be documented:
+Subject → Chapter → Topic → Skill → Problem Family → Attempt Evidence → Error/Strategy Evidence → Remediation Decision
+
+============================================================
+4. LEARNER UX PRINCIPLE
+============================================================
+
+The frontend MUST NOT expose the entire diagnostic engine by default.
+Engine data may be rich.
+Learner UI must remain simple.
+
+DEFAULT PRESENTATION:
+Problem ↓ One correct interaction ↓ Minimal feedback ↓ Diagnosis only when useful ↓ One clear next action
+
+Only reveal additional diagnostic information when it helps learning.
+
+============================================================
+5. LEARNING OBJECT CONTRACT
+============================================================
+
+Document the exact semantics and UI for:
+problem, quick, mcq, stepwise, concept_check, strategy_drill, worked_example, declarative_recall, prerequisite_review
+
+For each define:
+- educational purpose
+- learner goal
+- presentation
+- interaction
+- allowed controls
+- forbidden controls
+- answer modality
+- success state
+- wrong state
+- feedback state
+- diagnosis rules
+- remediation rules
+- next action
+
+Hard invariant:
+SEMANTIC MODALITY MUST ALWAYS MATCH UI MODALITY.
+Never use a generic textbox as a fallback for MCQ, ConceptCheck, StrategyDrill, WorkedExample.
+Numerical free-answer remains valid only for genuinely numerical/free-answer objects.
+
+============================================================
+6. FRONTEND STATE CONTRACT
+============================================================
+
+Define every learner-visible state:
+loading, ready, solving, submitting, mistake_classification, feedback, next, plus any object-specific states.
+
+For each state define:
+- visible content
+- visible controls
+- hidden controls
+- primary CTA
+- secondary CTA
+- keyboard behavior
+- native Anki controls
+- transition
+- backend event
+- learner-visible data
+- hidden engine data
+
+============================================================
+7. BUTTON/CONTROL CONTRACT
+============================================================
+
+Create one canonical button matrix.
+For every control define: exact label, purpose, object types, states, priority, ownership, location, keyboard shortcut, transition, telemetry, coexistence rules, forbidden combinations.
+Controls include: Quick Solve, Step-by-Step Solve, Submit, Check Solution, Add Step, Request Hint, Reset, Try Similar Problem, Next Problem, 1 Silly Slip, 2 Pattern Missed, 3 Concept Gap, 4 Prereq Unknown, Again, Hard, Good, Easy, Show Answer, More.
+Explicitly define mutually exclusive control sets.
+
+============================================================
+8. NATIVE ANKI BOUNDARY
+============================================================
+
+Create an exact responsibility matrix.
+ANKI OWNS: collection, FSRS, scheduling, normal Basic/Cloze cards, standard flashcard review, standard Anki controls where appropriate.
+STUDYLAB OWNS: procedural interaction, evaluation, semantic feedback, diagnosis, remediation, procedural attempt evidence, next-problem selection.
+Define state-by-state visibility of Show Answer, Again, Hard, Good, Easy, Next Problem. No duplicate interaction ownership.
+
+============================================================
+9. VISUAL PRODUCT CONTRACT
+============================================================
+
+Define canonical design rules. The problem/content must be the visual hero.
+The UI should feel: native, calm, minimal, focused, professional, dense enough for reasoning, free of unnecessary chrome.
+Avoid: giant card wrappers, web-widget appearance, excessive shadows, excessive badges, raw schema names, debug labels, telemetry dumps, repeated information, stacked giant panels.
+Define rules for header, breadcrumbs, badges, typography, spacing, problem area, answer area, feedback, hints, diagnosis, solution, next action.
+
+============================================================
+10. DIAGNOSTIC UI CONTRACT
+============================================================
+
+Classify every diagnostic field computed by the engine:
+ENGINE ONLY / LEARNER OPTIONAL / LEARNER AFTER ERROR / LEARNER IN DIAGNOSTIC MODE / NEVER DISPLAY.
+Do NOT automatically show every metric.
+
+============================================================
+11. WRONG-ANSWER CONTRACT & 12. CORRECT-ANSWER CONTRACT
+============================================================
+
+Define calm, minimal, pedagogically useful flows for both correct and wrong answers.
+
+============================================================
+13. STEPWISE CONTRACT, 14. MCQ CONTRACT, 15. WORKED EXAMPLE CONTRACT
+============================================================
+
+Exhaustively document each modality's distinct UI rules and control surface.
+
+============================================================
+16. APKG CONTRACT & 17. APKG HYGIENE
+============================================================
+
+Definitive canonical APKG specification: schema, fields, ProceduralPayload, object_type, parameters, constraints, derivation, step_nodes, provenance, hints, metadata.
+Single canonical full-universe APKG policy.
+
+============================================================
+18. APKG → BACKEND → DB → FRONTEND CONTRACT
+============================================================
+
+Cross-layer mapping matrix for all fields and direction of ownership.
+
+============================================================
+19. DATABASE / DATA OWNERSHIP CONTRACT
+============================================================
+
+Separate Anki collection data from StudyLab procedural data. Define durable vs derived vs cached vs reproducible data.
+
+============================================================
+20. PRODUCT DIAGNOSTIC VISION
+============================================================
+
+Aggregated diagnostic intelligence hierarchy for future mock tests/weakness modeling.
+
+============================================================
+21. SCREEN-BY-SCREEN ACCEPTANCE CONTRACT & 22. CURRENT GAP MAP
+============================================================
+
+Screen-by-screen expected states and screenshot-grounded gap map.
+
+============================================================
+23. "PERFECT WINDOW" DEFINITION
+============================================================
+
+Clear usability and acceptance criteria.
+
+============================================================
+24. DOCUMENT HIERARCHY
+============================================================
+
+Create/update:
+- docs/STUDYLAB_PRODUCT_CONTRACT.md
+- docs/FRONTEND_PRODUCT_SPEC.md
+- docs/FRONTEND_UI_STATE_SPEC.md
+- docs/FRONTEND_BUTTON_CONTRACT.md
+- docs/FRONTEND_VISUAL_DESIGN_SPEC.md
+- docs/APKG_CONTENT_CONTRACT.md
+- docs/APKG_FRONTEND_CONTRACT.md
+- docs/DATABASE_DATA_CONTRACT.md
+- docs/FRONTEND_ACCEPTANCE_MATRIX.md
+- docs/FRONTEND_CURRENT_STATE_GAP_MAP.md
+
+Index specifying which doc is authoritative for which question.
+
+============================================================
+25. CONTRADICTION CLEANUP & 26. FRESH-AI SELF TEST
+============================================================
+
+Resolve all contradictions across the documentation. Run the 12-question self-test to verify zero guesswork is needed.
+
+## ACCEPTANCE CRITERIA
+- All 10 documentation files created/updated in docs/ with zero code changes.
+- All 27 mission sections thoroughly addressed.
+- Final verdict clearly stated (GREEN or YELLOW).

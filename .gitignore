@@ -31,3 +31,9 @@ desktop_window_info.json
 desktop_ownership.json
 evidence.json
 test_qt.py
+all_anchors.jsonl
+audit_script.py
+list_windows.py
+windows.txt
+.agents/
+
