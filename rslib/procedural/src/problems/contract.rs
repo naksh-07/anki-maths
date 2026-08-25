@@ -716,6 +716,10 @@ pub struct DeclarativeArchetype {
     pub solution_template: String,
     pub step_nodes: Vec<StepNodeSpec>,
     pub target_time_ms: u64,
+    #[serde(default)]
+    pub object_type: Option<String>,
+    #[serde(default)]
+    pub metadata: Option<serde_json::Value>,
 }
 
 impl DeclarativeArchetype {
@@ -745,6 +749,8 @@ impl DeclarativeArchetype {
             solution_template: solution_template.into(),
             step_nodes: Vec::new(),
             target_time_ms,
+            object_type: None,
+            metadata: None,
         }
     }
 
@@ -755,6 +761,16 @@ impl DeclarativeArchetype {
 
     pub fn with_step_nodes(mut self, nodes: Vec<StepNodeSpec>) -> Self {
         self.step_nodes = nodes;
+        self
+    }
+
+    pub fn with_object_type(mut self, object_type: impl Into<String>) -> Self {
+        self.object_type = Some(object_type.into());
+        self
+    }
+
+    pub fn with_metadata(mut self, metadata: serde_json::Value) -> Self {
+        self.metadata = Some(metadata);
         self
     }
 }

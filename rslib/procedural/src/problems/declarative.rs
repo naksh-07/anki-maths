@@ -814,16 +814,27 @@ impl ProblemGenerator for DeclarativeProblemGenerator {
         }
 
         // Instance metadata
-        let metadata = serde_json::json!({
-            "target_time_ms": archetype.target_time_ms,
-            "difficulty_level": archetype.difficulty_level,
-            "variant": archetype.variant_name,
-            "variant_category": archetype.variant_category.as_str(),
-            "archetype_id": archetype.archetype_id,
-            "is_declarative": true,
-            "contract_version": 1,
-        });
-        instance = instance.with_metadata(metadata);
+        let mut metadata_map = serde_json::Map::new();
+        metadata_map.insert("target_time_ms".to_string(), Value::from(archetype.target_time_ms));
+        metadata_map.insert("difficulty_level".to_string(), Value::from(archetype.difficulty_level));
+        metadata_map.insert("variant".to_string(), Value::String(archetype.variant_name.clone()));
+        metadata_map.insert("variant_category".to_string(), Value::String(archetype.variant_category.as_str().to_string()));
+        metadata_map.insert("archetype_id".to_string(), Value::String(archetype.archetype_id.clone()));
+        metadata_map.insert("is_declarative".to_string(), Value::Bool(true));
+        metadata_map.insert("contract_version".to_string(), Value::from(1));
+
+        if let Some(ot) = &archetype.object_type {
+            metadata_map.insert("object_type".to_string(), Value::String(ot.clone()));
+        }
+        if let Some(arch_meta) = &archetype.metadata {
+            if let Some(obj) = arch_meta.as_object() {
+                for (k, v) in obj {
+                    metadata_map.insert(k.clone(), v.clone());
+                }
+            }
+        }
+
+        instance = instance.with_metadata(Value::Object(metadata_map));
 
         Ok(instance)
     }

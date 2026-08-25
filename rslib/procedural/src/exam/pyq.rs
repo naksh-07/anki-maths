@@ -12,23 +12,36 @@ pub const DEFAULT_GENERATOR_VERSION: u32 = 1;
 pub const DEFAULT_SCHEMA_VERSION: u32 = 1;
 pub const DEFAULT_CATALOG_VERSION: u32 = 1;
 
+fn default_source_version() -> u32 { 1 }
+fn default_generator_version() -> u32 { 1 }
+fn default_schema_version() -> u32 { 1 }
+fn default_catalog_version() -> u32 { 1 }
+fn default_variant_type() -> String { "practice".into() }
+
 /// Complete, immutable provenance record retained on every problem instance,
 /// practice attempt, or derivative practice object originated from a PYQ or schema.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContentProvenance {
     /// Associated source PYQ identifier if this content derived from an authentic PYQ
+    #[serde(default)]
     pub source_pyq_id: Option<PyqId>,
     /// Incremental version of the underlying PYQ source document
+    #[serde(default = "default_source_version")]
     pub source_version: u32,
     /// Procedural engine generator implementation version
+    #[serde(default = "default_generator_version")]
     pub generator_version: u32,
     /// Schema definition version
+    #[serde(default = "default_schema_version")]
     pub schema_version: u32,
     /// Catalog registry release version
+    #[serde(default = "default_catalog_version")]
     pub catalog_version: u32,
     /// Specific variant class / transformation applied
+    #[serde(default = "default_variant_type")]
     pub variant_type: String,
     /// Deterministic RNG seed used to generate parameters and content
+    #[serde(default)]
     pub seed: Option<u64>,
 }
 

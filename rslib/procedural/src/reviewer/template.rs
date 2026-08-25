@@ -48,7 +48,10 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         .and_then(|v| v.as_str())
         .unwrap_or("problem");
 
-    if object_type == "problem" && session.instance.parameters.get("options").and_then(|v| v.as_array()).is_some() {
+    if object_type == "problem" && (
+        session.instance.parameters.get("options").and_then(|v| v.as_array()).is_some() ||
+        session.instance.metadata.get("options").and_then(|v| v.as_array()).is_some()
+    ) {
         object_type = "mcq";
     }
 
@@ -135,7 +138,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     } else {
         "".to_string()
     };
-    let canonical_text = escape_html(&canonical_str);
+    let _canonical_text = escape_html(&canonical_str);
 
     let raw_solution = session
         .instance
@@ -203,7 +206,8 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     // Body content according to learning object type
     let main_body_html = match object_type {
         "mcq" => {
-            let options_html = if let Some(opts) = session.instance.parameters.get("options").and_then(|v| v.as_array()) {
+            let options_html = if let Some(opts) = session.instance.parameters.get("options").and_then(|v| v.as_array())
+                .or_else(|| session.instance.metadata.get("options").and_then(|v| v.as_array())) {
                 let mut s = String::new();
                 for (i, opt) in opts.iter().enumerate() {
                     let letter = (b'A' + (i as u8).min(25)) as char;
@@ -401,8 +405,49 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 escape_html(advisory)
             )
         }
-        "problem" | "quick" | "stepwise" => {
-            // Standard Quick / Stepwise Problem
+        "stepwise" => {
+            // Dedicated Stepwise Solving Workspace (Zero quick solve fallback)
+            let initial_steps_html = if let Some(ref graph) = solution_graph_opt {
+                let mut s = String::new();
+                for (idx, step) in graph.steps.iter().enumerate() {
+                    let desc = escape_html(&step.description);
+                    let label = format!("Step {}", idx + 1);
+                    s.push_str(&format!(
+                        r#"<div class="proc-step-row" data-step-idx="{idx}">
+                            <div class="proc-step-desc"><strong>{label}:</strong> {desc}</div>
+                            <input type="text" class="proc-input proc-step-input" placeholder="Transform equation or compute step value..." autocomplete="off" />
+                        </div>"#
+                    ));
+                }
+                s
+            } else {
+                r#"<div class="proc-step-row" data-step-idx="0">
+                    <span class="proc-step-label">Step 1</span>
+                    <input type="text" class="proc-input proc-step-input" placeholder="Write step 1 transformation or equation..." autocomplete="off" />
+                </div>"#.to_string()
+            };
+
+            format!(
+                r#"<div class="proc-prompt">{prompt_text}</div>
+
+                <!-- Stepwise Solving Mode (Active Primary Workspace) -->
+                <div id="proc-stepwise-container">
+                    <div id="proc-steps-list">
+                        {initial_steps_html}
+                    </div>
+                    <div class="proc-controls">
+                        <button type="button" id="proc-add-step-btn" class="proc-btn proc-btn-secondary">+ Add Step</button>
+                        <button type="button" id="proc-hint-btn" class="proc-btn proc-btn-secondary">💡 Request Hint</button>
+                        <button type="button" id="proc-reset-steps-btn" class="proc-btn proc-btn-secondary">Reset</button>
+                        <button type="button" id="proc-check-steps-btn" class="proc-btn">Check Solution</button>
+                    </div>
+                </div>
+
+                <div id="proc-hint-container" class="proc-hint-box hidden"></div>"#
+            )
+        }
+        "problem" | "quick" => {
+            // Standard Quick / Stepwise Numerical Problem
             let initial_steps_html = if let Some(ref graph) = solution_graph_opt {
                 let mut s = String::new();
                 for (idx, step) in graph.steps.iter().enumerate() {
@@ -550,7 +595,6 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             <span><strong>Target Time:</strong> {target_time_secs}s</span>
             <div id="proc-actual-time"></div>
         </div>
-        <div class="proc-expected-row"><strong>Expected Answer:</strong> <span id="proc-expected-ans">{canonical_text}</span></div>
 
         <!-- Mistake Classification (compact action strip seamlessly styled with native review actions) -->
         <div id="proc-mistake-panel" class="proc-mistake-panel hidden">

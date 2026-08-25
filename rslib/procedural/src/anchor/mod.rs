@@ -149,18 +149,13 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_from_card_fields() {
-        let fields = vec![
-            "Front Question".to_string(),
-            r#"{"proc_schema":"physics.kinematics.freefall"}"#.to_string(),
-            "Back Answer".to_string(),
-        ];
-
-        let extracted = ProceduralCardAnchor::extract_from_card_fields(&fields).unwrap();
-        assert!(extracted.is_some());
-        assert_eq!(
-            extracted.unwrap().proc_schema.as_str(),
-            "physics.kinematics.freefall"
-        );
+    fn test_extract_from_universe_175_note() {
+        let fld = r#"{"proc_schema": "schema.math.number_system.lcm_hcf.v1", "seed_mode": {"fixed": 42}, "difficulty_override": 1.0, "inline_contract": {"contract": {"family_id": "family.math.number_system.lcm_hcf", "skill_id": "math.number_system.lcm_hcf", "domain": "mathematics", "default_schema": "schema.math.number_system.lcm_hcf.v1", "capability": "declarative", "min_difficulty": 1.0, "max_difficulty": 5.0, "supported_variants": ["lcm_two_numbers", "hcf_two_numbers"], "variant_categories": ["parameter", "structural"], "target_latency_model": {"1": 25000, "2": 35000, "3": 45000, "4": 60000, "5": 75000}, "structural_tags": ["number_system", "arithmetic", "factors"], "decision_points": ["prime_factorization", "division_method"], "error_categories": ["common_factor_omission", "arithmetic_slip"], "prerequisites": [], "provenance": {"source": "PYQ Corpus", "exam": "RRB ALP", "year": 2024, "shift": 1}, "metadata": {"title": "LCM and HCF", "category": "Number System"}}, "archetypes": [{"archetype_id": "math.ns.lcm_two_num", "difficulty_level": 1, "variant_category": "parameter", "variant_name": "lcm_two_numbers", "object_type": "problem", "parameters": [{"name": "num1", "domain": {"type": "integer_range", "min": 6, "max": 24, "step": null, "non_zero": null}}, {"name": "num2", "domain": {"type": "integer_range", "min": 8, "max": 36, "step": null, "non_zero": null}}], "constraints": [], "prompt_template": "Find the Least Common Multiple (LCM) of \\({num1}\\) and \\({num2}\\).", "answer_derivation": {"type": "lcm_array", "params": ["num1", "num2"]}, "answer_formatted_template": "{answer}", "solution_template": "Prime factorize both numbers: {num1} and {num2}. Take highest power of each prime factor. LCM = {answer}.", "step_nodes": [{"id": "step_factorize", "step_type": "arithmetic", "label": "Prime Factorization", "description_template": "Factorize {num1} and {num2}", "expected_expression_template": "LCM({num1}, {num2}) = {answer}", "alternate_templates": [], "hint_principle": "Prime factorization reveals the base components of both numbers.", "hint_operation": "Write each number as a product of prime powers.", "hint_intermediate": "Examine the common and distinct prime factors."}], "target_time_ms": 25000}]}}"#;
+        let res = ProceduralCardAnchor::from_json_str(fld);
+        println!("Result: {:?}", res);
+        assert!(res.is_ok());
+        let opt = res.unwrap();
+        assert!(opt.is_some(), "Anchor should be parsed successfully!");
     }
 }
+

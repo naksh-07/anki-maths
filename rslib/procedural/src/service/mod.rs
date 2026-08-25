@@ -524,16 +524,28 @@ impl ProceduralService {
             let skill_state = self.load_skill_state(&schema.skill_id)?;
             let target_time = inline_contract.contract.target_latency(difficulty_level);
 
-            let mut session = PracticeSessionObject::new(schema, instance.clone(), card_id, skill_state);
+            let mut instance_clone = instance.clone();
+            if let Some(meta_obj) = instance_clone.metadata.as_object_mut() {
+                if !meta_obj.contains_key("provenance") {
+                    if let Ok(prov_val) = serde_json::to_value(&inline_contract.contract.provenance) {
+                        meta_obj.insert("provenance".to_string(), prov_val);
+                    }
+                }
+                if !meta_obj.contains_key("domain") {
+                    meta_obj.insert("domain".to_string(), serde_json::Value::String(inline_contract.contract.domain.as_str().to_string()));
+                }
+            }
+
+            let mut session = PracticeSessionObject::new(schema, instance_clone.clone(), card_id, skill_state);
             session.readiness = SessionReadiness::Ready;
             session.target_latency_ms = Some(target_time);
             session.selection_reason = Some("Inline Declarative Contract".to_string());
             session.difficulty_level = Some(difficulty_level);
-            if let Some(v) = instance.metadata.get("variant").and_then(|v| v.as_str()) {
+            if let Some(v) = instance_clone.metadata.get("variant").and_then(|v| v.as_str()) {
                 session.selected_variant = Some(v.to_string());
             }
 
-            let _ = self.store.insert_problem_instance(&instance);
+            let _ = self.store.insert_problem_instance(&instance_clone);
 
             return Ok(session);
         }

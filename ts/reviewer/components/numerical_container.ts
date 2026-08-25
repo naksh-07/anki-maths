@@ -852,7 +852,8 @@ export class NumericalContainer {
         this.submitBtn =
             this.options.submitButton ||
             this.container.querySelector<HTMLElement>("#proc-quick-submit") ||
-            this.container.querySelector<HTMLElement>(".proc-quick-submit");
+            this.container.querySelector<HTMLElement>(".proc-quick-submit") ||
+            this.container.querySelector<HTMLElement>("#proc-submit-btn");
 
         // Make sure container is visible
         const quickContainer = this.container.querySelector<HTMLElement>("#proc-quick-container");
@@ -861,21 +862,13 @@ export class NumericalContainer {
             quickContainer.style.display = "";
         }
 
-        // Setup unit hint badge if present or create one
-        this.unitBadgeEl = this.container.querySelector<HTMLElement>(".proc-unit-hint");
-        if (!this.unitBadgeEl && this.inputEl) {
-            this.unitBadgeEl = document.createElement("span");
-            this.unitBadgeEl.className = "proc-unit-hint";
-            this.unitBadgeEl.style.cssText =
-                "font-size: 0.85em; color: var(--text-muted, #888); margin-left: 6px;";
-            this.inputEl.parentElement?.appendChild(this.unitBadgeEl);
-        }
+        // Bind existing preview pill if present in DOM
+        this.previewPillEl =
+            this.container.querySelector<HTMLElement>("#proc-num-preview") ||
+            this.container.querySelector<HTMLElement>(".proc-num-preview-pill");
 
-        const expUnit = this.getExpectedUnit();
-        if (this.unitBadgeEl && expUnit && expUnit !== UnitRegistry.DIMENSIONLESS) {
-            this.unitBadgeEl.textContent = `[${expUnit.symbol}]`;
-            this.unitBadgeEl.setAttribute("title", `Expected dimension: ${expUnit.dimension}`);
-        }
+        // Setup unit hint badge if explicitly present in DOM
+        this.unitBadgeEl = this.container.querySelector<HTMLElement>(".proc-unit-hint");
 
         // Setup accessibility attributes
         if (this.inputEl) {
@@ -923,6 +916,7 @@ export class NumericalContainer {
         if (!val) {
             if (this.previewPillEl) {
                 this.previewPillEl.textContent = "";
+                this.previewPillEl.classList.add("hidden");
                 this.previewPillEl.style.display = "none";
             }
             return;
@@ -932,6 +926,7 @@ export class NumericalContainer {
         if (!this.previewPillEl && this.inputEl.parentElement) {
             this.previewPillEl = document.createElement("div");
             this.previewPillEl.className = "proc-num-preview-pill";
+            this.previewPillEl.id = "proc-num-preview";
             this.previewPillEl.style.cssText =
                 "font-size: 0.78em; color: var(--text-muted, #666); margin-top: 4px; transition: opacity 0.2s;";
             this.inputEl.parentElement.appendChild(this.previewPillEl);
@@ -941,10 +936,12 @@ export class NumericalContainer {
             if (parsed.isValid) {
                 const unitStr = parsed.unit?.symbol || parsed.rawUnitStr || "";
                 this.previewPillEl.textContent = `Parsed: ${parsed.value} ${unitStr}`.trim();
+                this.previewPillEl.classList.remove("hidden");
                 this.previewPillEl.style.display = "block";
                 this.previewPillEl.style.color = "var(--text-muted, #666)";
             } else {
                 this.previewPillEl.textContent = "Enter a valid number, fraction, or scientific notation";
+                this.previewPillEl.classList.remove("hidden");
                 this.previewPillEl.style.display = "block";
                 this.previewPillEl.style.color = "var(--danger, #dc3545)";
             }

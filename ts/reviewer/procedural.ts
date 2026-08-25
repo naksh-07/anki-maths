@@ -222,6 +222,9 @@ export class ProceduralReviewer {
     constructor(container: HTMLElement, options: ProceduralSetupOptions) {
         this.container = container;
         this.options = options;
+        if (options.objectType === "stepwise") {
+            this.activeMode = "stepwise";
+        }
         this.startTime = Date.now();
         this.state = "ready";
         this.bindElements();
@@ -319,7 +322,7 @@ export class ProceduralReviewer {
                 },
                 typesetMathJax: (el) => this.typesetMathJax(el),
             });
-        } else if (this.options.objectType === "problem" || this.options.objectType === "quick" || this.options.objectType === "stepwise" || !this.options.objectType) {
+        } else if ((this.options.objectType === "problem" || this.options.objectType === "quick" || !this.options.objectType) && this.quickInput) {
             this.numericalContainer = new NumericalContainer(this.container, {
                 inputElement: this.quickInput,
                 submitButton: this.quickSubmitBtn,
@@ -528,7 +531,10 @@ export class ProceduralReviewer {
 
         // Auto-focus initial input or first option
         this.focusTimeout = setTimeout(() => {
-            if (this.quickInput) {
+            if (this.options.objectType === "stepwise") {
+                const firstStepInput = this.stepsList?.querySelector<HTMLInputElement>("input");
+                firstStepInput?.focus();
+            } else if (this.quickInput) {
                 this.quickInput.focus();
             } else if (optionItems.length > 0) {
                 optionItems[0].focus();
