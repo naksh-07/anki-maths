@@ -9,13 +9,28 @@
 
 ## 1. Master Documentation Index & Subsystem Matrix
 
-The table below catalogs the canonical documentation suite for StudyLab. Each document serves a dedicated architectural, pedagogical, or operational purpose.
+The table below catalogs the complete documentation suite for StudyLab. Each document serves a dedicated architectural, pedagogical, or operational purpose.
+
+### 1.1 Canonical Master Specifications (The 10 Frozen Contracts)
+
+| # | Master Specification | Primary Focus & Scope | Target Audience | Key Symbols & Artifacts Covered |
+|---|---|---|---|---|
+| 1 | **[STUDYLAB_PRODUCT_CONTRACT.md](STUDYLAB_PRODUCT_CONTRACT.md)** | Product North Star, 5-stage learner loop, 8-level diagnostic hierarchy, Speed-Accuracy model. | Product Leads & AI Agents | Two-System Architecture, ACT-R Production Rules, 5-tier diagnostic field ledger. |
+| 2 | **[FRONTEND_PRODUCT_SPEC.md](FRONTEND_PRODUCT_SPEC.md)** | 9 learning object modalities, semantic modality invariant, Cognitive Tutor inner loop. | Frontend & UX Devs | `problem`, `quick`, `mcq`, `stepwise`, `concept_check`, `strategy_drill`, `worked_example`. |
+| 3 | **[FRONTEND_UI_STATE_SPEC.md](FRONTEND_UI_STATE_SPEC.md)** | 14 frontend states, transitions, keyboard behavior, native Anki button suppression. | Frontend Devs | `ProceduralUIState`, anti-bypass mistake gate, Space/Enter keyboard isolation. |
+| 4 | **[FRONTEND_BUTTON_CONTRACT.md](FRONTEND_BUTTON_CONTRACT.md)** | Canonical master button matrix across 23 controls, priorities, and mutual exclusions. | Frontend Devs | Master button matrix, CTA hierarchy, forbidden coexistence rules. |
+| 5 | **[FRONTEND_VISUAL_DESIGN_SPEC.md](FRONTEND_VISUAL_DESIGN_SPEC.md)** | "Problem is the Visual Hero", CSS design tokens (`--proc-*`), dark mode, anti-patterns. | Designers & Frontend | Design tokens, typography scale, prohibited visual clutter and telemetry dumps. |
+| 6 | **[APKG_CONTENT_CONTRACT.md](APKG_CONTENT_CONTRACT.md)** | Declarative blueprints, `ProceduralPayload` schema, and 175-topic curriculum taxonomy. | Content Creators | `ProceduralPayload`, `ProceduralCardAnchor`, 175 topics / 177 notes packaging. |
+| 7 | **[APKG_FRONTEND_CONTRACT.md](APKG_FRONTEND_CONTRACT.md)** | 4-tier cross-layer mapping (APKG → Rust → SQLite → Python/Qt → TypeScript). | System Architects | End-to-end data pipeline, field immutability, anti-cheat sanitization boundaries. |
+| 8 | **[DATABASE_DATA_CONTRACT.md](DATABASE_DATA_CONTRACT.md)** | Dedicated `collection.procedural` store, 16 tables, 22 indexes, v1-v5 migrations. | Database & Rust Devs | 16 tables, WAL pragma, atomic transactions, durable vs derived data taxonomy. |
+| 9 | **[FRONTEND_ACCEPTANCE_MATRIX.md](FRONTEND_ACCEPTANCE_MATRIX.md)** | 12-screen testable acceptance criteria, WCAG 2.1 AA compliance, Perfect Window criteria. | QA & Auditors | Screen-by-screen acceptance, accessibility matrix, performance latency budgets. |
+| 10 | **[FRONTEND_CURRENT_STATE_GAP_MAP.md](FRONTEND_CURRENT_STATE_GAP_MAP.md)** | Screenshot-grounded forensic gap audit, zero P0 defects, and remediation ledger. | QA & Auditors | Win32 GDI + CDP evidence audit, defect resolutions, and P1/P2 polish ledger. |
+
+### 1.2 Subsystem Architecture & Domain Deep Dives
 
 | Document | Primary Focus & Scope | Target Audience | Key Symbols & Artifacts Covered |
 | :--- | :--- | :--- | :--- |
 | **[README.md](README.md)** | Subsystem entry point, core identity, and quickstart. | All Readers | Core Invariant, Justfile targets, project directory layout. |
-| **[PRODUCT_VISION.md](PRODUCT_VISION.md)** | Product North Star, Two-Memory Architecture, target learners, non-goals. | Product & AI Agents | ACT-R Declarative vs Procedural Memory, System 1 vs System 2. |
-| **[PRODUCT_BOUNDARIES.md](PRODUCT_BOUNDARIES.md)** | System ownership boundaries (Anki responsibilities vs StudyLab responsibilities). | Core Engineers | Spacing scheduler vs procedural engine, 100-byte custom data boundary. |
 | **[SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)** | End-to-end multi-layer pipeline, 17-step lifecycle, crate structure. | System Architects | `rslib/procedural/`, Webview $\to$ Qt $\to$ Rust $\to$ SQLite execution pipeline. |
 | **[LEARNING_MODEL.md](LEARNING_MODEL.md)** | Cognitive model, EMA mastery tracking, 8 progression states, 6 mastery gates. | ML & Cognitive Eng | `SkillState`, EMA $\alpha=0.20$, 6-Gate Promotion Policy, 4-Tier Domain Hierarchy. |
 | **[CONTENT_AND_AUTHORING.md](CONTENT_AND_AUTHORING.md)** | Declarative authoring, 15 parameter domains, 24 derivations, content factory. | Content Creators | `DeclarativeFamilyContract`, `ParameterDomain`, `AnswerDerivation`, APKG packaging. |
@@ -52,33 +67,33 @@ The table below catalogs the canonical documentation suite for StudyLab. Each do
 
 ### Path 1: New AI Agent / LLM Clean-Context Fast-Start
 *Goal: Acquire full mental model of StudyLab without hallucinations in under 3 minutes.*
-1. Read **[DOCUMENTATION_TRUTH_MATRIX.md](DOCUMENTATION_TRUTH_MATRIX.md)** (Sections 1–4) for ground truth invariants and historical gap resolutions.
-2. Read **[SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)** for pipeline execution flow.
-3. Read **[PRODUCT_BOUNDARIES.md](PRODUCT_BOUNDARIES.md)** for Anki vs StudyLab ownership.
+1. Read **[STUDYLAB_PRODUCT_CONTRACT.md](STUDYLAB_PRODUCT_CONTRACT.md)** (Sections 1–4) for North Star, 5-stage loop, and core boundaries.
+2. Read **[DOCUMENTATION_TRUTH_MATRIX.md](DOCUMENTATION_TRUTH_MATRIX.md)** for ground truth invariants and historical gap resolutions.
+3. Read **[SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)** for pipeline execution flow.
 4. Consult **[DOCUMENTATION_MAP.md](DOCUMENTATION_MAP.md)** (Section 4) for exact file paths.
 
 ### Path 2: Core Rust Engine Developer
 *Goal: Implement new generators, validation algorithms, storage migrations, or scheduling policies.*
 1. Read **[SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md)** (Crate layout `rslib/procedural/`).
-2. Read **[DATA_AND_PERSISTENCE.md](DATA_AND_PERSISTENCE.md)** (Schema DDL, pragmas, atomic transactions).
+2. Read **[DATABASE_DATA_CONTRACT.md](DATABASE_DATA_CONTRACT.md)** & **[DATA_AND_PERSISTENCE.md](DATA_AND_PERSISTENCE.md)** (Schema DDL, pragmas, atomic transactions).
 3. Read **[LEARNING_MODEL.md](LEARNING_MODEL.md)** (EMA mastery, signals, 6 progression gates).
 4. Read **[DIAGNOSTIC_AND_REMEDIATION.md](DIAGNOSTIC_AND_REMEDIATION.md)** (`StepValidator`, `RemediationQueue`, circuit breakers).
 
 ### Path 3: Frontend TypeScript & UX Engineer
 *Goal: Modify webview UI, add answer modalities, tweak keyboard behavior, or optimize styles.*
-1. Read **[REVIEWER_STATE_MACHINE.md](REVIEWER_STATE_MACHINE.md)** (11 states, speed quadrants, keyboard trapping).
-2. Read **[LEARNING_OBJECTS.md](LEARNING_OBJECTS.md)** (`MCQContainer`, `NumericalContainer`, `StepwiseContainer`).
+1. Read **[FRONTEND_PRODUCT_SPEC.md](FRONTEND_PRODUCT_SPEC.md)** & **[FRONTEND_UI_STATE_SPEC.md](FRONTEND_UI_STATE_SPEC.md)** (9 modalities, 14 states, keyboard trapping).
+2. Read **[FRONTEND_BUTTON_CONTRACT.md](FRONTEND_BUTTON_CONTRACT.md)** & **[FRONTEND_VISUAL_DESIGN_SPEC.md](FRONTEND_VISUAL_DESIGN_SPEC.md)** (Master button matrix, design tokens).
 3. Read **[FRONTEND_BACKEND_CONTRACT.md](FRONTEND_BACKEND_CONTRACT.md)** (Bridge commands, `mutateNextCardStates`).
 
 ### Path 4: Python / Qt Desktop Integration Engineer
 *Goal: Maintain webview container bridge, link handlers, hook lifecycles, and desktop menus.*
 1. Read **[FRONTEND_BACKEND_CONTRACT.md](FRONTEND_BACKEND_CONTRACT.md)** (`_handle_procedural_command`, link handlers).
-2. Read **[PRODUCT_BOUNDARIES.md](PRODUCT_BOUNDARIES.md)** (Card separation, FSRS rating bridge).
+2. Read **[STUDYLAB_PRODUCT_CONTRACT.md](STUDYLAB_PRODUCT_CONTRACT.md)** (Card separation, FSRS rating bridge).
 3. Read **[ARCHITECTURE_INVARIANTS.md](ARCHITECTURE_INVARIANTS.md)** (Memory leak prevention, `destroyActive()`).
 
 ### Path 5: Curriculum Designer & Content Author
 *Goal: Create new academic subjects, chapters, declarative problem blueprints, or export APKG decks.*
-1. Read **[CONTENT_AND_AUTHORING.md](CONTENT_AND_AUTHORING.md)** (Declarative archetypes, 15 domains, 24 derivations).
+1. Read **[APKG_CONTENT_CONTRACT.md](APKG_CONTENT_CONTRACT.md)** & **[CONTENT_AND_AUTHORING.md](CONTENT_AND_AUTHORING.md)** (Declarative archetypes, 15 domains, 24 derivations).
 2. Read **[LEARNING_OBJECTS.md](LEARNING_OBJECTS.md)** (Modality contracts, decision points, hint structures).
 3. Run `python tools/studylab_content_factory.py` and `python generate_procedural_apkg.py`.
 

@@ -7,14 +7,21 @@
 
 ## Project Overview
 
-Anki is a spaced repetition flashcard program with a multi-layered architecture. Main components:
+Anki is a spaced repetition flashcard program with a multi-layered architecture, extended with the **StudyLab procedural learning subsystem**. Main components:
 
-- Web frontend: Svelte/TypeScript in ts/
-- PyQt GUI, which embeds the web components in aqt/
-- Python library which wraps our rust Layer (pylib/, with Rust module in pylib/rsbridge)
-- Core Rust layer in rslib/
-- Protobuf definitions in proto/ that are used by the different layers to
-  talk to each other.
+- **Web frontend**: Svelte/TypeScript in `ts/` (including StudyLab procedural reviewer in `ts/reviewer/`).
+- **PyQt GUI**: Embeds the web components in `aqt/` (`qt/aqt/reviewer.py` bridges procedural events and suppresses `Show Answer` during solving).
+- **Python library**: Wraps our Rust layer (`pylib/`, with Rust module in `pylib/rsbridge`).
+- **Core Rust layer**: `rslib/` (including the in-tree `procedural` crate in `rslib/procedural/`).
+- **Protobuf definitions**: In `proto/` for cross-layer RPC communications.
+- **StudyLab Procedural Engine**: In-tree Rust crate (`rslib/procedural/`) providing multi-domain problem generation (Math, Reasoning, Physics, Chemistry), CAS step validation, cognitive mastery models, and isolated SQLite store (`collection.procedural`).
+
+## Core StudyLab Invariants
+
+- **Product Identity**: *StudyLab is an adaptive procedural problem-solving engine hosted inside Anki. It is NOT a flashcard app.*
+- **System Separation**: Anki owns spaced repetition (FSRS), collection database (`collection.anki21`), and standard declarative flashcards (Basic/Cloze). StudyLab owns procedural generation, physical 5D dimensional analysis, CAS step validation, mistake classification, diagnostic assessment, and remediation.
+- **Semantic Modality Invariant**: Semantic modality must always match UI modality. MCQs and discrete drills never render a text input box.
+- **Data Boundary**: Rich procedural attempt telemetry is stored in `collection.procedural` and stripped before committing to `collection.anki21` to preserve Anki's 100-byte card data limit.
 
 ## Running Anki
 
@@ -42,13 +49,18 @@ Run `just` (or `just --list`) to see all available commands.
 
 During development, you can build/check subsections of our code:
 
-- Rust: `cargo check`
+- Rust: `cargo check` (or `cargo check -p procedural` for the StudyLab engine)
 - Python: `just lint` (runs mypy/ruff), and if wheel-related, `just wheels`
 - TypeScript/Svelte: `just lint` (includes check:svelte and check:typescript)
 
-Language-specific tests are also available: `just test-rust`, `just test-py`,
-`just test-ts`. Use `just fmt` / `just fix-fmt` for formatting and
-`just fix-lint` to auto-fix lint issues.
+Language-specific tests:
+- Rust tests: `just test-rust` or `cargo test -p procedural`
+- Python tests: `just test-py`
+- TypeScript tests: `just test-ts` or `npm --prefix ts test ts/reviewer/procedural.test.ts`
+- 175-Topic Factory test: `cargo test -p procedural --test phase36c_all_175_topics_factory_tests`
+- Canonical APKG validator: `python artifacts_qa/validate_canonical_apkg.py`
+
+Use `just fmt` / `just fix-fmt` for formatting and `just fix-lint` to auto-fix lint issues.
 
 TypeScript/Svelte browser e2e tests live in `ts/tests/e2e/` and run with
 `just test-e2e`. The harness launches a temporary Anki instance and drives
