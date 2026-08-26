@@ -8,7 +8,6 @@
 import { bridgeCommand } from "@tslib/bridgecommand";
 
 import { MCQContainer, type MCQEvaluationResult, type MCQOption } from "./components/mcq_container";
-import { MistakeFooter } from "./components/mistake_footer";
 import {
     NumericalContainer,
     NumericalParser,
@@ -185,7 +184,7 @@ export class ProceduralReviewer {
     private hasSubmitted = false;
     private mistakeType: string | null = null;
     private mistakePanel: HTMLElement | null = null;
-    private mistakeFooter: MistakeFooter | null = null;
+
     private mcqContainer: MCQContainer | null = null;
     private numericalContainer: NumericalContainer | null = null;
     private stepwiseContainerComponent: StepwiseContainer | null = null;
@@ -271,13 +270,6 @@ export class ProceduralReviewer {
         this.resultFeedback = this.container.querySelector("#proc-result-feedback");
         this.actualTimeEl = this.container.querySelector("#proc-actual-time");
         this.mistakePanel = this.container.querySelector("#proc-mistake-panel");
-
-        this.mistakeFooter = new MistakeFooter({
-            container: this.container,
-            instanceId: this.options.instanceId,
-            familyId: this.options.familyId,
-            onSelect: (val) => this.selectMistakeCategory(val),
-        });
 
         if (this.stepwiseContainer) {
             this.stepwiseContainerComponent = new StepwiseContainer(this.container, {
@@ -1037,16 +1029,6 @@ export class ProceduralReviewer {
             actionRow.style.display = "none";
         }
 
-        if (this.mistakeFooter) {
-            this.mistakeFooter.show((val) => {
-                this.selectMistakeCategory(val);
-            });
-        } else if (this.mistakePanel) {
-            this.mistakePanel.classList.remove("hidden");
-            this.mistakePanel.tabIndex = -1;
-            this.mistakePanel.focus();
-        }
-
         this.resultPanel?.classList.remove("hidden");
         if (this.resultTitle) {
             this.resultTitle.textContent = "✗ Incorrect Answer";
@@ -1072,15 +1054,6 @@ export class ProceduralReviewer {
             family_id: this.options.familyId,
             mistake_type: value,
         })}`);
-
-        const btns = this.container.querySelectorAll<HTMLButtonElement>(".proc-mistake-btn, .proc-mistake-card");
-        btns.forEach((c) => {
-            if (c.dataset.value === value) {
-                c.classList.add("selected");
-            } else {
-                c.classList.remove("selected");
-            }
-        });
 
         const pending = this.pendingMistakeOutcome;
         this.pendingMistakeOutcome = null;
@@ -1470,8 +1443,13 @@ export const proceduralAPI = {
             active.handleNativeShowAnswer();
         }
     },
+    selectMistakeCategory: (mistakeType: string): void => {
+        const active = (globalThis as any).__activeProceduralReviewer;
+        if (active && typeof active.selectMistakeCategory === "function") {
+            active.selectMistakeCategory(mistakeType);
+        }
+    },
     ProceduralReviewer,
-    MistakeFooter,
     escapeHtml,
 };
 
