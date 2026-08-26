@@ -106,13 +106,10 @@ export class MistakeFooter {
                     ).join("")}
                 </div>
             `;
-            // Insert into result panel or container
-            const resultPanel = this.container.querySelector("#proc-result-panel");
-            const solutionContainer = this.container.querySelector("#proc-solution-container");
-            if (resultPanel && solutionContainer) {
-                resultPanel.insertBefore(this.panelEl, solutionContainer);
-            } else if (resultPanel) {
-                resultPanel.appendChild(this.panelEl);
+            // Insert into interaction footer or container
+            const interactionFooter = this.container.querySelector("#proc-interaction-footer");
+            if (interactionFooter) {
+                interactionFooter.insertBefore(this.panelEl, interactionFooter.firstChild);
             } else {
                 this.container.appendChild(this.panelEl);
             }

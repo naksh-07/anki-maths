@@ -21,7 +21,7 @@ sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 REPO_ROOT = r"C:\Users\Suraj\Documents\Antigravity\Anki-maths"
 REVIEWER_DIR = r"C:\Users\Suraj\.gemini\config\skills\desktop-webview-reviewer"
-AUDIT_DIR = os.path.join(REPO_ROOT, "artifacts_qa", "frontend_reconciliation")
+AUDIT_DIR = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else os.path.join(REPO_ROOT, "artifacts_qa", "final_release_audit")
 os.makedirs(AUDIT_DIR, exist_ok=True)
 
 sys.path.insert(0, REVIEWER_DIR)
@@ -120,9 +120,7 @@ async def run_audit():
 
     # 1. Attach & Forensics Verification
     print("\n--- Step 1: Discover & Correlate Native GUI Window ---")
-    found_windows = find_anki_primary_hwnd(10776)
-    if not found_windows:
-        found_windows = find_anki_primary_hwnd(0)
+    found_windows = find_anki_primary_hwnd(0)
     
     print(f"Found {len(found_windows)} Real GUI Windows for Anki:")
     for st, d, h, inf in found_windows:

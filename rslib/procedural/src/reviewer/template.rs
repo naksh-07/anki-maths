@@ -550,6 +550,15 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             <div id="proc-actual-time" class="proc-actual-time"></div>
         </div>
 
+        <!-- ANTI-08: Solution container is strictly hidden initially to prevent premature exposure during reflection -->
+        <div id="proc-solution-container" class="proc-solution hidden">
+            <strong>Step-by-Step Solution:</strong>
+            <div class="proc-solution-body">{solution_text}</div>
+        </div>
+    </div>
+
+    <!-- Procedural Bottom Interaction Surface (Single Progression Footer) -->
+    <div id="proc-interaction-footer" class="proc-interaction-footer">
         <!-- Mistake Classification (1-4 Metacognitive Reflection Gate) -->
         <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
             <div class="proc-mistake-heading">Classify error (1-4) to reflect and optimize spaced repetition:</div>
@@ -569,13 +578,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             </div>
         </div>
 
-        <!-- ANTI-08: Solution container is strictly hidden initially to prevent premature exposure during reflection -->
-        <div id="proc-solution-container" class="proc-solution hidden">
-            <strong>Step-by-Step Solution:</strong>
-            <div class="proc-solution-body">{solution_text}</div>
-        </div>
-
-        <div class="proc-action-row hidden" style="margin-top: 16px; display: flex; justify-content: flex-end;">
+        <div class="proc-action-row hidden">
             <button type="button" id="proc-next-btn" class="proc-btn proc-btn-primary" style="padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer;">Next Problem ➔</button>
         </div>
     </div>

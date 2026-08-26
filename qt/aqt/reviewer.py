@@ -47,6 +47,7 @@ from aqt.operations.scheduling import (
 from aqt.operations.tag import add_tags_to_notes, remove_tags_from_notes
 from aqt.profiles import VideoDriver
 from aqt.qt import *
+from aqt.qt import QCursor, QKeySequence, QMenu, QMessageBox, Qt, QTimer
 from aqt.sound import av_player, play_clicked_audio, record_audio
 from aqt.theme import theme_manager
 from aqt.toolbar import BottomBar
@@ -1010,7 +1011,17 @@ timerStopped = false;
         if not self._states_mutated:
             self.mw.progress.single_shot(50, self._showEaseButtons)
             return
-        middle = self._answerButtons()
+
+        if self._is_procedural_card():
+            # ANTI-XX: Suppress native rating buttons during StudyLab procedural states.
+            # StudyLab procedural footer owns progression.
+            middle = (
+                "<table cellpadding=0><tr><td class=stat2 align=center><span class=stattxt>%s</span></td></tr></table>"
+                % self._remaining()
+            )
+        else:
+            middle = self._answerButtons()
+
         conf = self.mw.col.decks.config_dict_for_deck_id(self.card.current_deck_id())
         self.bottom.web.eval(
             f"showAnswer({json.dumps(middle)}, {json.dumps(conf['stopTimerOnAnswer'])});"

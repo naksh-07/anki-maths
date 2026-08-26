@@ -867,16 +867,40 @@ body.nightMode {
 }
 
 /* =========================================================================
- * Metacognitive Mistake Classification Reflection Strip
+ * Metacognitive Mistake Classification & Interaction Footer
  * ========================================================================= */
 
+.proc-interaction-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: var(--proc-surface);
+    border-top: 1px solid var(--proc-border);
+    padding: 12px 20px;
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+}
+
+.proc-interaction-footer:has(> :not(.hidden)) {
+    display: flex;
+}
+
+/* Ensure the main container has enough padding to not be obscured by the fixed footer */
+.procedural-card-container {
+    padding-bottom: 120px;
+}
+
 .proc-mistake-panel {
-    margin-top: 14px;
-    margin-bottom: 14px;
-    padding: 12px 16px;
-    background: var(--proc-surface-subtle);
-    border-left: 3px solid var(--proc-warning);
-    border-radius: 0 4px 4px 0;
+    width: 100%;
+    max-width: 600px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
 }
 
 .proc-mistake-heading {
