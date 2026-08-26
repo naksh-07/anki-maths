@@ -208,7 +208,6 @@ export class ProceduralReviewer {
     private resultTitle: HTMLElement | null = null;
     private resultFeedback: HTMLElement | null = null;
     private actualTimeEl: HTMLElement | null = null;
-    private nextBtn: HTMLButtonElement | null = null;
 
     private lastAttemptIsCorrect = false;
     private lastAttemptIsFast = false;
@@ -271,7 +270,6 @@ export class ProceduralReviewer {
         this.resultTitle = this.container.querySelector("#proc-result-title");
         this.resultFeedback = this.container.querySelector("#proc-result-feedback");
         this.actualTimeEl = this.container.querySelector("#proc-actual-time");
-        this.nextBtn = this.container.querySelector("#proc-next-btn");
         this.mistakePanel = this.container.querySelector("#proc-mistake-panel");
 
         this.mistakeFooter = new MistakeFooter({
@@ -447,7 +445,7 @@ export class ProceduralReviewer {
         // MutationObserver to safely destroy when container is removed from DOM (e.g. navigation to standard card)
         if (typeof MutationObserver !== "undefined") {
             const observer = new MutationObserver(() => {
-                if (!document.body.contains(this.container)) {
+                if (typeof document !== "undefined" && !document.body.contains(this.container)) {
                     this.destroy();
                 }
             });
@@ -577,9 +575,6 @@ export class ProceduralReviewer {
         // Prerequisite "Practice Prerequisite" button
         const prereqBtn = this.container.querySelector<HTMLButtonElement>("#proc-practice-prereq-btn");
         this.addListener(prereqBtn, "click", () => this.handlePracticePrerequisite());
-
-        // Next problem / continue button
-        this.addListener(this.nextBtn, "click", () => this.handleNext());
 
         // Auto-focus initial input or first option
         this.focusTimeout = setTimeout(() => {
@@ -1029,7 +1024,6 @@ export class ProceduralReviewer {
         this.quickContainer?.classList.add("hidden");
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
-        this.nextBtn?.classList.add("hidden");
 
         // ANTI-08: Explicitly ensure solution container remains strictly hidden during reflection
         const solutionContainer = this.container.querySelector<HTMLElement>("#proc-solution-container");
@@ -1091,9 +1085,7 @@ export class ProceduralReviewer {
         const pending = this.pendingMistakeOutcome;
         this.pendingMistakeOutcome = null;
 
-        setTimeout(() => {
-            this.finalizeAndShowFeedback(pending.outcome, pending.data, pending.mode, pending.timeTakenMs);
-        }, 150);
+        this.finalizeAndShowFeedback(pending.outcome, pending.data, pending.mode, pending.timeTakenMs);
     }
 
     /**
@@ -1111,12 +1103,11 @@ export class ProceduralReviewer {
         this.state = "feedback";
         this.lastAttemptIsCorrect = outcome.isCorrect;
 
-        // Hide input containers, show result panel, solution, and next button
+        // Hide input containers, show result panel, solution
         this.quickContainer?.classList.add("hidden");
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
         this.resultPanel?.classList.remove("hidden");
-        this.nextBtn?.classList.remove("hidden");
 
         // Reveal solution container and action row post-reflection
         const solutionContainer = this.container.querySelector<HTMLElement>("#proc-solution-container");
@@ -1307,8 +1298,9 @@ export class ProceduralReviewer {
         // Bridge notification for Python/Qt backend telemetry recording
         bridgeCommand(`procedural_attempt:${JSON.stringify(attemptResult)}`);
 
-        // Focus next button if present
-        this.nextBtn?.focus();
+        if (!outcome.isCorrect) {
+            this.handleNext();
+        }
     }
 
     public handleTrySimilar(): void {

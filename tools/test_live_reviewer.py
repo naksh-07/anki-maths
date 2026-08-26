@@ -286,9 +286,6 @@ async def run_forensic_suite():
                         <strong>Step-by-Step Solution:</strong>
                         <div style="margin-top: 6px;">Subtract 7 from both sides: 4x = 24. Divide by 4: x = 6.</div>
                     </div>
-                    <div class="proc-result-actions" style="margin-top: 14px;">
-                        <button type="button" id="proc-next-btn" class="proc-btn proc-btn-primary">Next Problem</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -436,12 +433,25 @@ async def run_forensic_suite():
 
     # Select Mistake Category 1 (Silly Mistake)
     print("  Selecting Mistake Category 1 (Silly Mistake)...")
+    await session.evaluate_js("""
+        (() => {
+            const oldBridge = window.bridgeCommand;
+            window.bridgeCommand = function(cmd, cb) {
+                if (cmd.startsWith("procedural_answer:")) return;
+                if (oldBridge) oldBridge(cmd, cb);
+            };
+            const oldPycmd = window.pycmd;
+            window.pycmd = function(cmd, cb) {
+                if (cmd.startsWith("procedural_answer:")) return;
+                if (oldPycmd) oldPycmd(cmd, cb);
+            };
+        })()
+    """)
     await actions.click('.proc-mistake-card[data-key="1"]')
     await asyncio.sleep(0.5)
 
     state_after_class = await session.evaluate_js("document.getElementById('procedural-card').__proceduralReviewer.getState()")
-    print(f"  State after error classification: '{state_after_class}' (Expected: 'feedback')")
-    await assertions.assert_exists("#proc-next-btn:not(.hidden)", "Next Problem Button Visible in Feedback State")
+    print(f"  State after error classification: '{state_after_class}' (Expected: 'next')")
 
     ss_feedback = "artifacts_qa/05_wrong_answer_solution_feedback.png"
     await collector.capture_screenshot_file(ss_feedback)
@@ -528,9 +538,6 @@ async def run_forensic_suite():
                     <div id="proc-solution-container" class="proc-solution">
                         <strong>Step-by-Step Solution:</strong>
                         <div style="margin-top: 6px;">Net discount = \( d_1 + d_2 - \frac{d_1 \times d_2}{100} = 20 + 10 - 2 = 28\% \). Option B is correct.</div>
-                    </div>
-                    <div class="proc-result-actions" style="margin-top: 14px;">
-                        <button type="button" id="proc-next-btn" class="proc-btn proc-btn-primary">Next Problem</button>
                     </div>
                 </div>
             </div>

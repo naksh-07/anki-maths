@@ -1013,12 +1013,16 @@ timerStopped = false;
             return
 
         if self._is_procedural_card():
-            # ANTI-XX: Suppress native rating buttons during StudyLab procedural states.
-            # StudyLab procedural footer owns progression.
-            middle = (
-                "<table cellpadding=0><tr><td class=stat2 align=center><span class=stattxt>%s</span></td></tr></table>"
-                % self._remaining()
-            )
+            attempt = self._last_procedural_attempt or {}
+            is_correct = attempt.get("is_correct", False) or attempt.get("isCorrect", False)
+            if not is_correct:
+                # ANTI-XX: Suppress native rating buttons during StudyLab mistake classification
+                middle = (
+                    "<table cellpadding=0><tr><td class=stat2 align=center><span class=stattxt>%s</span></td></tr></table>"
+                    % self._remaining()
+                )
+            else:
+                middle = self._answerButtons()
         else:
             middle = self._answerButtons()
 

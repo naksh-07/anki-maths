@@ -1,88 +1,611 @@
 {
-  "framework": "PyQt6",
+  "session_id": "session_4ff3f1100601",
+  "verdict": "UNVERIFIED",
+  "verdict_reason": "No native OS window forensics available; visible desktop GUI could not be proven.",
+  "hwnd": null,
+  "pid": null,
+  "executable": null,
+  "window_title": "",
+  "window_visible": false,
+  "window_geometry": {},
+  "cdp_port": 9222,
+  "cdp_target": {
+    "id": "47713FBDB67DD28C82899E3ED4026280",
+    "type": "page",
+    "title": "",
+    "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2158014901584",
+    "engine": "qtwebengine",
+    "framework": null,
+    "process_id": null,
+    "debug_endpoint": "http://127.0.0.1:9222",
+    "websocket_endpoint": "ws://127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280",
+    "is_application": true,
+    "rank_score": 45,
+    "filter_reason": null,
+    "metadata": {
+      "description": "",
+      "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@aa324b3754009b927f7db643b2e837d6a5383b04/inspector.html?ws=127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280",
+      "id": "47713FBDB67DD28C82899E3ED4026280",
+      "title": "",
+      "type": "page",
+      "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2158014901584",
+      "webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280"
+    },
+    "desktop_capture_path": null,
+    "native_capture_path": null,
+    "webview_capture_path": null,
+    "user_confirmation": false,
+    "input_delivery_verified": false
+  },
+  "screenshot_type": "cdp_page_capture",
+  "screenshot_hash": "0372a4799cf6f0e676fb2791275323c431fd220ad84e0a6b8c20db223fbc523c",
+  "window_forensics": null,
+  "screenshots": {
+    "primary": {
+      "screenshot_type": "cdp_page_capture",
+      "screenshot_hash": "0372a4799cf6f0e676fb2791275323c431fd220ad84e0a6b8c20db223fbc523c",
+      "path": "artifacts_qa/07_mcq_correct_selected.png",
+      "source": "cdp_page_capture (internal webview rendering surface, not native desktop OS capture)",
+      "dimensions": {},
+      "timestamp": 1787738133.8669887
+    }
+  },
+  "framework": null,
   "engine": "qtwebengine",
   "platform": "win32",
-  "verification_level": "RUNTIME_VERIFIED",
+  "verification_level": "runtime_verified",
   "target": {
-    "description": "",
-    "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@aa324b3754009b927f7db643b2e837d6a5383b04/inspector.html?ws=127.0.0.1:8080/devtools/page/3971B2466DEE32EB56970BF81A8AE392",
-    "faviconUrl": "http://127.0.0.1:55799/favicon.ico",
-    "id": "3971B2466DEE32EB56970BF81A8AE392",
-    "title": "main webview",
+    "id": "47713FBDB67DD28C82899E3ED4026280",
     "type": "page",
-    "url": "http://127.0.0.1:55799/_anki/legacyPageData?id=2734442786608",
-    "webSocketDebuggerUrl": "ws://127.0.0.1:8080/devtools/page/3971B2466DEE32EB56970BF81A8AE392"
+    "title": "",
+    "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2158014901584",
+    "engine": "qtwebengine",
+    "framework": null,
+    "process_id": null,
+    "debug_endpoint": "http://127.0.0.1:9222",
+    "websocket_endpoint": "ws://127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280",
+    "is_application": true,
+    "rank_score": 45,
+    "filter_reason": null,
+    "metadata": {
+      "description": "",
+      "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@aa324b3754009b927f7db643b2e837d6a5383b04/inspector.html?ws=127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280",
+      "id": "47713FBDB67DD28C82899E3ED4026280",
+      "title": "",
+      "type": "page",
+      "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2158014901584",
+      "webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280"
+    },
+    "desktop_capture_path": null,
+    "native_capture_path": null,
+    "webview_capture_path": null,
+    "user_confirmation": false,
+    "input_delivery_verified": false
+  },
+  "engine_info": {
+    "engine": "qtwebengine",
+    "backend": "QtWebEngine (Embedded Chromium)",
+    "version": "6.x / 5.x",
+    "protocol": "cdp",
+    "framework": null,
+    "confidence": "high",
+    "signals": [],
+    "capabilities": {
+      "DOM": "supported",
+      "INPUT": "supported",
+      "KEYBOARD": "supported",
+      "MOUSE": "supported",
+      "RUNTIME": "supported",
+      "SCREENSHOT": "supported",
+      "CONSOLE": "supported",
+      "NETWORK": "degraded",
+      "TARGETS": "degraded",
+      "MULTI_TARGET": "degraded",
+      "NAVIGATION": "supported",
+      "JS": "supported"
+    },
+    "probed_capabilities": {},
+    "notes": [
+      "Remote debugging enabled via QTWEBENGINE_REMOTE_DEBUGGING environment variable.",
+      "Does not support Browser.* domain context management (e.g. Browser.setDownloadBehavior).",
+      "Direct page-level WebSocket attachment is required.",
+      "Child process 'QtWebEngineProcess' must be recursively terminated during cleanup."
+    ],
+    "verification_level": "runtime_verified"
   },
   "actions": [
     {
-      "test": "01_basic_card_question",
-      "screenshot": "artifacts_qa/01_basic_card_question.png",
-      "sha256": "217d5504bdb6510e51371bfe4c1a9211d5fcfdeab62fe0a4c373c9ab1e60d9c9",
-      "verified": true,
-      "dom_state": {
-        "hasProcedural": true,
-        "hasInput": true,
-        "hasOptions": 0,
-        "hasTabs": true,
-        "hasStopwatch": false,
-        "breadcrumbs": "Quantitative Aptitude \u203a Prime Factorization",
-        "promptText": ".card { font-family: system-ui, -apple-system, sans-serif; font-size: 16px; text-align: left; color: #1e293b; background-color: #f8fafc; padding: 16px; } .studylab-card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); } .studylab-badge-row { display: flex; gap: 8px; margin-bottom: 8px; } .studylab-domain-badge { background: #e0f2fe; color: #0369a1; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; } .studylab-difficulty-badge { background: #fef3c7; color: #b45309; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; } .studylab-title { margin: 8px 0 4px 0; font-size: 20px; color: #0f172a; line-height: 1.3; } .studylab-family { color: #64748b; font-size: 14px; margin-bottom: 14px; } .studylab-launch-banner { background: #f1f5f9; border-left: 4px solid #3b82f6; padding: 10px 12px; border-radius: 4px; font-size: 14px; color: #1e40af; } .studylab-back { margin-top: 16px; } .studylab-section { margin-bottom: 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; } .studylab-section h3 { margin: 0 0 8px 0; font-size: 15px; color: #334155; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px; } .studylab-content { font-size: 14px; line-height: 1.5; } .nightMode .card { background-color: #0f172a; color: #f1f5f9; } .nightMode .studylab-card, .nightMode .studylab-section { background: #1e293b; border-color: #334155; } .nightMode .studylab-title { color: #f8fafc; } Quantitative Aptitude \u203a Prime Factorization Level 1: Foundational lcm multi numbers 21, 38 \u0914\u0930 47 \u0915\u093e \u0932\u0918\u0941\u0924\u094d\u0924\u092e \u0938\u092e\u093e\u092a\u0935\u0930\u094d\u0924\u094d\u092f (LCM) \u091c\u094d\u091e\u093e\u0924 \u0915\u0940\u091c\u093f\u090f\u0964 Quick Solve Step-by-Step Solve Submit Step 1: 21, 38, 47 \u0915\u093e \u0905\u092d\u093e\u091c\u094d\u092f \u0917\u0941\u0923\u0928\u0916\u0902\u0921\u0928 \u0915\u0930\u0947\u0902 + Add Step \ud83d\udca1 Request Hint Reset Check Solution \u2717 Incorrect Answer You answered: 25% Correct answer: 37506 Please classify this error to optimize your spaced repetition schedule. Target Time: 25s Expected Answer: 37506 Classify error (1-4) to reflect and optimize spaced repetition: 1 Silly Slip 2 Pattern Missed 3 Concept Gap 4 Prereq Unknown Step-by-Step Solution: \u0938\u0902\u0916\u094d\u092f\u093e\u0913\u0902 21, 38 \u0914\u0930 47 \u0915\u093e \u0905\u092d\u093e\u091c\u094d\u092f \u0917\u0941\u0923\u0928\u0916\u0902\u0921 \u0915\u0930\u0947\u0902\u0964 \u092a\u094d\u0930\u0924\u094d\u092f\u0947\u0915 \u0905\u092d\u093e\u091c\u094d\u092f \u0917\u0941\u0923\u0928\u0916\u0902\u0921 \u0915\u0940 \u0905\u0927\u093f\u0915\u0924\u092e \u0918\u093e\u0924 \u0915\u093e \u0917\u0941\u0923\u0928\u092b\u0932 \u0932\u0947\u0902\u0964 LCM = 37506. (function() { var meta = {\"archetype_id\":\"math.ns.lcm_hcf.prime_factors_lcm\",\"contract_version\":1,\"difficulty_level\":1,\"is_declarative\":true,\"target_time_ms\":25000,\"variant\":\"lcm_multi_numbers\",\"variant_category\":\"parameter\"}; var options = { containerId: \"procedural-card\", instanceId: \"inst-dec-family-math-number_system-lcm_hcf-prime_factorization-5382792854484459233\", familyId: \"family.math.number_system.lcm_hcf.prime_factorization\", skillId: \"math.number_system.lcm_hcf.prime_factorization\", schemaId: \"schema.math.number_system.lcm_hcf.prime_factorization.v1\", targetTimeMs: 25000, correctAnswer: {\"formatted\":\"37506\",\"solution\":\"\u0938\u0902\u0916\u094d\u092f\u093e\u0913\u0902 \\\\(21\\\\), \\\\(38\\\\) \u0914\u0930 \\\\(47\\\\) \u0915\u093e \u0905\u092d\u093e\u091c\u094d\u092f \u0917\u0941\u0923\u0928\u0916\u0902\u0921 \u0915\u0930\u0947\u0902\u0964 \u092a\u094d\u0930\u0924\u094d\u092f\u0947\u0915 \u0905\u092d\u093e\u091c\u094d\u092f \u0917\u0941\u0923\u0928\u0916\u0902\u0921 \u0915\u0940 \u0905\u0927\u093f\u0915\u0924\u092e \u0918\u093e\u0924 \u0915\u093e \u0917\u0941\u0923\u0928\u092b\u0932 \u0932\u0947\u0902\u0964 LCM = 37506.\",\"solution_graph\":{\"final_step_id\":\"step_prime_factorize\",\"metadata\":{},\"steps\":[{\"alternate_expressions\":[],\"dependencies\":[],\"description\":\"21, 38, 47 \u0915\u093e \u0905\u092d\u093e\u091c\u094d\u092f \u0917\u0941\u0923\u0928\u0916\u0902\u0921\u0928 \u0915\u0930\u0947\u0902\",\"expected_expression\":\"LCM(21, 38, 47) = 37506\",\"expected_value\":null,\"hints\":[{\"content\":\"LCM \u0915\u0947 \u0932\u093f\u090f \u0938\u092d\u0940 \u0905\u092d\u093e\u091c\u094d\u092f \u0917\u0941\u0923\u0928\u0916\u0902\u0921\u094b\u0902 \u0915\u0940 \u0905\u0927\u093f\u0915\u0924\u092e \u0918\u093e\u0924\u094b\u0902 \u0915\u093e \u0917\u0941\u0923\u0928\u092b\u0932 \u0915\u093f\u092f\u093e \u091c\u093e\u0924\u093e \u0939\u0948\u0964\",\"hint_level\":\"principle\",\"level\":1,\"title\":\"Principle / Rule\"},{\"content\":\"\u0938\u092d\u0940 \u0938\u0902\u0916\u094d\u092f\u093e\u0913\u0902 \u0915\u094b \u0905\u092d\u093e\u091c\u094d\u092f \u0918\u093e\u0924\u094b\u0902 \u0915\u0947 \u0930\u0942\u092a \u092e\u0947\u0902 \u0932\u093f\u0916\u0947\u0902\u0964\",\"hint_level\":\"operation\",\"level\":2,\"title\":\"Next Operation\"},{\"content\":\"\u0905\u0927\u093f\u0915\u0924\u092e \u0918\u093e\u0924\u0947\u0902 \u091a\u0941\u0928\u0915\u0930 \u0917\u0941\u0923\u093e \u0915\u0930\u0947\u0902\u0964\",\"hint_level\":\"intermediate_relation\",\"level\":3,\"title\":\"Intermediate Setup\"}],\"id\":\"step_prime_factorize\",\"is_final\":true,\"step_type\":\"arithmetic\",\"title\":\"Prime Factorization\"}]},\"value\":37506.0}, parameters: {\"archetype_id\":\"math.ns.lcm_hcf.prime_factors_lcm\",\"difficulty_level\":1,\"n1\":21,\"n2\":38,\"n3\":47,\"variant\":\"lcm_multi_numbers\"}, solutionGraph: {\"steps\":[{\"id\":\"step_prime_factorize\",\"step_type\":\"arithmetic\",\"title\":\"Prime Factorization\",\"description\":\"21, 38, 47 \u0915\u093e \u0905\u092d\u093e\u091c\u094d\u092f \u0917\u0941\u0923\u0928\u0916\u0902\u0921\u0928 \u0915\u0930\u0947\u0902\",\"expected_expression\":\"LCM(21, 38, 47) = 37506\",\"expected_value\":null,\"alternate_expressions\":[],\"dependencies\":[],\"is_final\":true,\"hints\":[{\"level\":1,\"hint_level\":\"principle\",\"title\":\"Principle / Rule\",\"content\":\"LCM \u0915\u0947 \u0932\u093f\u090f \u0938\u092d\u0940 \u0905\u092d\u093e\u091c\u094d\u092f \u0917\u0941\u0923\u0928\u0916\u0902\u0921\u094b\u0902 \u0915\u0940 \u0905\u0927\u093f\u0915\u0924\u092e \u0918\u093e\u0924\u094b\u0902 \u0915\u093e \u0917\u0941\u0923\u0928\u092b\u0932 \u0915\u093f\u092f\u093e \u091c\u093e\u0924\u093e \u0939\u0948\u0964\"},{\"level\":2,\"hint_level\":\"operation\",\"title\":\"Next Operation\",\"content\":\"\u0938\u092d\u0940 \u0938\u0902\u0916\u094d\u092f\u093e\u0913\u0902 \u0915\u094b \u0905\u092d\u093e\u091c\u094d\u092f \u0918\u093e\u0924\u094b\u0902 \u0915\u0947 \u0930\u0942\u092a \u092e\u0947\u0902 \u0932\u093f\u0916\u0947\u0902\u0964\"},{\"level\":3,\"hint_level\":\"intermediate_relation\",\"title\":\"Intermediate Setup\",\"content\":\"\u0905\u0927\u093f\u0915\u0924\u092e \u0918\u093e\u0924\u0947\u0902 \u091a\u0941\u0928\u0915\u0930 \u0917\u0941\u0923\u093e \u0915\u0930\u0947\u0902\u0964\"}]}],\"final_step_id\":\"step_prime_factorize\",\"metadata\":{}}, objectType: \"problem\", conceptCheck: meta.concept_check || null, strategyDrill: meta.strategy_drill || null, workedExample: meta.worked_example || null, declarativeRecall: meta.declarative_recall || null, prerequisiteReview: meta.prerequisite_review || null, provenance: meta.provenance || null, remediationMessage: meta.remediation_message || null }; if (window.anki && window.anki.procedural && window.anki.procedural.setup) { window.anki.procedural.setup(options); return; } // Standalone fallback var inputEl = document.getElementById('proc-answer-input'); var submitBtn = document.getElementById('proc-submit-btn'); var resultPanel = document.getElementById('proc-result-panel'); if (submitBtn && inputEl) { submitBtn.addEventListener('click', function() { if (resultPanel) resultPanel.classList.remove('hidden'); }); } })();"
+      "action_type": "click",
+      "selector": "a.deck",
+      "before_state": {
+        "tagName": "A",
+        "textContent": "StudyLab",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 417.40625,
+          "y": 106,
+          "width": 75,
+          "height": 20
+        }
+      },
+      "after_state": null,
+      "duration_ms": 184.525728225708,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    },
+    {
+      "action_type": "click",
+      "selector": "#study",
+      "before_state": {
+        "tagName": "BUTTON",
+        "textContent": "Study Now",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 707.1875,
+          "y": 101.66667175292969,
+          "width": 79.60417175292969,
+          "height": 32
+        }
+      },
+      "after_state": null,
+      "duration_ms": 218.28484535217285,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    },
+    {
+      "action_type": "click",
+      "selector": "#tab-stepwise",
+      "before_state": {
+        "tagName": "BUTTON",
+        "textContent": "Step-by-Step Solve",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 418.9895935058594,
+          "y": 229.0416717529297,
+          "width": 132.92709350585938,
+          "height": 29.33333396911621
+        }
+      },
+      "after_state": {
+        "tagName": "BUTTON",
+        "textContent": "Step-by-Step Solve",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 412.9895935058594,
+          "y": 229.0416717529297,
+          "width": 132.92709350585938,
+          "height": 29.33333396911621
+        }
+      },
+      "duration_ms": 161.8344783782959,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    },
+    {
+      "action_type": "click",
+      "selector": "#proc-add-step-btn",
+      "before_state": {
+        "tagName": "BUTTON",
+        "textContent": "+ Add Step",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 300,
+          "y": 466.7708435058594,
+          "width": 102.84375,
+          "height": 37.333335876464844
+        }
+      },
+      "after_state": {
+        "tagName": "BUTTON",
+        "textContent": "+ Add Step",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 300,
+          "y": 430.96875,
+          "width": 102.84375,
+          "height": 37.333335876464844
+        }
+      },
+      "duration_ms": 170.61352729797363,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    },
+    {
+      "action_type": "click",
+      "selector": "#proc-hint-btn",
+      "before_state": {
+        "tagName": "BUTTON",
+        "textContent": "\ud83d\udca1 Request Hint",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 422.84375,
+          "y": 430.96875,
+          "width": 131.3541717529297,
+          "height": 37.333335876464844
+        }
+      },
+      "after_state": {
+        "tagName": "BUTTON",
+        "textContent": "\ud83d\udca1 Request Hint",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 422.84375,
+          "y": 430.96875,
+          "width": 131.3541717529297,
+          "height": 37.333335876464844
+        }
+      },
+      "duration_ms": 152.87089347839355,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    },
+    {
+      "action_type": "click",
+      "selector": "#tab-quick",
+      "before_state": {
+        "tagName": "BUTTON",
+        "textContent": "Quick Solve",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 300,
+          "y": 36.375,
+          "width": 92.98958587646484,
+          "height": 29.33333396911621
+        }
+      },
+      "after_state": {
+        "tagName": "BUTTON",
+        "textContent": "Quick Solve",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 306,
+          "y": 229.0416717529297,
+          "width": 92.98958587646484,
+          "height": 29.33333396911621
+        }
+      },
+      "duration_ms": 134.9353790283203,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    },
+    {
+      "action_type": "type_text",
+      "selector": "#proc-answer-input",
+      "before_state": {
+        "tagName": "INPUT",
+        "textContent": "",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 300,
+          "y": 286.375,
+          "width": 680,
+          "height": 41.333335876464844
+        }
+      },
+      "after_state": {
+        "tagName": "INPUT",
+        "textContent": "",
+        "value": "10",
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 294,
+          "y": 286.375,
+          "width": 680,
+          "height": 41.333335876464844
+        }
+      },
+      "duration_ms": 8.550643920898438,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    },
+    {
+      "action_type": "click",
+      "selector": "#proc-submit-btn",
+      "before_state": {
+        "tagName": "BUTTON",
+        "textContent": "Submit",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 300,
+          "y": 343.7083435058594,
+          "width": 668,
+          "height": 36
+        }
+      },
+      "after_state": {
+        "tagName": "BUTTON",
+        "textContent": "Submit",
+        "value": null,
+        "disabled": false,
+        "visible": false,
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "duration_ms": 178.2081127166748,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    },
+    {
+      "action_type": "click",
+      "selector": ".proc-mistake-card[data-key=\"1\"]",
+      "before_state": {
+        "tagName": "BUTTON",
+        "textContent": "\n                                1\n                                Silly MistakeCalculation slip\n                            ",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 318.66668701171875,
+          "y": 367.5,
+          "width": 204.90625,
+          "height": 35.333335876464844
+        }
+      },
+      "after_state": {
+        "tagName": "BUTTON",
+        "textContent": "\n                                1\n                                Silly MistakeCalculation slip\n                            ",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 318.66668701171875,
+          "y": 398.5,
+          "width": 204.90625,
+          "height": 35.333335876464844
+        }
+      },
+      "duration_ms": 149.37663078308105,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    },
+    {
+      "action_type": "click",
+      "selector": ".proc-option-item[data-opt-id=\"opt_b\"]",
+      "before_state": {
+        "tagName": "BUTTON",
+        "textContent": "\n                        \n                            B\n                            28%\n                        \n                        \n                    ",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 300,
+          "y": 260.25,
+          "width": 668,
+          "height": 48
+        }
+      },
+      "after_state": {
+        "tagName": "BUTTON",
+        "textContent": "\n                        \n                            B\n                            28%\n                        \n                        \n                    ",
+        "value": null,
+        "disabled": false,
+        "visible": true,
+        "rect": {
+          "x": 300,
+          "y": 260.25,
+          "width": 668,
+          "height": 56
+        }
+      },
+      "duration_ms": 140.49029350280762,
+      "success": true,
+      "error": null,
+      "fallback_used": null
+    }
+  ],
+  "dom_snapshot_length": 21751,
+  "screenshot_path": "artifacts_qa/07_mcq_correct_selected.png",
+  "screenshot_sha256": "0372a4799cf6f0e676fb2791275323c431fd220ad84e0a6b8c20db223fbc523c",
+  "console_messages": [
+    {
+      "type": "warning",
+      "text": "No version information available for component [tex]/noerrors",
+      "timestamp": 1787738126889.046,
+      "raw": {
+        "type": "warning",
+        "args": [
+          {
+            "type": "string",
+            "value": "No version information available for component [tex]/noerrors"
+          }
+        ],
+        "executionContextId": 3,
+        "timestamp": 1787738126889.046,
+        "stackTrace": {
+          "callFrames": [
+            {
+              "functionName": "",
+              "scriptId": "39",
+              "url": "http://127.0.0.1:40000/_anki/js/vendor/mathjax/tex-chtml-full.js",
+              "lineNumber": 0,
+              "columnNumber": 16470
+            }
+          ]
+        }
       }
     },
     {
-      "test": "02_math_numerical_solving",
-      "screenshot": "artifacts_qa/02_math_numerical_solving.png",
-      "sha256": "217d5504bdb6510e51371bfe4c1a9211d5fcfdeab62fe0a4c373c9ab1e60d9c9",
-      "verified": true
-    },
-    {
-      "test": "03_stepwise_mode",
-      "screenshot": "artifacts_qa/03_stepwise_mode.png",
-      "sha256": "217d5504bdb6510e51371bfe4c1a9211d5fcfdeab62fe0a4c373c9ab1e60d9c9",
-      "verified": true
-    },
-    {
-      "test": "04_wrong_answer_reflection",
-      "screenshot": "artifacts_qa/04_wrong_answer_reflection.png",
-      "sha256": "217d5504bdb6510e51371bfe4c1a9211d5fcfdeab62fe0a4c373c9ab1e60d9c9",
-      "verified": true,
-      "mistake_buttons": [
-        {
-          "key": "1",
-          "value": "silly_mistake",
-          "text": "1 Silly Slip"
-        },
-        {
-          "key": "2",
-          "value": "pattern_not_recognized",
-          "text": "2 Pattern Missed"
-        },
-        {
-          "key": "3",
-          "value": "formula_or_concept_misapplied",
-          "text": "3 Concept Gap"
-        },
-        {
-          "key": "4",
-          "value": "concept_not_known",
-          "text": "4 Prereq Unknown"
+      "type": "warning",
+      "text": "No version information available for component [tex]/mathtools",
+      "timestamp": 1787738126889.246,
+      "raw": {
+        "type": "warning",
+        "args": [
+          {
+            "type": "string",
+            "value": "No version information available for component [tex]/mathtools"
+          }
+        ],
+        "executionContextId": 3,
+        "timestamp": 1787738126889.246,
+        "stackTrace": {
+          "callFrames": [
+            {
+              "functionName": "",
+              "scriptId": "39",
+              "url": "http://127.0.0.1:40000/_anki/js/vendor/mathjax/tex-chtml-full.js",
+              "lineNumber": 0,
+              "columnNumber": 16470
+            }
+          ]
         }
-      ]
-    },
-    {
-      "test": "06_mcq_selected",
-      "screenshot": "artifacts_qa/06_mcq_selected.png",
-      "sha256": "69f5fa049b45351f638cc62f17127033397d1079402ada525cb3fa72c80a282d",
-      "verified": true
+      }
     }
   ],
-  "summary": {
-    "math_numerical_verified": true,
-    "mcq_modality_verified": true,
-    "wrong_answer_footer_verified": true,
-    "stepwise_mode_verified": true,
-    "diagnostic_mock_verified": true,
-    "basic_anki_regression_verified": true
+  "state_assertions": [
+    {
+      "description": "Procedural Card Container Exists",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738128.2655516
+    },
+    {
+      "description": "Numerical Answer Input Exists",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738128.2703629
+    },
+    {
+      "description": "Submit Button Exists",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738128.2749844
+    },
+    {
+      "description": "Quick Tab Exists",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738128.2801034
+    },
+    {
+      "description": "Stepwise Tab Exists",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738128.284537
+    },
+    {
+      "description": "Clean Breadcrumbs Exist",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738128.2893944
+    },
+    {
+      "description": "Stepwise Container Visible",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738128.9443822
+    },
+    {
+      "description": "Add Step Button Exists",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738128.9483845
+    },
+    {
+      "description": "Request Hint Button Exists",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738128.9524662
+    },
+    {
+      "description": "Option Group Exists",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738132.8848493
+    },
+    {
+      "description": "Option B Exists",
+      "passed": true,
+      "expected": "True",
+      "actual": "True",
+      "error": null,
+      "timestamp": 1787738132.8888102
+    }
+  ],
+  "process_ownership": null,
+  "diagnostics": {
+    "engine": "qtwebengine",
+    "framework": "native",
+    "confidence": "high",
+    "platform": "win32",
+    "port": 9222,
+    "test_matrix": {
+      "dev_build_identity": "Anki 26.08.1 / Python 3.13 / PyQt6 QtWebEngine",
+      "dom_forensics": "PASS",
+      "numerical_parsing": "PASS",
+      "stepwise_mode": "PASS",
+      "wrong_answer_reflection_gating": "PASS",
+      "reflection_bypass_trap": "PASS",
+      "mcq_modality_verification": "PASS",
+      "developer_metadata_audit": "PASS",
+      "console_error_audit": "PASS"
+    }
   },
-  "verdict": "STUDYLAB PRODUCT EXPERIENCE RESTORED \u2014 DEV VERIFIED \u2014 RELEASE READY"
+  "metadata": {
+    "collection_time": 1787738133.876845,
+    "collection_iso": "2026-08-26T09:55:33Z"
+  },
+  "desktop_capture_path": null,
+  "native_capture_path": null,
+  "webview_capture_path": null,
+  "user_confirmation": false,
+  "input_delivery_verified": false
 }

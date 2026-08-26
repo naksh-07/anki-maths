@@ -258,8 +258,6 @@ async def main():
                     </div>
                 </div>
 
-                <div class="proc-footer">
-                    <button type="button" id="proc-next-btn" class="proc-btn proc-btn-primary hidden">Next Problem (Enter)</button>
                 </div>
             </div>
         </div>
@@ -294,11 +292,8 @@ async def main():
 
     state_after_wrong = await session.evaluate_js("document.getElementById('procedural-card').__proceduralReviewer.getState()")
     mistake_panel_visible = await session.evaluate_js("!document.getElementById('proc-mistake-panel').classList.contains('hidden')")
-    next_btn_hidden = await session.evaluate_js("document.getElementById('proc-next-btn').classList.contains('hidden')")
-
     print(f"  State after wrong submit: '{state_after_wrong}' (Expected: 'mistake_classification')")
     print(f"  Mistake panel visible: {mistake_panel_visible}")
-    print(f"  Next button hidden   : {next_btn_hidden}")
 
     # -------------------------------------------------------------
     # 3. VERIFY SPACE KEY TRAP (MUST NOT BYPASS REFLECTION)
@@ -349,6 +344,22 @@ async def main():
     print("\n[STEP 5] Pressing Hotkey '3' (Concept Gap) to classify mistake...")
     await session.evaluate_js("""
         (() => {
+            // Prevent actual navigation so we can read the final state
+            const oldBridge = window.bridgeCommand;
+            window.bridgeCommand = function(cmd, cb) {
+                window.__bridgeCalls = window.__bridgeCalls || [];
+                window.__bridgeCalls.push(cmd);
+                if (cmd.startsWith("procedural_answer:")) return;
+                if (oldBridge) oldBridge(cmd, cb);
+            };
+            const oldPycmd = window.pycmd;
+            window.pycmd = function(cmd, cb) {
+                window.__bridgeCalls = window.__bridgeCalls || [];
+                window.__bridgeCalls.push(cmd);
+                if (cmd.startsWith("procedural_answer:")) return;
+                if (oldPycmd) oldPycmd(cmd, cb);
+            };
+
             const btn = document.querySelector('.proc-mistake-btn[data-key="3"], .proc-mistake-card[data-key="3"]');
             if (btn) {
                 btn.click();
@@ -361,7 +372,7 @@ async def main():
 
     state_after_key3 = await session.evaluate_js("document.getElementById('procedural-card').__proceduralReviewer.getState()")
     bridge_calls_key3 = await session.evaluate_js("window.__bridgeCalls || []")
-    print(f"  State after Key 3 : '{state_after_key3}' (Expected: 'feedback')")
+    print(f"  State after Key 3 : '{state_after_key3}' (Expected: 'next')")
     print(f"  Bridge Calls Emitted: {bridge_calls_key3}")
 
     has_mistake_telemetry = False
@@ -372,25 +383,19 @@ async def main():
                 has_mistake_telemetry = True
                 print(f"  Verified Mistake Telemetry: {data}")
 
-    classification_ok = state_after_key3 == "feedback" and has_mistake_telemetry
+    classification_ok = state_after_key3 == "next" and has_mistake_telemetry
     results["classification_and_telemetry"] = "PASS" if classification_ok else "FAIL"
     print(f"  -> Classification & Telemetry Result: {results['classification_and_telemetry']}")
 
     ss_solution_feedback = await capture_target_screenshot(session, "10_wrong_answer_solution_feedback.png")
 
     # -------------------------------------------------------------
-    # 6. FEEDBACK ADVANCE VIA ENTER/SPACE TO RATING FLOW
+    # 6. FEEDBACK ADVANCE AUTOMATIC FLOW
     # -------------------------------------------------------------
-    print("\n[STEP 6] Testing Enter in Feedback State (Rating & Advance Flow)...")
-    await session.evaluate_js("""
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
-        window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }));
-    """)
-    await asyncio.sleep(0.3)
+    print("\n[STEP 6] Verifying Automatic Advance to Rating Flow...")
 
-    bridge_calls_feedback = await session.evaluate_js("window.__bridgeCalls")
-    has_answer_rating = any("procedural_answer:1" in c for c in bridge_calls_feedback)
-    print(f"  Rating Bridge Command Emitted: {has_answer_rating} (Calls: {bridge_calls_feedback})")
+    has_answer_rating = any("procedural_answer:1" in c for c in bridge_calls_key3)
+    print(f"  Rating Bridge Command Emitted Automatically: {has_answer_rating} (Calls: {bridge_calls_key3})")
 
     results["next_rating_advance"] = "PASS" if has_answer_rating else "FAIL"
     print(f"  -> Next Rating Advance Result: {results['next_rating_advance']}")

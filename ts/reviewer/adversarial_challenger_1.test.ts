@@ -185,7 +185,7 @@ describe("Challenger 1 Adversarial Audit - Frontend State Machine and Modalities
 
             vi.advanceTimersByTime(200);
 
-            expect(reviewer.getState()).toBe("feedback");
+            expect(reviewer.getState()).toBe("next");
 
             const solutionContainer = container.querySelector<HTMLElement>("#proc-solution-container")!;
             expect(solutionContainer.style.display).toBe("");

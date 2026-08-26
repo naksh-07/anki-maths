@@ -137,14 +137,9 @@ test("procedural runtime e2e", async ({ page: mediasrvPage }) => {
             await reviewerPage!.click(".proc-mistake-btn[data-value='silly_mistake']");
         }
         
-        // Wait for next button
-        await reviewerPage!.waitForSelector("#proc-next-btn");
-        await reviewerPage!.click("#proc-next-btn");
-        
-        // Click ease button
+        // We don't need to click a next button or ease button manually because 
+        // mistake classification immediately advances the card and records ease.
         await new Promise(resolve => setTimeout(resolve, 500));
-        // We need the bottom toolbar page to click the ease button. Or we can just `pycmd("ease3")` from reviewerPage!
-        await reviewerPage!.evaluate(() => (window as any).pycmd("ease3"));
     }
 
     // 6. We did a real run! If we get here, telemetry was executed without errors.

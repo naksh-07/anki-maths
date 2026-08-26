@@ -559,15 +559,7 @@ describe("ProceduralReviewer API", () => {
         // Wait for the setTimeout in showMistakeClassificationUI to resolve
         await new Promise(resolve => setTimeout(resolve, 200));
 
-        // Now state should transition to feedback
-        expect(reviewer.getState()).toBe("feedback");
-
-        // Verify next button is shown
-        const nextBtn = container.querySelector<HTMLButtonElement>("#proc-next-btn")!;
-        expect(nextBtn.classList.contains("hidden")).toBe(false);
-
-        // Trigger next problem
-        nextBtn.click();
+        // Immediately advances after mistake classification
         expect((window as any).bridgeCommand).toHaveBeenCalledWith("procedural_answer:1", undefined);
 
         // Verify telemetry was persisted
@@ -774,12 +766,6 @@ describe("ProceduralReviewer API", () => {
             undefined
         );
 
-        await new Promise(resolve => setTimeout(resolve, 200));
-        expect(reviewer.getState()).toBe("feedback");
-
-        // 3. In feedback state: Enter or Space triggers handleNext
-        const enterInFeedback = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
-        container.dispatchEvent(enterInFeedback);
         expect((window as any).bridgeCommand).toHaveBeenCalledWith("procedural_answer:1", undefined);
 
         reviewer.destroy();
@@ -979,8 +965,8 @@ describe("ProceduralReviewer API", () => {
         reviewer.selectMistakeCategory("silly_mistake");
         await new Promise((resolve) => setTimeout(resolve, 200));
 
-        // State transitions to feedback
-        expect(reviewer.getState()).toBe("feedback");
+        // State transitions to next due to auto-advance
+        expect(reviewer.getState()).toBe("next");
 
         // ANTI-08: Solution container is now revealed post-reflection
         expect(solutionContainer.classList.contains("hidden")).toBe(false);

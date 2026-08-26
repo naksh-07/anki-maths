@@ -578,9 +578,6 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             </div>
         </div>
 
-        <div class="proc-action-row hidden">
-            <button type="button" id="proc-next-btn" class="proc-btn proc-btn-primary" style="padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer;">Next Problem ➔</button>
-        </div>
     </div>
 
     <script>

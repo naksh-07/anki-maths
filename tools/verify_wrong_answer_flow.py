@@ -203,11 +203,8 @@ async def main():
                         <div class="proc-solution-body">For \\(2x^2 - 7x + 3 = 0\\), \\(a=2, b=-7, c=3\\). \\(D = (-7)^2 - 4(2)(3) = 49 - 24 = 25\\).</div>
                     </div>
                 </div>
-                <div class="proc-footer">
-                    <div class="proc-footer-actions">
-                        <button type="button" id="proc-next-btn" class="proc-btn proc-btn-primary hidden">Next Problem (Enter)</button>
-                    </div>
                 </div>
+            </div>
             </div>
         </div>
         `;
@@ -241,8 +238,7 @@ async def main():
     st_after_wrong = await session.evaluate_js("window.reviewer.getState()")
     print(f"  State after wrong submission: '{st_after_wrong}' (Expected: 'mistake_classification')")
     mistake_panel_visible = await session.evaluate_js("!document.getElementById('proc-mistake-panel').classList.contains('hidden')")
-    next_btn_hidden = await session.evaluate_js("document.getElementById('proc-next-btn').classList.contains('hidden')")
-    print(f"  Mistake panel visible: {mistake_panel_visible} | Next button hidden: {next_btn_hidden}")
+    print(f"  Mistake panel visible: {mistake_panel_visible}")
 
     # -------------------------------------------------------------
     # TEST 2: Space Key Trap (Must NOT Bypass Reflection)
@@ -315,21 +311,18 @@ async def main():
     ss_feedback = await capture_target_screenshot(session, "wrong_answer_solution_feedback.png")
 
     # -------------------------------------------------------------
-    # TEST 5: Next Problem / Rating Advance via Space / Enter
+    # TEST 5: Automatic Advance to Next Problem / Rating Flow
     # -------------------------------------------------------------
-    print("\n[TEST 5] Testing Enter/Space in 'feedback' state (advance to next)...")
-    await session.dispatch_key_event("keyDown", "Enter")
-    await session.dispatch_key_event("keyUp", "Enter")
-    await asyncio.sleep(0.3)
+    print("\n[TEST 5] Verifying automatic advance to next problem/rating flow...")
 
     bridge_calls_after_next = await session.evaluate_js("window.__bridgeCalls")
     has_answer_rating = any("procedural_answer:1" in c for c in bridge_calls_after_next)
-    print(f"  Rating Command Emitted: {has_answer_rating} (Calls: {bridge_calls_after_next})")
+    print(f"  Rating Command Emitted Automatically: {has_answer_rating} (Calls: {bridge_calls_after_next})")
     if has_answer_rating:
-        print("  PASS: Enter in feedback state successfully advanced to Anki rating flow.")
+        print("  PASS: Mistake classification successfully advanced to Anki rating flow automatically.")
         results["next_advance_flow"] = "PASS"
     else:
-        print("  FAIL: Enter did not emit procedural_answer rating!")
+        print("  FAIL: Automatic rating flow did not occur!")
         results["next_advance_flow"] = "FAIL"
 
     # -------------------------------------------------------------
