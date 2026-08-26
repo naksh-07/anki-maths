@@ -993,6 +993,10 @@ export class ProceduralReviewer {
         const timeTakenMs = Date.now() - this.startTime;
 
         if (!outcome.isCorrect && mode !== "concept_check" && mode !== "strategy_drill") {
+            bridgeCommand(`procedural_attempt:${JSON.stringify({
+                isCorrect: false,
+                mode: mode,
+            })}`);
             this.showMistakeClassificationUI(outcome, data, mode, timeTakenMs);
             return;
         }
