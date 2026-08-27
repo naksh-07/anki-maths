@@ -66,18 +66,11 @@ def _field_checksum(s: str) -> int:
 def _make_anchor_json(
     schema_id: str,
     seed: int | None = None,
-    content_ref: str | None = None,
     difficulty_override: float | None = None,
     inline_contract: dict | None = None,
 ) -> str:
-    """Return the JSON string for the ProceduralPayload field.
-
-    ProceduralCardAnchor::extract_from_card_fields() scans each field for a
-    JSON object containing key "proc_schema", "content_ref", or "inline_contract".
-    """
+    """Return the JSON string for the ProceduralPayload field."""
     anchor: dict = {"proc_schema": schema_id}
-    if content_ref is not None:
-        anchor["content_ref"] = content_ref
     if seed is not None:
         anchor["seed_mode"] = {"fixed": seed}
     if difficulty_override is not None:
@@ -170,12 +163,8 @@ def create_procedural_apkg(output_path: str) -> None:
 }
 .nightMode .card { color: #f1f5f9; background: #0f172a; }
 """
-    # Minimal template — render_procedural_anchor() intercepts before this runs.
-    q_tmpl = (
-        "<div style='padding:20px;font-family:sans-serif;color:#6366f1'>"
-        "Loading StudyLab Procedural Card..."
-        "</div>{{ProceduralPayload}}"
-    )
+    # Minimal template - render_procedural_anchor() intercepts before this runs.
+    q_tmpl = "{{ProceduralPayload}}"
     a_tmpl = q_tmpl
 
     model = {
@@ -198,19 +187,60 @@ def create_procedural_apkg(output_path: str) -> None:
                 "bfont": "",
                 "bsize": 0,
             }],
-            "flds": [{
-                "name": "ProceduralPayload",
-                "ord": 0,
-                "sticky": False,
-                "rtl": False,
-                "font": "Arial",
-                "size": 14,
-                "description": "JSON anchor for procedural engine",
-                "plainText": True,
-                "collapsed": False,
-                "excludeFromSearch": False,
-                "media": [],
-            }],
+            "flds": [
+                {
+                    "name": "ProceduralPayload",
+                    "ord": 0,
+                    "sticky": False,
+                    "rtl": False,
+                    "font": "Arial",
+                    "size": 14,
+                    "description": "JSON anchor for procedural engine",
+                    "plainText": True,
+                    "collapsed": False,
+                    "excludeFromSearch": False,
+                    "media": [],
+                },
+                {
+                    "name": "TopicTitle",
+                    "ord": 1,
+                    "sticky": False,
+                    "rtl": False,
+                    "font": "Arial",
+                    "size": 14,
+                    "description": "",
+                    "plainText": True,
+                    "collapsed": False,
+                    "excludeFromSearch": False,
+                    "media": [],
+                },
+                {
+                    "name": "Domain",
+                    "ord": 2,
+                    "sticky": False,
+                    "rtl": False,
+                    "font": "Arial",
+                    "size": 14,
+                    "description": "",
+                    "plainText": True,
+                    "collapsed": False,
+                    "excludeFromSearch": False,
+                    "media": [],
+                },
+                {
+                    "name": "Provenance",
+                    "ord": 3,
+                    "sticky": False,
+                    "rtl": False,
+                    "font": "Arial",
+                    "size": 14,
+                    "description": "",
+                    "plainText": True,
+                    "collapsed": False,
+                    "excludeFromSearch": False,
+                    "media": [],
+                }
+            ],
             "css": css,
             "latexPre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
             "latexPost": "\\end{document}",
@@ -252,12 +282,12 @@ def create_procedural_apkg(output_path: str) -> None:
         "addToCur": True, "curDeck": 1, "curModel": str(model_id), "collapseTime": 1200,
     }
 
-    # Card definitions: (label, schema_id, seed, content_ref, diff_override, inline_contract, tags)
+    # Card definitions: (label, schema_id, seed, diff_override, inline_contract, tags)
     cards_data = [
-        ("Math: Successive Percentage (Legacy proc_schema)", SCHEMA_MATH, 42, None, None, None, "StudyLab Math Fixture"),
-        ("Reasoning: Linear Seating Arrangement (Legacy proc_schema)", SCHEMA_REASONING, None, None, None, None, "StudyLab Reasoning Fixture"),
-        ("Math: Content Ref Path", SCHEMA_MATH, None, "missing-item-xyz", 2.0, None, "StudyLab Math Fixture ContentRef"),
-        ("Math: Rich Declarative Contract (Linear Equations)", "schema.algebra.linear_equations.v1", 101, None, 1.0, make_math_linear_eq_contract(), "StudyLab Rich Contract Math"),
+        ("Math: Successive Percentage (Legacy proc_schema)", SCHEMA_MATH, 42, None, None, "StudyLab Math Fixture"),
+        ("Reasoning: Linear Seating Arrangement (Legacy proc_schema)", SCHEMA_REASONING, None, None, None, "StudyLab Reasoning Fixture"),
+        ("Math: Content Ref Path", SCHEMA_MATH, None, 2.0, None, "StudyLab Math Fixture ContentRef"),
+        ("Math: Rich Declarative Contract (Linear Equations)", "schema.algebra.linear_equations.v1", 101, 1.0, make_math_linear_eq_contract(), "StudyLab Rich Contract Math"),
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -301,17 +331,16 @@ CREATE INDEX ix_notes_csum on notes (csum);
         card_id = now_ms + 2000
         due = 1
 
-        for label, schema_id, seed, content_ref, diff_override, inline_contract, tags_str in cards_data:
+        for label, schema_id, seed, diff_override, inline_contract, tags_str in cards_data:
             payload = _make_anchor_json(
                 schema_id,
                 seed=seed,
-                content_ref=content_ref,
                 difficulty_override=diff_override,
                 inline_contract=inline_contract,
             )
             nid = note_id; note_id += 1
             guid = _gen_guid()
-            flds = payload
+            flds = "\x1f".join([payload, label, "mathematics", "{}"])
             sfld = payload
             csum = _field_checksum(payload)
             tags = " " + tags_str.replace(" ", "_") + " "
