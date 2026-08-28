@@ -559,6 +559,16 @@ export class ProceduralReviewer {
             }
         });
 
+        // Next Problem button (feedback state progression)
+        const nextBtns = this.container.querySelectorAll<HTMLButtonElement>("#proc-next-btn, .proc-next-btn");
+        nextBtns.forEach((btn) => {
+            this.addListener(btn, "click", (e: Event) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleNext();
+            });
+        });
+
         // WorkedExample "Try Similar" button
         const trySimilarBtn = this.container.querySelector<HTMLButtonElement>("#proc-try-similar-btn");
         this.addListener(trySimilarBtn, "click", () => this.handleTrySimilar());
@@ -994,12 +1004,25 @@ export class ProceduralReviewer {
         this.hasSubmitted = true;
         clearInterval(this.timerInterval);
         const timeTakenMs = Date.now() - this.startTime;
+        const quadrantInfo = this.computeSpeedQuadrant(outcome.isCorrect, timeTakenMs, this.options.targetTimeMs);
+
+        const attemptResult: ProceduralAttemptResult = {
+            instanceId: this.options.instanceId,
+            answer: data.answer,
+            mode,
+            steps: data.steps,
+            hintsUsed: this.hintsUsed,
+            timeTakenMs,
+            isCorrect: outcome.isCorrect,
+            score: outcome.score,
+            selectedOptionId: this.selectedOptionId || undefined,
+            speedQuadrant: quadrantInfo.quadrant,
+        };
+
+        // Bridge notification for Python/Qt backend telemetry recording (emitted EXACTLY ONCE upon submission)
+        bridgeCommand(`procedural_attempt:${JSON.stringify(attemptResult)}`);
 
         if (!outcome.isCorrect && mode !== "concept_check" && mode !== "strategy_drill") {
-            bridgeCommand(`procedural_attempt:${JSON.stringify({
-                isCorrect: false,
-                mode: mode,
-            })}`);
             this.showMistakeClassificationUI(outcome, data, mode, timeTakenMs);
             return;
         }
@@ -1287,11 +1310,11 @@ export class ProceduralReviewer {
             }
         }
 
-        // Bridge notification for Python/Qt backend telemetry recording
-        bridgeCommand(`procedural_attempt:${JSON.stringify(attemptResult)}`);
-
-        if (!outcome.isCorrect) {
-            this.handleNext();
+        // Reveal next button for deliberate progression post-feedback
+        const nextBtn = this.container.querySelector<HTMLElement>("#proc-next-btn, .proc-next-btn");
+        if (nextBtn) {
+            nextBtn.classList.remove("hidden");
+            nextBtn.style.display = "";
         }
     }
 
@@ -1373,7 +1396,7 @@ export class ProceduralReviewer {
     }
 
     private handleNext(): void {
-        if (this.state === "teardown") {return;}
+        if (this.state === "teardown" || this.state === "next") {return;}
         this.state = "next";
         const ease = this.deriveCalibratedEase();
         bridgeCommand(`procedural_answer:${ease}`);
@@ -1422,6 +1445,9 @@ export class ProceduralReviewer {
             }
         }
         this.disposables = [];
+        if ((this.container as any)?.__proceduralReviewer === this) {
+            (this.container as any).__proceduralReviewer = null;
+        }
         if ((globalThis as any).__activeProceduralReviewer === this) {
             (globalThis as any).__activeProceduralReviewer = null;
         }

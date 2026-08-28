@@ -1,6 +1,6 @@
 {
   "runtime": "PyQt6 / QtWebEngine Windows Desktop",
-  "pid": 26704,
+  "pid": 20736,
   "cdp_port": 9222,
   "scenarios": {
     "01_procedural_solving": {
@@ -12,7 +12,7 @@
     },
     "02_show_answer_attempt": {
       "mistake_panel_visible": true,
-      "result_title": "",
+      "result_title": "? Incorrect Answer",
       "p0_a_bypass_prevented": true,
       "screenshot": "02_show_answer_attempt.png"
     },
@@ -27,19 +27,19 @@
       "screenshot": "04_mistake_classification.png"
     },
     "05_feedback": {
-      "feedback_visible": true,
-      "next_btn_visible": true,
-      "speed_quadrant": "?? Check Strategy / Trap (Fast but Incorrect)",
-      "single_interaction_surface": true,
+      "feedback_visible": false,
+      "next_btn_visible": false,
+      "speed_quadrant": "",
+      "single_interaction_surface": false,
       "screenshot": "05_feedback.png"
     },
     "06_normal_anki": {
-      "is_normal_card": true,
+      "is_normal_card": false,
       "show_answer_button_present": true,
       "ease_buttons_present": true,
-      "normal_anki_unaffected": true,
+      "normal_anki_unaffected": false,
       "screenshot": "06_normal_anki.png"
     }
   },
-  "verdict": "BOTH P0s PROVEN RESOLVED"
+  "verdict": "CONTRACT ISSUES REMAIN"
 }

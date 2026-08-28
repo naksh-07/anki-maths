@@ -5,8 +5,6 @@
 @typescript-eslint/no-explicit-any: "off",
  */
 
-import { bridgeCommand } from "@tslib/bridgecommand";
-
 export type MistakeType =
     | "silly_mistake"
     | "pattern_not_recognized"
@@ -217,13 +215,6 @@ export class MistakeFooter {
                 btn.classList.remove("selected");
             }
         });
-
-        // Dispatch bridge notification for mistake classification
-        bridgeCommand(`procedural_mistake:${JSON.stringify({
-            instance_id: this.options.instanceId || "",
-            family_id: this.options.familyId || "",
-            mistake_type: matchedType,
-        })}`);
 
         if (this.activeCallback) {
             const cb = this.activeCallback;

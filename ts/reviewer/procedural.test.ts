@@ -555,11 +555,13 @@ describe("ProceduralReviewer API", () => {
         sillyMistakeCard.click();
 
         expect(sillyMistakeCard.classList.contains("selected")).toBe(true);
+        expect(reviewer.getState()).toBe("feedback");
 
-        // Wait for the setTimeout in showMistakeClassificationUI to resolve
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Advance after reviewing solution and feedback
+        container.querySelector<HTMLButtonElement>("#proc-next-btn")!.click();
+        expect(reviewer.getState()).toBe("next");
 
-        // Immediately advances after mistake classification
+        // Advances after deliberate confirmation
         expect((window as any).bridgeCommand).toHaveBeenCalledWith("procedural_answer:1", undefined);
 
         // Verify telemetry was persisted
@@ -765,13 +767,18 @@ describe("ProceduralReviewer API", () => {
             expect.stringContaining('"mistake_type":"formula_or_concept_misapplied"'),
             undefined
         );
+        expect(reviewer.getState()).toBe("feedback");
 
+        // Advance to next on Enter in feedback state
+        const enterInFeedback = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+        container.dispatchEvent(enterInFeedback);
+        expect(reviewer.getState()).toBe("next");
         expect((window as any).bridgeCommand).toHaveBeenCalledWith("procedural_answer:1", undefined);
 
         reviewer.destroy();
     });
 
-    test("MistakeFooter component traps Space/Enter without bypass and dispatches all 1-4 categories with telemetry", () => {
+    test("MistakeFooter component traps Space/Enter without bypass and dispatches all 1-4 categories", () => {
         let selectedMistake: string | null = null;
         const footerContainer = document.createElement("div");
         footerContainer.innerHTML = `<div id="proc-result-panel"><div id="proc-solution-container"></div></div>`;
@@ -812,32 +819,18 @@ describe("ProceduralReviewer API", () => {
         expect(selectedMistake).toBe("pattern_not_recognized");
         expect(footer.getSelectedValue()).toBe("pattern_not_recognized");
 
-        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
-            expect.stringContaining('"mistake_type":"pattern_not_recognized"'),
-            undefined,
-        );
-
         // 3. Test keydown '1', '3', '4' selections
         footer.select(1);
         expect(footer.getSelectedValue()).toBe("silly_mistake");
-        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
-            expect.stringContaining('"mistake_type":"silly_mistake"'),
-            undefined,
-        );
+        expect(selectedMistake).toBe("silly_mistake");
 
         footer.select(3);
         expect(footer.getSelectedValue()).toBe("formula_or_concept_misapplied");
-        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
-            expect.stringContaining('"mistake_type":"formula_or_concept_misapplied"'),
-            undefined,
-        );
+        expect(selectedMistake).toBe("formula_or_concept_misapplied");
 
         footer.select(4);
         expect(footer.getSelectedValue()).toBe("concept_not_known");
-        expect((window as any).bridgeCommand).toHaveBeenCalledWith(
-            expect.stringContaining('"mistake_type":"concept_not_known"'),
-            undefined,
-        );
+        expect(selectedMistake).toBe("concept_not_known");
 
         footer.destroy();
         footerContainer.remove();
@@ -965,8 +958,8 @@ describe("ProceduralReviewer API", () => {
         reviewer.selectMistakeCategory("silly_mistake");
         await new Promise((resolve) => setTimeout(resolve, 200));
 
-        // State transitions to next due to auto-advance
-        expect(reviewer.getState()).toBe("next");
+        // State transitions to feedback
+        expect(reviewer.getState()).toBe("feedback");
 
         // ANTI-08: Solution container is now revealed post-reflection
         expect(solutionContainer.classList.contains("hidden")).toBe(false);
@@ -975,6 +968,10 @@ describe("ProceduralReviewer API", () => {
         // ANTI-02: Feedback now shows concise deduplicated answer comparison
         expect(feedbackEl.textContent).toContain("Your answer: 10");
         expect(feedbackEl.textContent).toContain("Correct answer: 42");
+
+        // Advance to next via next button
+        testContainer.querySelector<HTMLButtonElement>("#proc-next-btn")!.click();
+        expect(reviewer.getState()).toBe("next");
 
         // ANTI-03 / ANTI-04: Elapsed time is displayed in speed row
         const timeEl = testContainer.querySelector<HTMLElement>("#proc-actual-time")!;
@@ -1308,9 +1305,9 @@ describe("ProceduralReviewer Performance Classification", () => {
             const panel = container.querySelector<HTMLElement>("#proc-mistake-panel")!;
             expect(panel.classList.contains("hidden")).toBe(false);
 
-            // Select mistake category -> auto-advances to next state
+            // Select mistake category -> transitions to feedback state
             card1.selectMistakeCategory("silly_mistake");
-            expect(card1.getState()).toBe("next");
+            expect(card1.getState()).toBe("feedback");
             expect(panel.classList.contains("hidden")).toBe(true);
             expect(container.querySelectorAll("#proc-mistake-panel").length).toBe(1);
 
@@ -1373,8 +1370,13 @@ describe("ProceduralReviewer Performance Classification", () => {
             const keyEvent = new KeyboardEvent("keydown", { key: "2", bubbles: true, cancelable: true });
             window.dispatchEvent(keyEvent);
 
-            expect(reviewer.getState()).toBe("next");
+            expect(reviewer.getState()).toBe("feedback");
             expect(reviewer.deriveCalibratedEase()).toBe(1);
+
+            // Press Enter in feedback state to advance
+            const enterEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+            window.dispatchEvent(enterEvent);
+            expect(reviewer.getState()).toBe("next");
 
             reviewer.destroy();
         });

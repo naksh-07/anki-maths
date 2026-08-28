@@ -492,7 +492,6 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
             self.web.eval(
                 "if (globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.handleNativeShowAnswer === 'function') { globalThis.anki.procedural.handleNativeShowAnswer(); }"
             )
-            self._showEaseButtons()
             self.mw.web.setFocus()
             gui_hooks.reviewer_did_show_answer(c)
             self._auto_advance_to_question_if_enabled()
@@ -740,9 +739,6 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
             self.web.update()
         elif url == "statesMutated":
             self._states_mutated = True
-        elif url.startswith("procedural_mistake_select:"):
-            mistake_val = url.split(":", 1)[1]
-            self.web.eval(f"if(globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.selectMistakeCategory === 'function') {{ globalThis.anki.procedural.selectMistakeCategory('{mistake_val}'); }}")
         elif url.startswith("procedural_"):
             self._handle_procedural_command(url)
         else:
@@ -803,11 +799,8 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         self._last_procedural_hint = data
 
     def _on_procedural_attempt(self, data: dict[str, Any]) -> None:
-        """Handle procedural attempt submission telemetry and synchronize review state."""
+        """Handle procedural attempt submission telemetry."""
         self._last_procedural_attempt = data
-        if self.state == "question":
-            self.state = "answer"
-            self._showEaseButtons()
 
     def _on_procedural_mistake(self, data: dict[str, Any]) -> None:
         """Handle mistake classification reflection signal."""

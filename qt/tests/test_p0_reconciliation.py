@@ -94,9 +94,8 @@ def test_p0_a_show_answer_delegates_without_dom_destruction(mock_reviewer):
     assert mock_reviewer.web.eval.called
     eval_arg = mock_reviewer.web.eval.call_args[0][0]
     assert "handleNativeShowAnswer" in eval_arg
-    # Verify _showAnswer(json) was NOT sent to web to replace HTML
-    assert "_showAnswer(" not in eval_arg
-    assert mock_reviewer._showEaseButtons.called
+    # Verify _showEaseButtons was NOT called on procedural cards (footer isolation)
+    assert not mock_reviewer._showEaseButtons.called
 
 
 def test_p0_b_procedural_answer_link_executes_answercard(mock_reviewer):

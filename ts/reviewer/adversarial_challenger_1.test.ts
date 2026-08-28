@@ -180,16 +180,19 @@ describe("Challenger 1 Adversarial Audit - Frontend State Machine and Modalities
             window.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true }));
 
             const mistakeCalls = (window as any).bridgeCommand.mock.calls.filter((c: any) => c[0].startsWith("procedural_mistake:"));
-            expect(mistakeCalls.length).toBeGreaterThanOrEqual(1);
+            expect(mistakeCalls.length).toBe(1);
             expect(mistakeCalls[0][0]).toContain("silly_mistake");
 
-            vi.advanceTimersByTime(200);
-
-            expect(reviewer.getState()).toBe("next");
+            // State transitions to feedback with derivation revealed
+            expect(reviewer.getState()).toBe("feedback");
 
             const solutionContainer = container.querySelector<HTMLElement>("#proc-solution-container")!;
             expect(solutionContainer.style.display).toBe("");
             expect(solutionContainer.classList.contains("hidden")).toBe(false);
+
+            // Deliberate user advance via Space/Enter in feedback state transitions to next
+            window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true }));
+            expect(reviewer.getState()).toBe("next");
 
             vi.useRealTimers();
         });
