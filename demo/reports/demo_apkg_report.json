@@ -1,0 +1,97 @@
+{
+  "timestamp": "2026-08-28T19:51:03.809178+00:00",
+  "apkg_path": "C:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\demo\\output\\studylab-demo-v1.0.apkg",
+  "valid": true,
+  "package_metadata": {
+    "SchemaVersion": "1.0",
+    "PackageID": "studylab-demo-source-v1.0",
+    "GeneratedAt": "2026-08-28T19:51:03.488698+00:00",
+    "SourceCoreVersion": "1.0.0"
+  },
+  "notetype": "StudyLab Source",
+  "canonical_fields_order": [
+    "Prompt",
+    "Options",
+    "CorrectAnswer",
+    "Hint",
+    "Solution",
+    "Steps",
+    "Explanation",
+    "Subject",
+    "Chapter",
+    "Topic",
+    "Skill",
+    "ProblemType",
+    "QuestionType",
+    "Difficulty",
+    "Source",
+    "Exam",
+    "Year",
+    "Shift",
+    "Paper",
+    "SourceQuestionID"
+  ],
+  "total_notes": 100,
+  "per_subject_counts": {
+    "Mathematics": 25,
+    "Physics": 25,
+    "Chemistry": 25,
+    "Reasoning": 25
+  },
+  "chapters_covered": {
+    "Mathematics": [
+      "Number System"
+    ],
+    "Physics": [
+      "Motion"
+    ],
+    "Chemistry": [
+      "Mole Concept"
+    ],
+    "Reasoning": [
+      "Seating Arrangement"
+    ]
+  },
+  "topics_covered": {
+    "Mathematics": [
+      "Factors",
+      "LCM and HCF",
+      "Divisibility",
+      "Remainders"
+    ],
+    "Physics": [
+      "Acceleration",
+      "Relative Motion",
+      "Velocity",
+      "Distance-Time",
+      "Speed"
+    ],
+    "Chemistry": [
+      "Molar Mass",
+      "Avogadro Number",
+      "Mass-Mole Conversion",
+      "Basic Stoichiometry",
+      "Moles"
+    ],
+    "Reasoning": [
+      "Position",
+      "Relative Order",
+      "Circular Seating",
+      "Constraint Recognition",
+      "Linear Seating"
+    ]
+  },
+  "question_type_distribution": {
+    "mcq": 86,
+    "numerical": 14
+  },
+  "difficulty_distribution": {
+    "3": 28,
+    "2": 49,
+    "1": 17,
+    "4": 6
+  },
+  "media_assets_bundled": 2,
+  "media_references_verified": 2,
+  "validation_errors": []
+}

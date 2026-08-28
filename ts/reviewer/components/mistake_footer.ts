@@ -84,13 +84,31 @@ export class MistakeFooter {
     constructor(options: MistakeFooterOptions) {
         this.container = options.container;
         this.options = options;
+
+        // Destroy any existing instance on the same container to avoid multiple controllers
+        const existing = (this.container as any)?.__mistakeFooter;
+        if (existing && existing !== this && typeof existing.destroy === "function") {
+            existing.destroy();
+        }
+        (this.container as any).__mistakeFooter = this;
+
         this.initDOM();
     }
 
     private initDOM(): void {
-        // Look for existing mistake panel or create one
-        this.panelEl = this.container.querySelector("#proc-mistake-panel");
-        if (!this.panelEl) {
+        // Look for existing mistake panels in container
+        const existingPanels = Array.from(
+            this.container.querySelectorAll<HTMLElement>("#proc-mistake-panel")
+        );
+
+        if (existingPanels.length > 0) {
+            // Reuse the first existing panel
+            this.panelEl = existingPanels[0];
+            // Remove any accidental duplicate panels in the same container
+            for (let i = 1; i < existingPanels.length; i++) {
+                existingPanels[i].remove();
+            }
+        } else {
             this.panelEl = document.createElement("div");
             this.panelEl.id = "proc-mistake-panel";
             this.panelEl.className = "proc-mistake-panel hidden";
@@ -115,10 +133,21 @@ export class MistakeFooter {
             }
         }
 
+        (this.panelEl as any).__mistakeFooter = this;
         this.bindButtons();
     }
 
     private bindButtons(): void {
+        // Clear any previous button event listeners
+        for (const dispose of this.disposables) {
+            try {
+                dispose();
+            } catch {
+                /* non-fatal */
+            }
+        }
+        this.disposables = [];
+
         this.buttons = Array.from(
             this.panelEl?.querySelectorAll<HTMLButtonElement>(
                 ".proc-mistake-btn, .proc-mistake-card"
@@ -126,7 +155,9 @@ export class MistakeFooter {
         );
 
         this.buttons.forEach((btn) => {
-            const clickHandler = () => {
+            const clickHandler = (e: MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const val = btn.dataset.value as MistakeType;
                 if (val) {
                     this.select(val);
@@ -257,6 +288,12 @@ export class MistakeFooter {
         }
         this.disposables = [];
         this.buttons = [];
+        if ((this.container as any)?.__mistakeFooter === this) {
+            (this.container as any).__mistakeFooter = null;
+        }
+        if (this.panelEl && (this.panelEl as any).__mistakeFooter === this) {
+            (this.panelEl as any).__mistakeFooter = null;
+        }
         this.panelEl = null;
     }
 }

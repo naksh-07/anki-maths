@@ -8,6 +8,7 @@
 import { bridgeCommand } from "@tslib/bridgecommand";
 
 import { MCQContainer, type MCQEvaluationResult, type MCQOption } from "./components/mcq_container";
+import { MistakeFooter } from "./components/mistake_footer";
 import {
     NumericalContainer,
     NumericalParser,
@@ -184,6 +185,7 @@ export class ProceduralReviewer {
     private hasSubmitted = false;
     private mistakeType: string | null = null;
     private mistakePanel: HTMLElement | null = null;
+    private mistakeFooter: MistakeFooter | null = null;
 
     private mcqContainer: MCQContainer | null = null;
     private numericalContainer: NumericalContainer | null = null;
@@ -321,6 +323,16 @@ export class ProceduralReviewer {
             });
         }
 
+        // Mistake Footer Component Integration
+        this.mistakeFooter = new MistakeFooter({
+            container: this.container,
+            instanceId: this.options.instanceId,
+            familyId: this.options.familyId,
+            onSelect: (val) => {
+                this.selectMistakeCategory(val);
+            },
+        });
+
         // Centralized Modality Invariant Enforcement
         this.enforceModalityInvariants();
     }
@@ -422,17 +434,6 @@ export class ProceduralReviewer {
                     kbEvent.preventDefault();
                     this.selectOption(optId, optEl);
                 }
-            });
-        });
-
-        // Mistake classification buttons & cards
-        const mistakeBtns = this.container.querySelectorAll<HTMLButtonElement>(".proc-mistake-card, .proc-mistake-btn");
-        mistakeBtns.forEach((btn) => {
-            const val = btn.dataset.value || "";
-            this.addListener(btn, "click", () => {
-                mistakeBtns.forEach(b => b.classList.remove("selected"));
-                btn.classList.add("selected");
-                this.selectMistakeCategory(val);
             });
         });
 

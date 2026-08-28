@@ -389,8 +389,8 @@ fn test_e2e_adversarial_malformed_note_render_error_handling() {
     // 2. Create a malformed note: QuestionType is "invalid_type"
     let mut malformed_note = source_nt.new_note();
     malformed_note.set_field(0, "What is the speed of light?").unwrap(); // Prompt
-    malformed_note.set_field(1, "invalid_unsupported_type").unwrap(); // QuestionType
-    malformed_note.set_field(3, "3e8").unwrap(); // CorrectAnswer
+    malformed_note.set_field(2, "3e8").unwrap(); // CorrectAnswer
+    malformed_note.set_field(12, "invalid_unsupported_type").unwrap(); // QuestionType
     col.add_note(&mut malformed_note, DeckId(1)).unwrap();
 
     let card = get_first_card_for_note(&mut col, malformed_note.id);
@@ -443,4 +443,65 @@ fn test_e2e_adversarial_learning_support_propagation() {
     assert!(!html.contains("{{Steps}}"));
     assert!(!html.contains("{{Explanation}}"));
 }
+
+#[test]
+fn test_e2e_studylab_demo_apkg_100_notes_all_subjects() {
+    let (mut col, _dir) = open_fs_test_collection("e2e_studylab_demo_100");
+
+    let apkg_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../demo/output/studylab-demo-v1.0.apkg");
+    assert!(apkg_path.exists(), "Demo APKG fixture must exist at {:?}", apkg_path);
+
+    // 1. Import the Demo APKG
+    let res = col.import_apkg(&apkg_path, ImportAnkiPackageOptions::default());
+    assert!(res.is_ok(), "Importing demo APKG must succeed: {:?}", res.err());
+
+    // 2. Verify exactly 100 notes imported into collection.anki2
+    let source_notes = col.search_notes_unordered("note:\"StudyLab Source*\"").unwrap();
+    assert_eq!(source_notes.len(), 100, "Expected 100 StudyLab Source notes in collection");
+
+    // 3. Verify reconciliation of all 100 notes into collection.procedural
+    let service = col.procedural_service().unwrap();
+    let store = service.store();
+
+    let mut subjects_found = std::collections::HashSet::new();
+    for nid in &source_notes {
+        let note = col.storage.get_note(*nid).unwrap().unwrap();
+        let item_id = SourceQuestion::stable_id_from_guid(&note.guid);
+        let practice_item = store.get_practice_item(&item_id).unwrap();
+        assert!(practice_item.is_some(), "PracticeItem for note GUID {} must exist in store", note.guid);
+        
+        let item = practice_item.unwrap();
+        subjects_found.insert(item.domain.as_str().to_string());
+        assert!(!item.prompt.is_empty());
+        assert!(item.difficulty >= 1.0 && item.difficulty <= 5.0);
+    }
+
+    // 4. Verify all 4 domains represented in store
+    assert!(subjects_found.contains("mathematics"), "Mathematics domain must be represented");
+    assert!(subjects_found.contains("physics"), "Physics domain must be represented");
+    assert!(subjects_found.contains("chemistry"), "Chemistry domain must be represented");
+    assert!(subjects_found.contains("reasoning"), "Reasoning domain must be represented");
+
+    // 5. Test rendering of a sample note (Math remainder problem)
+    let math_notes = col.search_notes_unordered("note:\"StudyLab Source*\" remainder").unwrap();
+    assert!(!math_notes.is_empty(), "Math remainder note must exist");
+    let math_note = col.storage.get_note(math_notes[0]).unwrap().unwrap();
+    let math_nt = col.get_notetype(math_note.notetype_id).unwrap().unwrap();
+    let math_card = get_first_card_for_note(&mut col, math_note.id);
+    let math_out = col.render_card(&math_note, &math_card, &math_nt, &math_nt.templates[0], false, false).unwrap();
+    let math_html = match &math_out.qnodes[0] { RenderedNode::Text { text } => text, _ => "" };
+    assert!(math_html.contains("procedural-card"), "Must render procedural card container");
+    assert!(math_html.contains("remainder"), "Must render prompt content");
+
+    // 6. Test rendering of media diagram note
+    let graph_notes = col.search_notes_unordered("note:\"StudyLab Source*\" graph").unwrap();
+    assert!(!graph_notes.is_empty(), "Graph note must exist");
+    let graph_note = col.storage.get_note(graph_notes[0]).unwrap().unwrap();
+    let graph_card = get_first_card_for_note(&mut col, graph_note.id);
+    let graph_out = col.render_card(&graph_note, &graph_card, &math_nt, &math_nt.templates[0], false, false).unwrap();
+    let graph_html = match &graph_out.qnodes[0] { RenderedNode::Text { text } => text, _ => "" };
+    assert!(graph_html.contains("studylab_demo_motion_graph.png"), "Must render image tag");
+}
+
 

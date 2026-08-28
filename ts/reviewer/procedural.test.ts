@@ -1199,4 +1199,185 @@ describe("ProceduralReviewer Performance Classification", () => {
 
         reviewer.destroy();
     });
+
+    describe("MistakeFooter Single-Mount and Idempotence Invariants", () => {
+        test("exactly one #proc-mistake-panel exists and has exactly 4 classification buttons", () => {
+            const reviewer = new ProceduralReviewer(container, {
+                instanceId: "inst-single-mount",
+                familyId: "math.single",
+                targetTimeMs: 45000,
+                correctAnswer: { value: 42 },
+            });
+
+            const panels = container.querySelectorAll("#proc-mistake-panel");
+            expect(panels.length).toBe(1);
+
+            const buttons = panels[0].querySelectorAll(".proc-mistake-btn, .proc-mistake-card");
+            expect(buttons.length).toBe(4);
+
+            const keys = Array.from(buttons).map(b => (b as HTMLElement).dataset.key);
+            expect(keys).toEqual(["1", "2", "3", "4"]);
+
+            reviewer.destroy();
+        });
+
+        test("mistake panel is not a descendant of native answer button container and lives in interaction footer", () => {
+            // Setup a mock reviewer DOM with both card container and a simulated native bottom footer
+            const nativeBottom = document.createElement("div");
+            nativeBottom.id = "bottom";
+            nativeBottom.innerHTML = `<table id="middle"><tr><td><button class="ease1">Again</button></td><td><button class="ease2">Hard</button></td><td><button class="ease3">Good</button></td><td><button class="ease4">Easy</button></td></tr></table>`;
+            document.body.appendChild(nativeBottom);
+
+            const reviewer = new ProceduralReviewer(container, {
+                instanceId: "inst-hierarchy",
+                familyId: "math.hierarchy",
+                targetTimeMs: 45000,
+                correctAnswer: { value: 100 },
+            });
+
+            const mistakePanel = container.querySelector("#proc-mistake-panel");
+            expect(mistakePanel).not.toBeNull();
+            expect(nativeBottom.contains(mistakePanel)).toBe(false);
+            expect(container.contains(mistakePanel)).toBe(true);
+
+            const interactionFooter = container.querySelector("#proc-interaction-footer");
+            if (interactionFooter) {
+                expect(interactionFooter.contains(mistakePanel)).toBe(true);
+            }
+
+            reviewer.destroy();
+            nativeBottom.remove();
+        });
+
+        test("repeated initialization is strictly idempotent and does not duplicate DOM nodes", () => {
+            // First initialization
+            const rev1 = proceduralAPI.setup({
+                containerId: "procedural-card",
+                instanceId: "inst-idem-1",
+                familyId: "math.idem",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 50 },
+            });
+
+            expect(container.querySelectorAll("#proc-mistake-panel").length).toBe(1);
+
+            // Repeated call to MistakeFooter on the same container
+            const footer2 = new MistakeFooter({
+                container,
+                instanceId: "inst-idem-1",
+                familyId: "math.idem",
+            });
+
+            expect(container.querySelectorAll("#proc-mistake-panel").length).toBe(1);
+            expect(container.querySelectorAll(".proc-mistake-btn, .proc-mistake-card").length).toBe(4);
+
+            // Re-setup through proceduralAPI
+            const rev2 = proceduralAPI.setup({
+                containerId: "procedural-card",
+                instanceId: "inst-idem-2",
+                familyId: "math.idem",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 50 },
+            });
+
+            expect(container.querySelectorAll("#proc-mistake-panel").length).toBe(1);
+            expect(container.querySelectorAll(".proc-mistake-btn, .proc-mistake-card").length).toBe(4);
+
+            rev2.destroy();
+            footer2.destroy();
+        });
+
+        test("question -> answer -> next card lifecycle preserves single mistake panel mount", () => {
+            // Card 1: Question
+            const card1 = proceduralAPI.setup({
+                containerId: "procedural-card",
+                instanceId: "card-1",
+                familyId: "math.calc",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 25 },
+            });
+            expect(container.querySelectorAll("#proc-mistake-panel").length).toBe(1);
+
+            // Card 1: Answer incorrect -> trigger mistake classification
+            const input = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+            input.value = "99";
+            container.querySelector<HTMLButtonElement>("#proc-submit-btn")!.click();
+
+            expect(card1.getState()).toBe("mistake_classification");
+            expect(container.querySelectorAll("#proc-mistake-panel").length).toBe(1);
+            const panel = container.querySelector<HTMLElement>("#proc-mistake-panel")!;
+            expect(panel.classList.contains("hidden")).toBe(false);
+
+            // Select mistake category -> auto-advances to next state
+            card1.selectMistakeCategory("silly_mistake");
+            expect(card1.getState()).toBe("next");
+            expect(panel.classList.contains("hidden")).toBe(true);
+            expect(container.querySelectorAll("#proc-mistake-panel").length).toBe(1);
+
+            // Card 2: Next card transition (simulate new card rendered into container)
+            container.innerHTML = `
+                <div class="proc-header"><span class="proc-timer" id="proc-stopwatch">00:00</span></div>
+                <div id="proc-quick-container">
+                    <input type="text" id="proc-answer-input" class="proc-input" />
+                    <button type="button" id="proc-submit-btn" class="proc-btn">Submit</button>
+                </div>
+                <div id="proc-result-panel" class="proc-result hidden">
+                    <div id="proc-result-title"></div>
+                    <div id="proc-result-feedback"></div>
+                    <div id="proc-actual-time"></div>
+                </div>
+                <div id="proc-interaction-footer" class="proc-interaction-footer">
+                    <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
+                        <div class="proc-mistake-heading">Classify Error:</div>
+                        <div class="proc-mistake-footer">
+                            <button type="button" class="proc-mistake-btn" data-value="silly_mistake" data-key="1">1 Silly</button>
+                            <button type="button" class="proc-mistake-btn" data-value="pattern_not_recognized" data-key="2">2 Pattern</button>
+                            <button type="button" class="proc-mistake-btn" data-value="formula_or_concept_misapplied" data-key="3">3 Concept</button>
+                            <button type="button" class="proc-mistake-btn" data-value="concept_not_known" data-key="4">4 Unknown</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const card2 = proceduralAPI.setup({
+                containerId: "procedural-card",
+                instanceId: "card-2",
+                familyId: "math.calc",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 75 },
+            });
+
+            expect(container.querySelectorAll("#proc-mistake-panel").length).toBe(1);
+            expect(container.querySelectorAll(".proc-mistake-btn, .proc-mistake-card").length).toBe(4);
+
+            card2.destroy();
+        });
+
+        test("keyboard keys 1-4 trigger mistake selection and bridge notification", () => {
+            const bridgeSpy = vi.fn();
+            (globalThis as any).bridgeCommand = bridgeSpy;
+
+            const reviewer = new ProceduralReviewer(container, {
+                instanceId: "inst-kb-test",
+                familyId: "math.kb",
+                targetTimeMs: 40000,
+                correctAnswer: { value: 10 },
+            });
+
+            const input = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+            input.value = "99";
+            container.querySelector<HTMLButtonElement>("#proc-submit-btn")!.click();
+            expect(reviewer.getState()).toBe("mistake_classification");
+
+            // Dispatch Keydown '2' for pattern_not_recognized
+            const keyEvent = new KeyboardEvent("keydown", { key: "2", bubbles: true, cancelable: true });
+            window.dispatchEvent(keyEvent);
+
+            expect(reviewer.getState()).toBe("next");
+            expect(reviewer.deriveCalibratedEase()).toBe(1);
+
+            reviewer.destroy();
+        });
+    });
 });
+

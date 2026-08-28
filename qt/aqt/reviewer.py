@@ -576,21 +576,6 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         if not proceed:
             return
 
-        # INTERCEPT FOR PROCEDURAL MISTAKE CLASSIFICATION
-        if self._is_procedural_card():
-            attempt = self._last_procedural_attempt or {}
-            is_correct = attempt.get("is_correct", False) or attempt.get("isCorrect", False)
-            if not is_correct and not self._last_procedural_mistake:
-                mistake_map = {
-                    1: "silly_mistake",
-                    2: "pattern_not_recognized",
-                    3: "formula_or_concept_misapplied",
-                    4: "concept_not_known",
-                }
-                if ease in mistake_map:
-                    self.web.eval(f"if(globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.selectMistakeCategory === 'function') {{ globalThis.anki.procedural.selectMistakeCategory('{mistake_map[ease]}'); }}")
-                return
-
         sched = cast(V3Scheduler, self.mw.col.sched)
         answer = sched.build_answer(
             card=self.card,
@@ -726,12 +711,6 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
             val2: Literal[1, 2, 3, 4] = int(val)  # type: ignore
             self._answerCard(val2)
         else:
-            # INTERCEPT FOR PROCEDURAL MISTAKE CLASSIFICATION
-            if self._is_procedural_card():
-                attempt = self._last_procedural_attempt or {}
-                is_correct = attempt.get("is_correct", False) or attempt.get("isCorrect", False)
-                if not is_correct and not self._last_procedural_mistake:
-                    return # DO NOTHING ON SPACE/ENTER WITHOUT EXPLICIT SELECTION
             self._answerCard(self._defaultEase())
 
     def _linkHandler(self, url: str) -> None:
@@ -742,10 +721,10 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
             self._answerCard(val)
         elif url.startswith("procedural_answer:"):
             try:
-                val = int(url.split(":", 1)[1])
-                if val in (1, 2, 3, 4):
+                raw_val = int(url.split(":", 1)[1])
+                if raw_val in (1, 2, 3, 4):
                     self.state = "answer"
-                    self._answerCard(val)  # type: ignore
+                    self._answerCard(cast(Literal[1, 2, 3, 4], raw_val))
             except Exception as e:
                 print("Error handling procedural_answer link:", e)
         elif url == "edit":
@@ -762,8 +741,8 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         elif url == "statesMutated":
             self._states_mutated = True
         elif url.startswith("procedural_mistake_select:"):
-            val = url.split(":", 1)[1]
-            self.web.eval(f"if(globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.selectMistakeCategory === 'function') {{ globalThis.anki.procedural.selectMistakeCategory('{val}'); }}")
+            mistake_val = url.split(":", 1)[1]
+            self.web.eval(f"if(globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.selectMistakeCategory === 'function') {{ globalThis.anki.procedural.selectMistakeCategory('{mistake_val}'); }}")
         elif url.startswith("procedural_"):
             self._handle_procedural_command(url)
         else:
@@ -1042,35 +1021,12 @@ timerStopped = false;
             self.mw.progress.single_shot(50, self._showEaseButtons)
             return
 
-        if self._is_procedural_card():
-            attempt = self._last_procedural_attempt or {}
-            is_correct = attempt.get("is_correct", False) or attempt.get("isCorrect", False)
-            if not is_correct:
-                middle = self._mistakeButtons()
-            else:
-                middle = self._answerButtons()
-        else:
-            middle = self._answerButtons()
+        middle = self._answerButtons()
 
         conf = self.mw.col.decks.config_dict_for_deck_id(self.card.current_deck_id())
         self.bottom.web.eval(
             f"showAnswer({json.dumps(middle)}, {json.dumps(conf['stopTimerOnAnswer'])});"
         )
-
-    def _mistakeButtons(self) -> str:
-        buttons = [
-            (1, "silly_mistake", "1 Silly Slip", "Arithmetic or calculation slip", "1"),
-            (2, "pattern_not_recognized", "2 Pattern Missed", "Failed to identify problem structure or schema", "2"),
-            (3, "formula_or_concept_misapplied", "3 Concept Gap", "Wrong formula or misapplied theorem", "3"),
-            (4, "concept_not_known", "4 Prereq Unknown", "Fundamental knowledge gap or missing prerequisite", "4"),
-        ]
-        html = "<tr>"
-        for key, val, label, title, badge in buttons:
-            html += f"""
-<td align=center><button class="proc-mistake-btn" title="{title}" data-ease="{key}" onclick='pycmd("procedural_mistake_select:{val}");'>\
-{label}</button></td>"""
-        html += "</tr>"
-        return f"<table cellpadding=0>{html}</table>"
 
     def _remaining(self) -> str:
         if not self.mw.col.conf.get("dueCounts", True):
