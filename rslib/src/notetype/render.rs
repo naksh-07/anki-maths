@@ -125,6 +125,11 @@ impl Collection {
             return self.render_procedural_anchor(note, card, nt);
         }
 
+        if nt.name.as_str().starts_with("StudyLab Source") && !browser {
+            println!("StudyLab debug: Executing render_source_anchor!");
+            return self.render_source_anchor(note, card, nt);
+        }
+
         let mut field_map = note.fields_map(&nt.fields);
 
         self.add_special_fields(&mut field_map, note, card, nt, template)?;
@@ -233,6 +238,50 @@ impl Collection {
         let session = match service.resolve_procedural_target(&anchor, Some(card.id.0)) {
             Ok(s) => s,
             Err(e) => return error_html(&format!("Failed to resolve procedural target: {}", e)),
+        };
+
+        let html = procedural::reviewer::render_reviewer_html(&session);
+        Ok(RenderCardOutput {
+            qnodes: vec![RenderedNode::Text { text: html.clone() }],
+            anodes: vec![RenderedNode::Text { text: html }],
+            css: nt.config.css.clone(),
+            latex_svg: nt.config.latex_svg,
+            is_empty: false,
+        })
+    }
+
+    fn render_source_anchor(
+        &mut self,
+        note: &Note,
+        card: &Card,
+        nt: &Notetype,
+    ) -> Result<RenderCardOutput> {
+        let error_html = |msg: &str| -> Result<RenderCardOutput> {
+            let html = format!(
+                "<div class='proc-error' style='padding: 20px; font-family: sans-serif; border: 2px solid #ef4444; border-radius: 8px; background-color: #fee2e2; color: #991b1b;'>\n\
+                    <h3 style='margin-top: 0;'>Source Engine Error</h3>\n\
+                    <p>{}</p>\n\
+                </div>",
+                htmlescape::encode_minimal(msg)
+            );
+            Ok(RenderCardOutput {
+                qnodes: vec![RenderedNode::Text { text: html.clone() }],
+                anodes: vec![RenderedNode::Text { text: html }],
+                css: nt.config.css.clone(),
+                latex_svg: nt.config.latex_svg,
+                is_empty: false,
+            })
+        };
+
+        let fields = note.fields_map(&nt.fields);
+        let source_q = match procedural::anchor::source::SourceQuestion::extract_from_card_fields(&fields) {
+            Ok(q) => q,
+            Err(e) => return error_html(&format!("Failed to parse source question from note: {}", e)),
+        };
+
+        let session = match source_q.into_practice_session(Some(card.id.0)) {
+            Ok(s) => s,
+            Err(e) => return error_html(&format!("Failed to initialize source practice session: {}", e)),
         };
 
         let html = procedural::reviewer::render_reviewer_html(&session);

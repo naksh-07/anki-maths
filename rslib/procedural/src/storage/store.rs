@@ -90,6 +90,136 @@ impl ProceduralStore {
         Ok(())
     }
 
+    pub fn upsert_practice_item(&self, item: &PracticeItem) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let origin_json = serde_json::to_string(&item.origin).unwrap_or_default();
+        let q_type_json = serde_json::to_string(&item.question_type).unwrap_or_default();
+        let struct_tags_json = serde_json::to_string(&item.structural_tags).unwrap_or_default();
+        let dec_points_json = serde_json::to_string(&item.decision_points).unwrap_or_default();
+        let err_cats_json = serde_json::to_string(&item.error_categories).unwrap_or_default();
+        let prereqs_json = serde_json::to_string(&item.prerequisites).unwrap_or_default();
+        let prov_json = serde_json::to_string(&item.provenance).unwrap_or_default();
+        let meta_json = serde_json::to_string(&item.metadata).unwrap_or_default();
+        
+        let existing: Option<String> = conn.query_row(
+            "SELECT id FROM practice_items WHERE id = ?1",
+            params![item.id.as_str()],
+            |row| row.get(0)
+        ).optional()?;
+
+        let is_new = existing.is_none();
+
+        conn.execute(
+            r#"
+            INSERT INTO practice_items (
+                id, origin, domain, chapter, skill_id, schema_id, problem_family_id,
+                question_type, prompt, difficulty, structural_tags, decision_points,
+                error_categories, prerequisites, provenance, created_at, metadata
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+            ON CONFLICT(id) DO UPDATE SET
+                origin = excluded.origin,
+                domain = excluded.domain,
+                chapter = excluded.chapter,
+                skill_id = excluded.skill_id,
+                schema_id = excluded.schema_id,
+                problem_family_id = excluded.problem_family_id,
+                question_type = excluded.question_type,
+                prompt = excluded.prompt,
+                difficulty = excluded.difficulty,
+                structural_tags = excluded.structural_tags,
+                decision_points = excluded.decision_points,
+                error_categories = excluded.error_categories,
+                prerequisites = excluded.prerequisites,
+                provenance = excluded.provenance,
+                metadata = excluded.metadata;
+            "#,
+            params![
+                item.id.as_str(),
+                origin_json,
+                item.domain.as_str(),
+                item.chapter,
+                item.skill_id.as_str(),
+                item.schema_id.as_str(),
+                item.problem_family_id.as_str(),
+                q_type_json,
+                item.prompt,
+                item.difficulty,
+                struct_tags_json,
+                dec_points_json,
+                err_cats_json,
+                prereqs_json,
+                prov_json,
+                item.created_at,
+                meta_json
+            ],
+        )?;
+
+        Ok(is_new)
+    }
+
+    pub fn get_practice_item_hash(&self, id: &PracticeItemId) -> Result<Option<u64>> {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let conn = self.conn.lock().unwrap();
+        let row: Option<(String, String, String, f64, String, String)> = conn.query_row(
+            "SELECT origin, question_type, prompt, difficulty, provenance, metadata FROM practice_items WHERE id = ?1",
+            params![id.as_str()],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?))
+        ).optional()?;
+
+        if let Some((o, q, p, d, pr, m)) = row {
+            let mut hasher = DefaultHasher::new();
+            o.hash(&mut hasher);
+            q.hash(&mut hasher);
+            p.hash(&mut hasher);
+            d.to_bits().hash(&mut hasher);
+            pr.hash(&mut hasher);
+            m.hash(&mut hasher);
+            Ok(Some(hasher.finish()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn archive_missing_practice_items(&self, active_ids: &[PracticeItemId]) -> Result<usize> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+        
+        let mut count = 0;
+        {
+            let mut stmt = tx.prepare("SELECT id, metadata FROM practice_items WHERE origin LIKE '%curated_source%'")?;
+            let rows = stmt.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?;
+            
+            let active_set: std::collections::HashSet<&str> = active_ids.iter().map(|id| id.as_str()).collect();
+            let mut to_update = Vec::new();
+
+            for row in rows {
+                if let Ok((id_str, meta_str)) = row {
+                    if !active_set.contains(id_str.as_str()) {
+                        let mut meta: serde_json::Value = serde_json::from_str(&meta_str).unwrap_or_default();
+                        if let Some(obj) = meta.as_object_mut() {
+                            if obj.get("status").and_then(|v| v.as_str()) != Some("archived") {
+                                obj.insert("status".to_string(), serde_json::Value::String("archived".to_string()));
+                                to_update.push((id_str, serde_json::to_string(&meta).unwrap_or_default()));
+                            }
+                        }
+                    }
+                }
+            }
+            
+            let mut update_stmt = tx.prepare("UPDATE practice_items SET metadata = ?1 WHERE id = ?2")?;
+            for (id_str, new_meta) in to_update {
+                update_stmt.execute(params![new_meta, id_str])?;
+                count += 1;
+            }
+        }
+        tx.commit()?;
+        Ok(count)
+    }
+
     pub fn get_skill(&self, id: &SkillId) -> Result<Option<Skill>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(

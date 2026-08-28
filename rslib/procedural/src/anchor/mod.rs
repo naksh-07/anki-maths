@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use crate::core::{ProceduralError, Result, SchemaId};
 use crate::problems::contract::DeclarativeFamilyContract;
 
+pub mod source;
+
 /// Strategy for generating random seeds for ephemeral problem instances.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]

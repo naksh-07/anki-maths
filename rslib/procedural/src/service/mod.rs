@@ -9,6 +9,7 @@ use chrono::Utc;
 use rand::Rng;
 
 use crate::anchor::{ProceduralCardAnchor, SeedMode};
+use crate::anchor::source::SourceQuestion;
 use crate::core::{
     AttemptId, Domain, ErrorEventId, ExamProfileId, ProblemFamilyId, ProblemInstanceId,
     ProceduralError, PyqId, Result, SchemaId, SkillId,
@@ -65,6 +66,14 @@ pub(crate) fn format_family_title(family_id: &str) -> String {
         })
         .collect();
     words.join(" ")
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ReconciliationReport {
+    pub new_count: usize,
+    pub updated_count: usize,
+    pub unchanged_count: usize,
+    pub archived_count: usize,
 }
 
 /// High-level service facade providing the narrow integration boundary
@@ -148,6 +157,53 @@ impl ProceduralService {
     /// Ingests practice questions JSON (like LCM-HCF_PracticeQuestions.json) into the Practice Content Layer.
     pub fn ingest_practice_questions(&self, json_content: &str) -> Result<()> {
         crate::content::ingestion::PracticeContentIngester::ingest_practice_questions_json(&self.store, json_content)
+    }
+
+    /// Reconciles Anki static SourceNotes against the persistent PracticeItem database.
+    pub fn reconcile_source_questions(
+        &self,
+        source_items: Vec<(String, SourceQuestion)>,
+    ) -> Result<ReconciliationReport> {
+        let mut report = ReconciliationReport::default();
+        let mut active_ids = Vec::new();
+
+        for (guid, source_question) in source_items {
+            let item = source_question.clone().into_practice_item(&guid);
+            active_ids.push(item.id.clone());
+
+            let current_hash = self.store.get_practice_item_hash(&item.id)?;
+
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+            let origin_str = serde_json::to_string(&item.origin).unwrap_or_default();
+            let qtype_str = serde_json::to_string(&item.question_type).unwrap_or_default();
+            let meta_str = serde_json::to_string(&item.metadata).unwrap_or_default();
+            let prov_str = serde_json::to_string(&item.provenance).unwrap_or_default();
+            origin_str.hash(&mut hasher);
+            qtype_str.hash(&mut hasher);
+            item.prompt.hash(&mut hasher);
+            item.difficulty.to_bits().hash(&mut hasher);
+            prov_str.hash(&mut hasher);
+            meta_str.hash(&mut hasher);
+            let new_hash = hasher.finish();
+
+            if let Some(existing) = current_hash {
+                if existing == new_hash {
+                    report.unchanged_count += 1;
+                    continue; // Skip UPSERT if identical
+                } else {
+                    report.updated_count += 1;
+                }
+            } else {
+                report.new_count += 1;
+            }
+
+            self.store.upsert_practice_item(&item)?;
+        }
+
+        report.archived_count = self.store.archive_missing_practice_items(&active_ids)?;
+        Ok(report)
     }
 
     /// Access the prerequisite graph service.
@@ -1989,5 +2045,61 @@ mod tests {
         // Verify store has updated skill states
         let math_state = service.store.get_skill_state(&session.questions[0].skill_id).unwrap();
         assert!(math_state.is_some());
+    }
+
+    #[test]
+    fn test_reconciliation_lifecycle() {
+        use crate::anchor::source::SourceQuestion;
+        use serde_json::json;
+
+        let store = crate::storage::store::ProceduralStore::open_in_memory().unwrap();
+        let service = ProceduralService::new(store);
+
+        let guid = "abc123_test".to_string();
+        let source_q = SourceQuestion {
+            prompt: "What is 2 + 2?".to_string(),
+            options: Some(vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()]),
+            correct_answer: "4".to_string(),
+            explanation: Some("Basic math".to_string()),
+            domain: "Mathematics".to_string(),
+            chapter: "Algebra".to_string(),
+            topic: "Math".to_string(),
+            difficulty: 1.0,
+        };
+
+        // 1. Initial Insert (NEW)
+        let report1 = service.reconcile_source_questions(vec![(guid.clone(), source_q.clone())]).unwrap();
+        assert_eq!(report1.new_count, 1);
+        assert_eq!(report1.updated_count, 0);
+        assert_eq!(report1.unchanged_count, 0);
+        assert_eq!(report1.archived_count, 0);
+
+        // 2. No Changes (UNCHANGED)
+        let report2 = service.reconcile_source_questions(vec![(guid.clone(), source_q.clone())]).unwrap();
+        assert_eq!(report2.new_count, 0);
+        assert_eq!(report2.updated_count, 0);
+        assert_eq!(report2.unchanged_count, 1);
+        assert_eq!(report2.archived_count, 0);
+
+        // 3. Update existing (UPDATED)
+        let mut source_q_updated = source_q.clone();
+        source_q_updated.prompt = "What is 3 + 3?".to_string();
+        let report3 = service.reconcile_source_questions(vec![(guid.clone(), source_q_updated.clone())]).unwrap();
+        assert_eq!(report3.new_count, 0);
+        assert_eq!(report3.updated_count, 1);
+        assert_eq!(report3.unchanged_count, 0);
+        assert_eq!(report3.archived_count, 0);
+
+        // 4. Archive missing (ARCHIVED)
+        let report4 = service.reconcile_source_questions(vec![]).unwrap();
+        assert_eq!(report4.new_count, 0);
+        assert_eq!(report4.updated_count, 0);
+        assert_eq!(report4.unchanged_count, 0);
+        assert_eq!(report4.archived_count, 1); // The one we inserted is now missing
+        
+        // Verify it was archived in metadata
+        // Actually, we can't easily query by skill directly for the static source because we don't have get_practice_item,
+        // but we know it's archived if we check get_practice_item_hash or something similar if it existed.
+        // For now, checking the archived count is sufficient for integration testing!
     }
 }

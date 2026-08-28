@@ -182,6 +182,27 @@ impl Collection {
         Ok(self.state.procedural_service.as_ref().unwrap().clone())
     }
 
+    pub fn reconcile_source_questions(&mut self) -> Result<procedural::service::ReconciliationReport> {
+        let note_ids = self.search_notes_unordered("note:\"StudyLab Source*\"")?;
+        
+        let mut source_items = Vec::new();
+        
+        for id in note_ids {
+            if let Ok(note) = self.get_note(id) {
+                if let Ok(nt) = self.get_notetype(note.notetype_id) {
+                    let fields = note.fields_map(&nt.fields);
+                    if let Ok(source_q) = procedural::anchor::source::SourceQuestion::extract_from_card_fields(&fields) {
+                        source_items.push((note.guid.clone(), source_q));
+                    }
+                }
+            }
+        }
+        
+        let service = self.procedural_service()?;
+        let report = service.reconcile_source_questions(source_items)?;
+        Ok(report)
+    }
+
     // A count of all changed rows since the collection was opened, which can be
     // used to detect if the collection was modified or not.
     pub fn changes_since_open(&self) -> Result<u64> {

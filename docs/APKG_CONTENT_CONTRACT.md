@@ -14,7 +14,7 @@ StudyLab fundamentally transforms Anki from a static flashcard memorization tool
 ### 1.1 Core Principles
 1. **APKG as an Executable Blueprint Package:** Rather than thousands of static flashcards, a single StudyLab `.apkg` deck contains compact declarative contracts. Each card acts as an anchor that generates infinite variations of mathematically sound, pedagogically calibrated problems at review time.
 2. **Zero-Rust Declarative Scalability:** Authors define parameter domains, algebraic relationships, multi-step derivation graphs, and diagnostic hints in standardized JSON schemas. No Rust binary recompilation is required to author new subjects, chapters, or problem families.
-3. **Seamless Native Interception:** Cards use the dedicated note type `"StudyLab Procedural Anchor"`. When rendered in Anki's review window, `rslib/src/notetype/render.rs:122` intercepts the card and routes it through the procedural engine (`ProceduralService`), executing the blueprint and mounting the interactive webview surface.
+3. **Seamless Native Interception:** Cards use the dedicated note type `"StudyLab Procedural Anchor"` (for generated items) or `"StudyLab Source Anchor"` (for static curated questions). When rendered in Anki's review window, `rslib/src/notetype/render.rs` intercepts the card and routes it through the procedural engine (`ProceduralService`), executing the blueprint or rendering the source, and mounting the interactive webview surface.
 4. **Clean AnkiWeb Sync Compatibility:** Procedural card anchors are tiny metadata records (< 2 KB). They do not bloat Anki's `collection.anki2` database or violate Anki's 100-byte custom card data limits, allowing seamless syncing across desktop, mobile, and web.
 
 ```text
@@ -115,6 +115,24 @@ Anki notes for StudyLab contain up to 8 defined fields, with `ProceduralPayload`
 | **`LearningObjectType`** | `5` | Optional | String | Modality: `"problem"`, `"quick"`, `"mcq"`, `"stepwise"`, `"concept_check"`, `"strategy_drill"`, `"worked_example"`. |
 | **`Front`** | `6` | Fallback | Plain Text / HTML | Fallback question text for non-StudyLab standard Anki installations. |
 | **`Back`** | `7` | Fallback | Plain Text / HTML | Fallback solution text for non-StudyLab standard Anki installations. |
+
+---
+
+## 3.5 Source-First Eligibility Hook
+
+In Phase 2 of the Source-First Migration, a new path was introduced for purely static, curated content (e.g., historical PYQs) that should bypass dynamic generation. 
+
+Notes with a Notetype name starting with `"StudyLab Source"` are intercepted directly in `rslib/src/notetype/render.rs` and passed to `render_source_anchor`. 
+
+These notes map directly to the `SourceQuestion` Rust struct and use standard fields instead of a JSON payload:
+- **`Prompt`** or **`Question`** or **`Front`**
+- **`Options`** (Newline separated or JSON array string)
+- **`CorrectAnswer`** or **`Answer`** or **`Back`**
+- **`Explanation`** or **`Solution`** or **`Steps`**
+- **`Domain`** or **`Subject`**
+- **`Chapter`**
+- **`Topic`**
+- **`Difficulty`**
 
 ---
 
