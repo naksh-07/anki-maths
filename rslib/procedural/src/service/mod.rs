@@ -532,6 +532,38 @@ impl ProceduralService {
         Ok(session)
     }
 
+    /// Resolves a source target directly from persistent practice_items.
+    /// This is the primary Phase 4 source-first playback path.
+    pub fn resolve_source_target(
+        &self,
+        guid: &str,
+        card_id: Option<i64>,
+    ) -> Result<PracticeSessionObject> {
+        let item_id = SourceQuestion::stable_id_from_guid(guid);
+        let item = self.store.get_practice_item(&item_id)?
+            .ok_or_else(|| ProceduralError::NotFound(format!("Source question not found in database: {}. Please reconcile first.", guid)))?;
+
+        let instance = item.clone().into_problem_instance();
+        
+        let topic = item.metadata.get("topic").and_then(|v| v.as_str()).unwrap_or("General").to_string();
+        let schema_title = format!("Static Source Schema for {}", topic);
+
+        let schema = SchemaPracticeObject::new(
+            item.schema_id.clone(),
+            item.skill_id.clone(),
+            item.problem_family_id.clone(),
+            topic,
+            schema_title,
+        );
+        
+        let mut session = PracticeSessionObject::new(schema, instance, card_id, None);
+        session.readiness = SessionReadiness::Ready;
+        session.selection_reason = Some("StudyLab Static Source Rendering from DB".to_string());
+        session.difficulty_level = Some(item.difficulty as u32);
+        
+        Ok(session)
+    }
+
     /// Resolves a procedural anchor directly into a hydrated PracticeSessionObject.
     /// In Phase 35, this supports the complete contract source precedence:
     /// 1. Modern Rich APKG Path: `inline_contract` carries complete declarative blueprint
@@ -803,15 +835,67 @@ impl ProceduralService {
         hints_used: u32,
         attempt_count: u32,
     ) -> Result<ProceduralReviewOutcome> {
-        let instance = self
-            .store
-            .get_problem_instance(instance_id)?
-            .ok_or_else(|| ProceduralError::NotFound(format!("Problem instance not found: {}", instance_id)))?;
+        let (instance, family_id, skill_id, schema_id) = if instance_id.as_str().starts_with("inst-pi-") {
+            let practice_item_id = crate::core::PracticeItemId::new(instance_id.as_str().replace("inst-pi-", ""));
+            let item = self
+                .store
+                .get_practice_item(&practice_item_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Practice item not found: {}", practice_item_id)))?;
+            let f_id = item.problem_family_id.clone();
+            let s_id = item.skill_id.clone();
+            let sch_id = item.schema_id.clone();
+            
+            let _ = self.store.insert_skill(&crate::skills::Skill {
+                id: s_id.clone(),
+                domain: item.domain.clone(),
+                name: item.chapter.clone(),
+                description: format!("Synthetic skill for {}", item.chapter),
+                prerequisites: vec![],
+                metadata: serde_json::json!({ "synthetic": true }),
+                created_at: chrono::Utc::now().timestamp(),
+            });
 
-        let family = self
-            .store
-            .get_problem_family(&instance.family_id)?
-            .ok_or_else(|| ProceduralError::NotFound(format!("Problem family not found: {}", instance.family_id)))?;
+            let _ = self.store.insert_problem_family(&crate::problems::ProblemFamily {
+                id: f_id.clone(),
+                skill_id: s_id.clone(),
+                domain: item.domain.clone(),
+                name: item.chapter.clone(),
+                template_ref: "static_source".to_string(),
+                min_difficulty: item.difficulty,
+                max_difficulty: item.difficulty,
+                parameters_schema: serde_json::json!({}),
+                metadata: serde_json::json!({ "synthetic": true }),
+                created_at: chrono::Utc::now().timestamp(),
+            });
+
+            let _ = self.store.insert_schema(&crate::practice::SchemaPracticeObject::new(
+                sch_id.clone(),
+                s_id.clone(),
+                f_id.clone(),
+                item.chapter.clone(),
+                "Static Source Schema".to_string(),
+            ));
+
+            let instance = item.clone().into_problem_instance();
+            let _ = self.store.insert_problem_instance(&instance);
+
+            (instance, f_id, s_id, sch_id)
+        } else {
+            let instance = self
+                .store
+                .get_problem_instance(instance_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Problem instance not found: {}", instance_id)))?;
+            let family = self
+                .store
+                .get_problem_family(&instance.family_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Problem family not found: {}", instance.family_id)))?;
+            let schema_id = self
+                .store
+                .get_schema_by_family(&family.id)?
+                .map(|s| s.id)
+                .unwrap_or_else(|| SchemaId::new(format!("schema.{}", family.id.as_str())));
+            (instance, family.id, family.skill_id, schema_id)
+        };
 
         let target_time_ms = instance
             .metadata
@@ -826,27 +910,47 @@ impl ProceduralService {
             .map(|s| s.to_string());
 
         // Dispatch to registered validator or fallback
-        let eval = if let Some(validator) = self.registry.get_validator(family.id.as_str()) {
+        let eval = if let Some(validator) = self.registry.get_validator(family_id.as_str()) {
             validator.evaluate(&instance, &student_answer, time_taken_ms, target_time_ms)
         } else {
-            PercentageSuccessiveValidator::evaluate(
-                &instance.correct_answer,
-                &instance.parameters,
-                &student_answer,
-                time_taken_ms,
-                target_time_ms,
-            )
+            // Support simple string-based matching for static source items (MCQ/Reference)
+            if let Some(correct_opt) = instance.correct_answer.get("correct_option").and_then(|v| v.as_str()) {
+                let student_val_str = student_answer.get("value").and_then(|v| v.as_str()).unwrap_or("");
+                let is_correct = student_val_str == correct_opt;
+                crate::problems::validator::AnswerEvaluation {
+                    is_correct,
+                    score: if is_correct { 1.0 } else { 0.0 },
+                    parsed_student_value: None,
+                    canonical_value: 0.0,
+                    error_category: if is_correct { None } else { Some(crate::diagnostics::ErrorCategory::Unknown) },
+                    diagnostic_message: None,
+                }
+            } else if let Some(correct_ans) = instance.correct_answer.get("answer").and_then(|v| v.as_str()) {
+                let student_val_str = student_answer.get("value").and_then(|v| v.as_str()).unwrap_or("");
+                let is_correct = student_val_str == correct_ans;
+                crate::problems::validator::AnswerEvaluation {
+                    is_correct,
+                    score: if is_correct { 1.0 } else { 0.0 },
+                    parsed_student_value: None,
+                    canonical_value: 0.0,
+                    error_category: if is_correct { None } else { Some(crate::diagnostics::ErrorCategory::Unknown) },
+                    diagnostic_message: None,
+                }
+            } else {
+                PercentageSuccessiveValidator::evaluate(
+                    &instance.correct_answer,
+                    &instance.parameters,
+                    &student_answer,
+                    time_taken_ms,
+                    target_time_ms,
+                )
+            }
         };
 
         let attempt_id = AttemptId::new(format!(
             "att-{}",
             Utc::now().timestamp_nanos_opt().unwrap_or(Utc::now().timestamp())
         ));
-        let schema_id = self
-            .store
-            .get_schema_by_family(&family.id)?
-            .map(|s| s.id)
-            .unwrap_or_else(|| SchemaId::new(format!("schema.{}", family.id.as_str())));
 
         let metadata = serde_json::json!({
             "hints_used": hints_used,
@@ -864,7 +968,7 @@ impl ProceduralService {
             &attempt_id,
             &instance.id,
             &schema_id,
-            &family.skill_id,
+            &skill_id,
             student_answer,
             eval.is_correct,
             eval.score,
@@ -895,7 +999,7 @@ impl ProceduralService {
         let mut outcome = ProceduralReviewOutcome::new(
             attempt_id,
             schema_id,
-            family.skill_id,
+            skill_id,
             instance.family_id,
             instance.seed,
             eval.is_correct,
@@ -919,15 +1023,67 @@ impl ProceduralService {
         card_id: Option<i64>,
         submission: &crate::problems::steps::StepwiseSubmission,
     ) -> Result<ProceduralReviewOutcome> {
-        let instance = self
-            .store
-            .get_problem_instance(instance_id)?
-            .ok_or_else(|| ProceduralError::NotFound(format!("Problem instance not found: {}", instance_id)))?;
+        let (instance, family_id, skill_id, schema_id) = if instance_id.as_str().starts_with("inst-pi-") {
+            let practice_item_id = crate::core::PracticeItemId::new(instance_id.as_str().replace("inst-pi-", ""));
+            let item = self
+                .store
+                .get_practice_item(&practice_item_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Practice item not found: {}", practice_item_id)))?;
+            let f_id = item.problem_family_id.clone();
+            let s_id = item.skill_id.clone();
+            let sch_id = item.schema_id.clone();
 
-        let family = self
-            .store
-            .get_problem_family(&instance.family_id)?
-            .ok_or_else(|| ProceduralError::NotFound(format!("Problem family not found: {}", instance.family_id)))?;
+            let _ = self.store.insert_skill(&crate::skills::Skill {
+                id: s_id.clone(),
+                domain: item.domain.clone(),
+                name: item.chapter.clone(),
+                description: format!("Synthetic skill for {}", item.chapter),
+                prerequisites: vec![],
+                metadata: serde_json::json!({ "synthetic": true }),
+                created_at: chrono::Utc::now().timestamp(),
+            });
+
+            let _ = self.store.insert_problem_family(&crate::problems::ProblemFamily {
+                id: f_id.clone(),
+                skill_id: s_id.clone(),
+                domain: item.domain.clone(),
+                name: item.chapter.clone(),
+                template_ref: "static_source".to_string(),
+                min_difficulty: item.difficulty,
+                max_difficulty: item.difficulty,
+                parameters_schema: serde_json::json!({}),
+                metadata: serde_json::json!({ "synthetic": true }),
+                created_at: chrono::Utc::now().timestamp(),
+            });
+
+            let _ = self.store.insert_schema(&crate::practice::SchemaPracticeObject::new(
+                sch_id.clone(),
+                s_id.clone(),
+                f_id.clone(),
+                item.chapter.clone(),
+                "Static Source Schema".to_string(),
+            ));
+
+            let instance = item.clone().into_problem_instance();
+            let _ = self.store.insert_problem_instance(&instance);
+
+            (instance, f_id, s_id, sch_id)
+        } else {
+            let instance = self
+                .store
+                .get_problem_instance(instance_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Problem instance not found: {}", instance_id)))?;
+            let family = self
+                .store
+                .get_problem_family(&instance.family_id)?
+                .ok_or_else(|| ProceduralError::NotFound(format!("Problem family not found: {}", instance.family_id)))?;
+            let schema_id = self
+                .store
+                .get_schema_by_family(&family.id)?
+                .map(|s| s.id)
+                .unwrap_or_else(|| SchemaId::new(format!("schema.{}", family.id.as_str())));
+            (instance, family.id, family.skill_id, schema_id)
+        };
 
         let target_time_ms = instance
             .metadata
@@ -941,7 +1097,7 @@ impl ProceduralService {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let step_eval = if let Some(validator) = self.registry.get_validator(family.id.as_str()) {
+        let step_eval = if let Some(validator) = self.registry.get_validator(family_id.as_str()) {
             validator.evaluate_stepwise(&instance, submission, target_time_ms)
         } else if let Some(graph) = instance.solution_graph() {
             crate::problems::steps::StepValidator::evaluate_submission(&graph, submission, target_time_ms)
@@ -951,13 +1107,38 @@ impl ProceduralService {
                 .as_ref()
                 .map(|s| serde_json::json!(s))
                 .unwrap_or(serde_json::Value::Null);
-            let ans_eval = PercentageSuccessiveValidator::evaluate(
-                &instance.correct_answer,
-                &instance.parameters,
-                &ans_json,
-                submission.total_time_ms,
-                target_time_ms,
-            );
+
+            let ans_eval = if let Some(correct_opt) = instance.correct_answer.get("correct_option").and_then(|v| v.as_str()) {
+                let student_val_str = ans_json.get("value").or_else(|| ans_json.get("answer")).and_then(|v| v.as_str()).unwrap_or("");
+                let is_correct = student_val_str == correct_opt;
+                crate::problems::validator::AnswerEvaluation {
+                    is_correct,
+                    score: if is_correct { 1.0 } else { 0.0 },
+                    parsed_student_value: None,
+                    canonical_value: 0.0,
+                    error_category: if is_correct { None } else { Some(crate::diagnostics::ErrorCategory::Unknown) },
+                    diagnostic_message: None,
+                }
+            } else if let Some(correct_ans) = instance.correct_answer.get("answer").and_then(|v| v.as_str()) {
+                let student_val_str = ans_json.get("value").or_else(|| ans_json.get("answer")).and_then(|v| v.as_str()).unwrap_or("");
+                let is_correct = student_val_str == correct_ans;
+                crate::problems::validator::AnswerEvaluation {
+                    is_correct,
+                    score: if is_correct { 1.0 } else { 0.0 },
+                    parsed_student_value: None,
+                    canonical_value: 0.0,
+                    error_category: if is_correct { None } else { Some(crate::diagnostics::ErrorCategory::Unknown) },
+                    diagnostic_message: None,
+                }
+            } else {
+                PercentageSuccessiveValidator::evaluate(
+                    &instance.correct_answer,
+                    &instance.parameters,
+                    &ans_json,
+                    submission.total_time_ms,
+                    target_time_ms,
+                )
+            };
             crate::problems::steps::StepGraphEvaluation {
                 is_correct: ans_eval.is_correct,
                 score: ans_eval.score,
@@ -978,11 +1159,6 @@ impl ProceduralService {
             "att-{}",
             Utc::now().timestamp_nanos_opt().unwrap_or(Utc::now().timestamp())
         ));
-        let schema_id = self
-            .store
-            .get_schema_by_family(&family.id)?
-            .map(|s| s.id)
-            .unwrap_or_else(|| SchemaId::new(format!("schema.{}", family.id.as_str())));
 
         let error_category = step_eval.first_error_type.map(|e| match e {
             crate::problems::steps::StepErrorType::FormulaSelectionError => ErrorCategory::Concept,
@@ -1023,7 +1199,7 @@ impl ProceduralService {
             crate::problems::steps::StepErrorType::Unknown => ErrorCategory::Unknown,
         });
 
-        let domain_ev_opt = step_eval.to_domain_evidence(family.id.as_str());
+        let domain_ev_opt = step_eval.to_domain_evidence(family_id.as_str());
 
         let mut metadata = serde_json::json!({
             "hints_used": submission.hints_used,
@@ -1058,7 +1234,7 @@ impl ProceduralService {
             &attempt_id,
             &instance.id,
             &schema_id,
-            &family.skill_id,
+            &skill_id,
             student_val,
             step_eval.is_correct,
             step_eval.score,
@@ -1090,7 +1266,7 @@ impl ProceduralService {
         let mut outcome = ProceduralReviewOutcome::new(
             attempt_id,
             schema_id,
-            family.skill_id,
+            skill_id,
             instance.family_id,
             instance.seed,
             step_eval.is_correct,
@@ -2101,5 +2277,94 @@ mod tests {
         // Actually, we can't easily query by skill directly for the static source because we don't have get_practice_item,
         // but we know it's archived if we check get_practice_item_hash or something similar if it existed.
         // For now, checking the archived count is sufficient for integration testing!
+    }
+
+    #[test]
+    fn test_resolve_source_target() {
+        use crate::anchor::source::SourceQuestion;
+
+        let store = crate::storage::store::ProceduralStore::open_in_memory().unwrap();
+        let service = ProceduralService::new(store);
+
+        let guid = "abc123_resolve_test".to_string();
+        let source_q = SourceQuestion {
+            prompt: "What is 2 + 2?".to_string(),
+            options: Some(vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()]),
+            correct_answer: "4".to_string(),
+            explanation: Some("Basic math".to_string()),
+            domain: "Mathematics".to_string(),
+            chapter: "Algebra".to_string(),
+            topic: "Math".to_string(),
+            difficulty: 1.0,
+        };
+
+        // Initially it shouldn't exist
+        let err = service.resolve_source_target(&guid, Some(42)).unwrap_err();
+        assert!(matches!(err, crate::core::ProceduralError::NotFound(_)));
+
+        // Reconcile to insert it
+        service.reconcile_source_questions(vec![(guid.clone(), source_q)]).unwrap();
+
+        // Now we can resolve it
+        let session = service.resolve_source_target(&guid, Some(42)).unwrap();
+        assert_eq!(session.card_id, Some(42));
+        assert_eq!(session.schema.id.as_str(), "schema.static.source");
+        assert_eq!(session.instance.correct_answer["correct_option"].as_str().unwrap(), "4");
+    }
+    #[test]
+    fn test_evaluate_source_first_attempt() {
+        use crate::anchor::source::SourceQuestion;
+        use serde_json::json;
+
+        let store = crate::storage::store::ProceduralStore::open_in_memory().unwrap();
+        let service = ProceduralService::new(store);
+
+        let guid = "abc123_eval_test".to_string();
+        let source_q = SourceQuestion {
+            prompt: "What is 2 + 3?".to_string(),
+            options: Some(vec!["3".to_string(), "4".to_string(), "5".to_string(), "6".to_string()]),
+            correct_answer: "5".to_string(),
+            explanation: Some("Basic math".to_string()),
+            domain: "Mathematics".to_string(),
+            chapter: "Algebra".to_string(),
+            topic: "Math".to_string(),
+            difficulty: 1.0,
+        };
+
+        // Reconcile to insert it
+        service.reconcile_source_questions(vec![(guid.clone(), source_q)]).unwrap();
+
+        // Resolve to get the instance ID
+        let session = service.resolve_source_target(&guid, Some(42)).unwrap();
+        let instance_id = &session.instance.id;
+        
+        assert!(instance_id.as_str().starts_with("inst-pi-"));
+
+        // Evaluate and record attempt
+        let outcome = service.evaluate_and_record_attempt(
+            instance_id,
+            Some(42),
+            json!({"value": "5"}),
+            15000,
+            0,
+            1,
+        ).unwrap();
+
+        assert!(outcome.is_correct);
+        assert_eq!(outcome.score, 1.0);
+        assert_eq!(outcome.schema_id.as_str(), "schema.static.source");
+
+        // Now evaluate an incorrect attempt to trigger error event logging
+        let outcome2 = service.evaluate_and_record_attempt(
+            instance_id,
+            Some(42),
+            json!({"value": "6"}),
+            10000,
+            0,
+            2,
+        ).unwrap();
+
+        assert!(!outcome2.is_correct);
+        assert_eq!(outcome2.score, 0.0);
     }
 }

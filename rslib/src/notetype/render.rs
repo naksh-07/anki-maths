@@ -273,15 +273,31 @@ impl Collection {
             })
         };
 
-        let fields = note.fields_map(&nt.fields);
-        let source_q = match procedural::anchor::source::SourceQuestion::extract_from_card_fields(&fields) {
-            Ok(q) => q,
-            Err(e) => return error_html(&format!("Failed to parse source question from note: {}", e)),
+        let service = match self.procedural_service() {
+            Ok(s) => s,
+            Err(e) => return error_html(&format!("Failed to open procedural storage: {}", e)),
         };
 
-        let session = match source_q.into_practice_session(Some(card.id.0)) {
+        let guid = note.guid.clone();
+
+        let session = match service.resolve_source_target(&guid, Some(card.id.0)) {
             Ok(s) => s,
-            Err(e) => return error_html(&format!("Failed to initialize source practice session: {}", e)),
+            Err(_) => {
+                let fields = note.fields_map(&nt.fields);
+                let source_q = match procedural::anchor::source::SourceQuestion::extract_from_card_fields(&fields) {
+                    Ok(q) => q,
+                    Err(e) => return error_html(&format!("Failed to parse source question from note: {}", e)),
+                };
+                
+                if let Err(e) = service.reconcile_source_questions(vec![(guid.clone(), source_q)]) {
+                     return error_html(&format!("Failed to reconcile missing source question: {}", e));
+                }
+                
+                match service.resolve_source_target(&guid, Some(card.id.0)) {
+                    Ok(s) => s,
+                    Err(e) => return error_html(&format!("Failed to load source question after reconciliation: {}", e)),
+                }
+            }
         };
 
         let html = procedural::reviewer::render_reviewer_html(&session);

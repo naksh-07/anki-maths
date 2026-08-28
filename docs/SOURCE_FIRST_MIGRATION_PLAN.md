@@ -82,7 +82,7 @@ Any intentional exclusion (e.g., malformed note) must be explicitly logged. Sile
 1. **Phase 1 — Discovery & Planning**: COMPLETE.
 2. **Phase 2 — Eligibility & Interception (Read-Only)**: COMPLETE. Implemented `StudyLab Source` prefix interception hook in `render.rs`. Extracted fields (`Prompt`, `Options`, `CorrectAnswer`, etc.) into unified `SourceQuestion` struct in `rslib/procedural/src/anchor/source.rs` and translated directly into a `PracticeSessionObject` for UI rendering without generation.
 3. **Phase 3 — Identity & Persistence (Write)**: COMPLETE. Implemented reconciliation logic in `ProceduralService::reconcile_source_questions`. Mapped the extracted struct to canonical `PracticeItem` utilizing Note GUIDs. Added deterministic hashing to avoid unnecessary updates. Implemented SQL `UPSERT` in `ProceduralStore` and handles New/Updated/Archived states safely.
-4. **Phase 4 — Runtime Wiring**: Connect the procedural rendering engine to feed off `practice_items` instead of `ProceduralCardAnchor` templates.
+4. **Phase 4 — Runtime Wiring**: COMPLETE. Connected the procedural rendering engine (`render.rs`) to feed strictly off `practice_items` (via `resolve_source_target`) instead of dynamically hydrating from `ProceduralCardAnchor` templates. Implemented on-the-fly reconciliation fallback and removed deprecated direct rendering paths to enforce architectural invariants.
 5. **Phase 5 — Diagnostics & Telemetry Validation**: Ensure that learner evidence (`error_events`, `practice_attempts`) routes correctly to the new stable identities.
 
 ## O. Definition of Done

@@ -188,8 +188,8 @@ impl Collection {
         let mut source_items = Vec::new();
         
         for id in note_ids {
-            if let Ok(note) = self.get_note(id) {
-                if let Ok(nt) = self.get_notetype(note.notetype_id) {
+            if let Ok(Some(note)) = self.storage.get_note(id) {
+                if let Ok(Some(nt)) = self.get_notetype(note.notetype_id) {
                     let fields = note.fields_map(&nt.fields);
                     if let Ok(source_q) = procedural::anchor::source::SourceQuestion::extract_from_card_fields(&fields) {
                         source_items.push((note.guid.clone(), source_q));
@@ -199,7 +199,7 @@ impl Collection {
         }
         
         let service = self.procedural_service()?;
-        let report = service.reconcile_source_questions(source_items)?;
+        let report = service.reconcile_source_questions(source_items).map_err(|e| crate::error::AnkiError::TemplateError { info: e.to_string() })?;
         Ok(report)
     }
 

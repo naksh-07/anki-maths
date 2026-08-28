@@ -4,15 +4,15 @@
 StudyLab is a procedural problem-solving and adaptive learning engine hosted inside the Anki desktop runtime, providing generative problem generation, step-by-step validation, mistake classification, longitudinal skill tracking, and adaptive remediation.
 
 ```
-[Canonical APKG / Topic Factory]
-             │ (StudyLab Procedural Anchor Note / inline_contract)
+[Canonical APKG / Static Source Exporter]
+             │ (StudyLab Source Note / static questions)
              ▼
 [Anki Collection: collection.anki2] ──(isolated)──> [Normal Cards: Basic, Cloze]
              │
              ▼ (rslib/src/notetype/render.rs Interception Hook)
-[Rust Procedural Engine: rslib/procedural/]
+[Rust Procedural Engine: rslib/procedural/] (Bypasses Generation)
              │
-             ├──> [Isolated DB: <collection>.procedural] (16 tables, 22 indexes, WAL)
+             ├──> [Isolated DB: <collection>.procedural] (practice_items, pyq_sources)
              │
              ▼ (IPC / Qt Reviewer Bridge: qt/aqt/reviewer.py)
 [Qt WebEngine Reviewer Viewport]
