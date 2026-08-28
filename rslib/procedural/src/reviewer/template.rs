@@ -98,6 +98,9 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         .correct_answer
         .get("solution")
         .and_then(|v| v.as_str())
+        .or_else(|| session.instance.metadata.get("solution").and_then(|v| v.as_str()))
+        .or_else(|| session.instance.metadata.get("explanation").and_then(|v| v.as_str()))
+        .or_else(|| session.instance.correct_answer.get("explanation").and_then(|v| v.as_str()))
         .unwrap_or("");
     let solution_text = escape_html(raw_solution);
 
@@ -116,30 +119,26 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
     );
 
     // ANTI-05: Only authentic competitive exam provenance tags are rendered
-    let provenance_badge = if let Some(prov) = session.instance.metadata.get("provenance") {
-        let exam = prov.get("exam").and_then(|v| v.as_str());
-        let year = prov.get("year").and_then(|v| v.as_u64());
-        let shift = prov.get("shift").and_then(|v| v.as_str());
-        
-        let prov_label = match (exam, year) {
-            (Some(e), Some(y)) => {
-                if let Some(s) = shift {
-                    format!("PYQ: {} {} · {}", e, y, s)
-                } else {
-                    format!("PYQ: {} {}", e, y)
-                }
-            }
-            (Some(e), None) => format!("PYQ: {}", e),
-            _ => "".to_string(),
-        };
+    let exam_opt = session.instance.metadata.get("exam").and_then(|v| v.as_str())
+        .or_else(|| session.instance.metadata.get("provenance").and_then(|p| p.get("exam")).and_then(|v| v.as_str()));
+    let year_opt = session.instance.metadata.get("year").and_then(|v| v.as_u64().or_else(|| v.as_i64().map(|i| i as u64)).or_else(|| v.as_str().and_then(|s| s.parse::<u64>().ok())))
+        .or_else(|| session.instance.metadata.get("provenance").and_then(|p| p.get("year")).and_then(|v| v.as_u64()));
+    let shift_opt = session.instance.metadata.get("shift").and_then(|v| v.as_str())
+        .or_else(|| session.instance.metadata.get("provenance").and_then(|p| p.get("shift")).and_then(|v| v.as_str()));
 
-        if !prov_label.is_empty() {
-            format!("<span class=\"proc-pyq-badge\">{}</span>", escape_html(&prov_label))
-        } else {
-            "".to_string()
+    let provenance_badge = match (exam_opt, year_opt) {
+        (Some(e), Some(y)) => {
+            let label = if let Some(s) = shift_opt {
+                format!("PYQ: {} {} · {}", e, y, s)
+            } else {
+                format!("PYQ: {} {}", e, y)
+            };
+            format!("<span class=\"proc-pyq-badge\">{}</span>", escape_html(&label))
         }
-    } else {
-        "".to_string()
+        (Some(e), None) => {
+            format!("<span class=\"proc-pyq-badge\">{}</span>", escape_html(&format!("PYQ: {}", e)))
+        }
+        _ => "".to_string(),
     };
 
     // Remediation transparency banner

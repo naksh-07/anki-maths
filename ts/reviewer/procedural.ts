@@ -430,6 +430,8 @@ export class ProceduralReviewer {
         mistakeBtns.forEach((btn) => {
             const val = btn.dataset.value || "";
             this.addListener(btn, "click", () => {
+                mistakeBtns.forEach(b => b.classList.remove("selected"));
+                btn.classList.add("selected");
                 this.selectMistakeCategory(val);
             });
         });
@@ -1045,6 +1047,15 @@ export class ProceduralReviewer {
                 <div class="proc-mistake-hint-msg" style="margin-top: 6px; font-size: 0.85rem; color: var(--proc-text-muted, #94a3b8);"><em>Classify your error below to reflect and review canonical derivation.</em></div>
             `;
         }
+
+        if (this.mistakeFooter) {
+            this.mistakeFooter.show((val) => {
+                this.selectMistakeCategory(val);
+            });
+        } else if (this.mistakePanel) {
+            this.mistakePanel.classList.remove("hidden");
+        }
+
         this.typesetMathJax(this.resultPanel);
     }
 
@@ -1079,6 +1090,9 @@ export class ProceduralReviewer {
     ): void {
         this.state = "feedback";
         this.lastAttemptIsCorrect = outcome.isCorrect;
+
+        this.mistakeFooter?.hide();
+        this.mistakePanel?.classList.add("hidden");
 
         // Hide input containers, show result panel, solution
         this.quickContainer?.classList.add("hidden");

@@ -188,7 +188,7 @@ impl ProceduralStore {
         
         let mut count = 0;
         {
-            let mut stmt = tx.prepare("SELECT id, metadata FROM practice_items WHERE origin LIKE '%curated_source%'")?;
+            let mut stmt = tx.prepare("SELECT id, metadata FROM practice_items WHERE id LIKE 'pi_src_%' OR origin LIKE '%curated_source%' OR origin LIKE '%authentic_pyq%'")?;
             let rows = stmt.query_map([], |row| {
                 Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
             })?;

@@ -707,7 +707,8 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
     def _is_procedural_card(self) -> bool:
         try:
             nt = self.card.note_type()
-            return bool(nt and nt.get("name", "").startswith("StudyLab Procedural Anchor"))
+            name = nt.get("name", "") if nt else ""
+            return bool(name.startswith("StudyLab Procedural Anchor") or name.startswith("StudyLab Source"))
         except Exception:
             return False
 

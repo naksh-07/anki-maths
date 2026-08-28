@@ -145,6 +145,25 @@ impl PracticeItem {
             }
         }
         
+        if let Some(meta_obj) = self.metadata.as_object() {
+            if let Some(sol) = meta_obj.get("solution") {
+                correct_answer["solution"] = sol.clone();
+            }
+            if let Some(h) = meta_obj.get("hint") {
+                correct_answer["hint"] = h.clone();
+            }
+            if let Some(exp) = meta_obj.get("explanation") {
+                if !correct_answer.as_object().map_or(false, |o| o.contains_key("explanation")) {
+                    correct_answer["explanation"] = exp.clone();
+                }
+            }
+            if let Some(st) = meta_obj.get("steps") {
+                if !correct_answer.as_object().map_or(false, |o| o.contains_key("steps")) {
+                    correct_answer["steps"] = st.clone();
+                }
+            }
+        }
+        
         let mut metadata = self.metadata;
         if let Some(obj) = metadata.as_object_mut() {
             obj.insert("object_type".to_string(), serde_json::json!(object_type));

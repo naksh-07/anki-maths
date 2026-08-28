@@ -22,12 +22,14 @@ StudyLab is a procedural problem-solving and adaptive learning engine hosted ins
 ```
 
 ### Module Boundaries & Data Flow
-1. **Packaging Tier (`tools/studylab_content_factory.py`, `generate_procedural_apkg.py`)**:
-   - Generates canonical `.apkg` files containing `StudyLab Procedural Anchor` notes.
-   - Embeds Tier-1 `inline_contract` declarative blueprints (175 curriculum topics across Math, Reasoning, Physics, Chemistry).
+1. **Packaging Tier (`tools/studylab_content_factory.py`, Canonical APKG Exporters)**:
+   - Packages canonical `.apkg` files with standard note models:
+     * `StudyLab Source`: Immutable curated source questions (MCQ, Numerical) with full semantic and provenance metadata conforming to `StudyLab-Source-APKG-Contract(1).txt`.
+     * `StudyLab Procedural Anchor`: Declarative generator blueprints (`inline_contract`) across 175 curriculum topics.
 2. **Core Ingestion & Interception (`rslib/src/notetype/render.rs`)**:
-   - Intercepts note rendering if name starts with `StudyLab Procedural Anchor`. Standard notes (`Basic`, `Cloze`) bypass with zero overhead.
-   - Parses `ProceduralCardAnchor` and resolves 3-tier target hierarchy (`inline_contract` -> `content_ref` -> `proc_schema`).
+   - `StudyLab Source*`: Intercepts notes and parses them into `SourceQuestion` (`rslib/procedural/src/anchor/source.rs`), storing them into `practice_items` via deterministic reconciliation and rendering directly without dynamic generation.
+   - `StudyLab Procedural Anchor`: Resolves 3-tier target hierarchy (`inline_contract` -> `content_ref` -> `proc_schema`).
+   - Standard Anki notes (`Basic`, `Cloze`) bypass procedural interception with zero overhead.
 3. **Backend Procedural Engine (`rslib/procedural/`)**:
    - Generates dynamic variants, evaluates math/symbolic/dimensional expressions, and computes Bayesian mastery updates.
 4. **Storage Engine (`collection.procedural`)**:
@@ -86,8 +88,14 @@ StudyLab is a procedural problem-solving and adaptive learning engine hosted ins
 - Schema migrations applied via `MigrationRunner::run(&mut conn) -> Result<usize>` inside single transactions.
 
 ### Rust Rendering Hook ↔ Anki Notetype (`rslib/src/notetype/render.rs`)
-- Signature: `render_procedural_anchor(&self, note: &Note, card: &Card, nt: &Notetype) -> Result<RenderedTemplate>`
-- Gated strictly by: `nt.name.starts_with("StudyLab Procedural Anchor") && !browser`.
+- Signature: `render_card(&self, note: &Note, card: &Card, nt: &Notetype, ...) -> Result<RenderOutput>`
+- Intercepts:
+  * `StudyLab Source*` via `render_source_anchor`: Extracts canonical `SourceQuestion`, reconciles `PracticeItem`, renders discrete interactive MCQ / Numerical cards without generator blueprints.
+  * `StudyLab Procedural Anchor` via `render_procedural_anchor`: Resolves dynamic generator blueprints.
+  * Standard Anki notetypes (`Basic`, `Cloze`, custom): Bypass completely with zero overhead.
+
+### Rust APKG Importer ↔ Procedural Service (`rslib/src/import_export/package/apkg/import/mod.rs`)
+- Automatically invokes `col.reconcile_source_questions()` upon importing any `.apkg` file, maintaining deterministic `New`/`Updated`/`Unchanged`/`Archived` state in `collection.procedural`.
 
 ### Qt Reviewer Bridge ↔ Webview Frontend (`qt/aqt/reviewer.py` ↔ `ts/reviewer/procedural.ts`)
 - Bridge dispatch: `globalThis.pycmd("procedural_attempt:" + JSON.stringify(attempt))`

@@ -462,12 +462,12 @@ impl Notetype {
         }
     }
 
-    pub(crate) fn add_field<S: Into<String>>(&mut self, name: S) -> &mut NoteFieldConfig {
+    pub fn add_field<S: Into<String>>(&mut self, name: S) -> &mut NoteFieldConfig {
         self.fields.push(NoteField::new(name));
         self.fields.last_mut().map(|f| &mut f.config).unwrap()
     }
 
-    pub(crate) fn add_template<S1, S2, S3>(&mut self, name: S1, qfmt: S2, afmt: S3)
+    pub fn add_template<S1, S2, S3>(&mut self, name: S1, qfmt: S2, afmt: S3)
     where
         S1: Into<String>,
         S2: Into<String>,

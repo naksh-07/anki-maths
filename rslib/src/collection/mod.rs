@@ -10,6 +10,7 @@ pub(crate) mod undo;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fmt::Formatter;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -182,24 +183,36 @@ impl Collection {
         Ok(self.state.procedural_service.as_ref().unwrap().clone())
     }
 
+    pub fn media_folder(&self) -> &Path {
+        &self.media_folder
+    }
+
     pub fn reconcile_source_questions(&mut self) -> Result<procedural::service::ReconciliationReport> {
         let note_ids = self.search_notes_unordered("note:\"StudyLab Source*\"")?;
         
         let mut source_items = Vec::new();
+        let mut diagnostics = Vec::new();
         
         for id in note_ids {
             if let Ok(Some(note)) = self.storage.get_note(id) {
                 if let Ok(Some(nt)) = self.get_notetype(note.notetype_id) {
                     let fields = note.fields_map(&nt.fields);
-                    if let Ok(source_q) = procedural::anchor::source::SourceQuestion::extract_from_card_fields(&fields) {
-                        source_items.push((note.guid.clone(), source_q));
+                    match procedural::anchor::source::SourceQuestion::extract_from_card_fields(&fields) {
+                        Ok(source_q) => {
+                            source_items.push((note.guid.clone(), source_q));
+                        }
+                        Err(e) => {
+                            diagnostics.push(format!("Note ID {} (GUID {}): {}", id, note.guid, e));
+                        }
                     }
                 }
             }
         }
         
         let service = self.procedural_service()?;
-        let report = service.reconcile_source_questions(source_items).map_err(|e| crate::error::AnkiError::TemplateError { info: e.to_string() })?;
+        let mut report = service.reconcile_source_questions(source_items).map_err(|e| crate::error::AnkiError::TemplateError { info: e.to_string() })?;
+        report.invalid_count += diagnostics.len();
+        report.diagnostics.extend(diagnostics);
         Ok(report)
     }
 

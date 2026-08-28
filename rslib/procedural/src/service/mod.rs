@@ -68,12 +68,14 @@ pub(crate) fn format_family_title(family_id: &str) -> String {
     words.join(" ")
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ReconciliationReport {
     pub new_count: usize,
     pub updated_count: usize,
     pub unchanged_count: usize,
     pub archived_count: usize,
+    pub invalid_count: usize,
+    pub diagnostics: Vec<String>,
 }
 
 /// High-level service facade providing the narrow integration boundary
@@ -2225,8 +2227,7 @@ mod tests {
 
     #[test]
     fn test_reconciliation_lifecycle() {
-        use crate::anchor::source::SourceQuestion;
-        use serde_json::json;
+        use crate::anchor::source::{CanonicalQuestionType, SourceQuestion};
 
         let store = crate::storage::store::ProceduralStore::open_in_memory().unwrap();
         let service = ProceduralService::new(store);
@@ -2236,11 +2237,23 @@ mod tests {
             prompt: "What is 2 + 2?".to_string(),
             options: Some(vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()]),
             correct_answer: "4".to_string(),
+            hint: None,
+            solution: None,
+            steps: None,
             explanation: Some("Basic math".to_string()),
-            domain: "Mathematics".to_string(),
-            chapter: "Algebra".to_string(),
-            topic: "Math".to_string(),
-            difficulty: 1.0,
+            subject: Some("Mathematics".to_string()),
+            chapter: Some("Algebra".to_string()),
+            topic: Some("Math".to_string()),
+            skill: Some("math.arithmetic".to_string()),
+            problem_type: Some("mcq".to_string()),
+            question_type: CanonicalQuestionType::Mcq,
+            difficulty: Some(1.0),
+            source: Some("Sample Deck".to_string()),
+            exam: None,
+            year: None,
+            shift: None,
+            paper: None,
+            source_question_id: None,
         };
 
         // 1. Initial Insert (NEW)
@@ -2271,17 +2284,12 @@ mod tests {
         assert_eq!(report4.new_count, 0);
         assert_eq!(report4.updated_count, 0);
         assert_eq!(report4.unchanged_count, 0);
-        assert_eq!(report4.archived_count, 1); // The one we inserted is now missing
-        
-        // Verify it was archived in metadata
-        // Actually, we can't easily query by skill directly for the static source because we don't have get_practice_item,
-        // but we know it's archived if we check get_practice_item_hash or something similar if it existed.
-        // For now, checking the archived count is sufficient for integration testing!
+        assert_eq!(report4.archived_count, 1);
     }
 
     #[test]
     fn test_resolve_source_target() {
-        use crate::anchor::source::SourceQuestion;
+        use crate::anchor::source::{CanonicalQuestionType, SourceQuestion};
 
         let store = crate::storage::store::ProceduralStore::open_in_memory().unwrap();
         let service = ProceduralService::new(store);
@@ -2291,11 +2299,23 @@ mod tests {
             prompt: "What is 2 + 2?".to_string(),
             options: Some(vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()]),
             correct_answer: "4".to_string(),
+            hint: None,
+            solution: None,
+            steps: None,
             explanation: Some("Basic math".to_string()),
-            domain: "Mathematics".to_string(),
-            chapter: "Algebra".to_string(),
-            topic: "Math".to_string(),
-            difficulty: 1.0,
+            subject: Some("Mathematics".to_string()),
+            chapter: Some("Algebra".to_string()),
+            topic: Some("Math".to_string()),
+            skill: Some("math.arithmetic".to_string()),
+            problem_type: Some("mcq".to_string()),
+            question_type: CanonicalQuestionType::Mcq,
+            difficulty: Some(1.0),
+            source: None,
+            exam: None,
+            year: None,
+            shift: None,
+            paper: None,
+            source_question_id: None,
         };
 
         // Initially it shouldn't exist
@@ -2308,12 +2328,13 @@ mod tests {
         // Now we can resolve it
         let session = service.resolve_source_target(&guid, Some(42)).unwrap();
         assert_eq!(session.card_id, Some(42));
-        assert_eq!(session.schema.id.as_str(), "schema.static.source");
+        assert_eq!(session.schema.id.as_str(), "schema.source.mathematics.math");
         assert_eq!(session.instance.correct_answer["correct_option"].as_str().unwrap(), "4");
     }
+
     #[test]
     fn test_evaluate_source_first_attempt() {
-        use crate::anchor::source::SourceQuestion;
+        use crate::anchor::source::{CanonicalQuestionType, SourceQuestion};
         use serde_json::json;
 
         let store = crate::storage::store::ProceduralStore::open_in_memory().unwrap();
@@ -2324,11 +2345,23 @@ mod tests {
             prompt: "What is 2 + 3?".to_string(),
             options: Some(vec!["3".to_string(), "4".to_string(), "5".to_string(), "6".to_string()]),
             correct_answer: "5".to_string(),
+            hint: None,
+            solution: None,
+            steps: None,
             explanation: Some("Basic math".to_string()),
-            domain: "Mathematics".to_string(),
-            chapter: "Algebra".to_string(),
-            topic: "Math".to_string(),
-            difficulty: 1.0,
+            subject: Some("Mathematics".to_string()),
+            chapter: Some("Algebra".to_string()),
+            topic: Some("Math".to_string()),
+            skill: Some("math.arithmetic".to_string()),
+            problem_type: Some("mcq".to_string()),
+            question_type: CanonicalQuestionType::Mcq,
+            difficulty: Some(1.0),
+            source: None,
+            exam: None,
+            year: None,
+            shift: None,
+            paper: None,
+            source_question_id: None,
         };
 
         // Reconcile to insert it
@@ -2352,14 +2385,14 @@ mod tests {
 
         assert!(outcome.is_correct);
         assert_eq!(outcome.score, 1.0);
-        assert_eq!(outcome.schema_id.as_str(), "schema.static.source");
+        assert_eq!(outcome.schema_id.as_str(), "schema.source.mathematics.math");
 
         // Now evaluate an incorrect attempt to trigger error event logging
         let outcome2 = service.evaluate_and_record_attempt(
             instance_id,
             Some(42),
-            json!({"value": "6"}),
-            10000,
+            json!({"value": "3"}),
+            20000,
             0,
             2,
         ).unwrap();

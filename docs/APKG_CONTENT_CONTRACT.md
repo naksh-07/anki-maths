@@ -118,21 +118,66 @@ Anki notes for StudyLab contain up to 8 defined fields, with `ProceduralPayload`
 
 ---
 
-## 3.5 Source-First Eligibility Hook
+## 3.5 Canonical Source Question APKG Contract (`StudyLab Source`)
 
-In Phase 2 of the Source-First Migration, a new path was introduced for purely static, curated content (e.g., historical PYQs) that should bypass dynamic generation. 
+StudyLab supports purely static, curated source questions (such as official Previous Year Questions or curriculum problem sets) without requiring generator blueprints. Decks containing static questions conform to the **Canonical StudyLab Source Question Contract**.
 
-Notes with a Notetype name starting with `"StudyLab Source"` are intercepted directly in `rslib/src/notetype/render.rs` and passed to `render_source_anchor`. 
+### 3.5.1 Note Model & Interception
+- **Note Type Name:** Notes starting with `"StudyLab Source"` (e.g. `"StudyLab Source Question"`, `"StudyLab Source Anchor"`).
+- **Interception Hook:** Intercepted in [`rslib/src/notetype/render.rs`](file:///c:/Users/Suraj/Documents/Antigravity/Anki-maths/rslib/src/notetype/render.rs) via `render_source_anchor`.
+- **Target Ingestion Model:** Parsed and validated directly into `SourceQuestion` ([`rslib/procedural/src/anchor/source.rs`](file:///c:/Users/Suraj/Documents/Antigravity/Anki-maths/rslib/procedural/src/anchor/source.rs)).
 
-These notes map directly to the `SourceQuestion` Rust struct and use standard fields instead of a JSON payload:
-- **`Prompt`** or **`Question`** or **`Front`**
-- **`Options`** (Newline separated or JSON array string)
-- **`CorrectAnswer`** or **`Answer`** or **`Back`**
-- **`Explanation`** or **`Solution`** or **`Steps`**
-- **`Domain`** or **`Subject`**
-- **`Chapter`**
-- **`Topic`**
-- **`Difficulty`**
+### 3.5.2 Canonical Field Specification
+
+| Field Name | Category | Required / Optional | Data Type | Description & Validation Rules |
+|---|---|---|---|---|
+| **`Prompt`** | Content | **Mandatory** | Plain Text / LaTeX | The primary question text or problem statement. Must not be empty. |
+| **`QuestionType`** | Semantics | **Mandatory** | String Enum | Explicit question type: `"mcq"` (or `"multiple_choice"`) or `"numerical"` (or `"numeric"`). Never inferred. |
+| **`CorrectAnswer`** | Content | **Mandatory** | String | The canonical answer. For MCQ: must match or resolve to one of the provided `Options`. For Numerical: must parse as numeric floating point. |
+| **`Options`** | Content | Mandatory for MCQ | JSON Array / Newlines | Array of at least 2 option strings (e.g. `["A", "B", "C", "D"]`). Omitted or ignored for Numerical. |
+| **`Difficulty`** | Semantics | Optional | Float String | Authored source difficulty rating in range `[1.0, 5.0]`. Preserved as immutable source metadata. |
+| **`Subject`** | Semantics | Optional | String | Discipline: `"mathematics"`, `"physics"`, `"chemistry"`, `"reasoning"`. |
+| **`Chapter`** | Semantics | Optional | String | Topic grouping (e.g. `"Algebra"`, `"Kinematics"`). |
+| **`Topic`** | Semantics | Optional | String | Specific problem concept (e.g. `"Linear Equations"`, `"Projectile Motion"`). |
+| **`Skill`** | Semantics | Optional | String | Fine-grained skill identifier (e.g. `"math.algebra.linear_two_step"`). |
+| **`ProblemType`** | Semantics | Optional | String | Pedagogical categorization (e.g. `"standard"`, `"trap_check"`, `"transfer"`). |
+| **`Hint`** | Content | Optional | Plain Text / LaTeX | Pedagogical hint revealed on learner request. |
+| **`Solution`** | Content | Optional | Plain Text / LaTeX | Full written derivation or solution walkthrough. |
+| **`Steps`** | Content | Optional | JSON Array / Newlines | Stepwise breakdown of the derivation graph. |
+| **`Explanation`** | Content | Optional | Plain Text / LaTeX | Conceptual explanation or distractor analysis. |
+| **`Source`** | Provenance | Optional | String | Source collection title (e.g. `"Official PYQ Corpus"`). |
+| **`Exam`** | Provenance | Optional | String | Competitive exam name (e.g. `"RRB ALP"`, `"SSC CGL"`, `"JEE Main"`). |
+| **`Year`** | Provenance | Optional | Integer String | Examination year (e.g. `"2024"`). Must be parseable as integer. |
+| **`Shift`** | Provenance | Optional | String | Examination shift/session (e.g. `"Shift 1"`, `"Morning"`). |
+| **`Paper`** | Provenance | Optional | String | Specific paper or tier (e.g. `"Paper 1 (CBT-1)"`). |
+| **`SourceQuestionID`**| Provenance | Optional | String | Authored canonical question identifier (e.g. `"RRB_ALP_2024_S1_Q42"`). |
+
+### 3.5.3 Structured Validation Errors (`SourceContractError`)
+If a note fails contract validation, `SourceQuestion::extract_from_card_fields` emits a structured, actionable error rather than crashing or guessing:
+- `MissingRequiredField`: When `Prompt`, `QuestionType`, or `CorrectAnswer` is missing or empty.
+- `InvalidQuestionType`: When `QuestionType` is unrecognized (e.g. `"essay"`, `"garbage"`).
+- `InvalidDifficulty`: When `Difficulty` is out of bounds (`< 1.0` or `> 5.0`), non-finite (`NaN`, `inf`), or unparseable.
+- `MissingMcqOptions`: When an MCQ card has missing `Options` or fewer than 2 non-empty choices.
+- `InvalidCorrectAnswer`: When an MCQ answer fails to match any option, or Numerical answer is non-numeric / non-finite (`NaN`, `inf`).
+- `InvalidProvenance`: When `Year` fails integer parsing.
+
+### 3.5.4 Ingestion & Runtime Translation
+```text
+Anki Note Fields
+  │
+  ▼
+SourceQuestion::extract_from_card_fields (Strict Validation)
+  │
+  ▼
+SourceQuestion::into_practice_item (Deterministic ID: `pi_src_<guid>`)
+  │
+  ▼
+ProceduralService::reconcile_source_questions (SQL UPSERT into `practice_items`)
+  │
+  ▼
+ProceduralService::resolve_source_target (Mounts Open Canvas Reviewer UI)
+```
+
 
 ---
 

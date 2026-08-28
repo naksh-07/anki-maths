@@ -65,7 +65,11 @@ impl Collection {
             col.set_config(ConfigKey::UpdateNotes, &options.update_notes())?;
             col.set_config(ConfigKey::UpdateNotetypes, &options.update_notetypes())?;
             let mut ctx = Context::new(archive, col, options, progress)?;
-            ctx.import()
+            let log = ctx.import()?;
+            if let Err(e) = col.reconcile_source_questions() {
+                eprintln!("StudyLab source reconciliation warning during apkg import: {}", e);
+            }
+            Ok(log)
         })
     }
 }
