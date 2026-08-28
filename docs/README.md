@@ -119,7 +119,11 @@ StudyLab is organized across three integrated tiers in a polyglot workspace:
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### The 17-Step Processing Pipeline
+### The 17-Step Procedural Processing Pipeline
+
+> [!NOTE]
+> This section describes the procedural content architecture. For the canonical source-first static question pipeline, see `StudyLab-Source-APKG-Contract(1).txt` and [`PROJECT.md`](file:///c:/Users/Suraj/Documents/Antigravity/Anki-maths/PROJECT.md).
+
 1. **Source Material:** Syllabus, exam blueprints, curricular standards.
 2. **Content Factory (`tools/studylab_content_factory.py`):** Declarative parameter domains, constraints, and templates.
 3. **APKG Blueprint:** Static `.apkg` files with self-contained `inline_contract`s.

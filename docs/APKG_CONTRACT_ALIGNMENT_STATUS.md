@@ -8,7 +8,43 @@
 
 ---
 
-## 1. Executive Summary & Status
+## 1. Documentation Authority Hierarchy & Agent Directive
+
+```text
+Level 1 — Canonical Contract
+StudyLab-Source-APKG-Contract(1).txt (Authoritative Source of Truth — FROZEN)
+        ↓
+Level 2 — Project Architecture
+PROJECT.md
+        ↓
+Level 3 — APKG / Content Documentation
+docs/APKG_CONTENT_CONTRACT.md
+        ↓
+Level 4 — Implementation / Runtime Docs
+docs/SYSTEM_ARCHITECTURE.md, docs/ARCHITECTURE_INVARIANTS.md
+        ↓
+Level 5 — Agent Handoff / Status
+docs/APKG_CONTRACT_ALIGNMENT_STATUS.md (This Document)
+```
+
+> [!IMPORTANT]
+> **Directive for Future Agents:**
+> ```text
+> Canonical Source APKG
+>         ↓
+> StudyLab Source
+>         ↓
+> Canonical SourceQuestion
+>         ↓
+> Runtime
+> 
+> Procedural content is a separate compatible architecture.
+> It must not redefine the Source APKG contract.
+> ```
+
+---
+
+## 2. Executive Summary & Status
 
 All phases of the StudyLab APKG Contract Alignment initiative are **COMPLETE and FROZEN**:
 

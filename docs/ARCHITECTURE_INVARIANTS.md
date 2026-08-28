@@ -123,10 +123,10 @@ This document defines the **16 Frozen Architecture Invariants** of StudyLab. The
 ---
 
 ### Invariant 9: APKG Owns Definitions; Runtime Owns Learner History
-- **Invariant Statement:** `.apkg` files are static declarative blueprints containing parameter domains, constraints, and problem templates. The runtime instantiates problems dynamically and persists historical attempts exclusively in `procedural.db`.
+- **Invariant Statement:** `.apkg` files are static definitions (declarative blueprints for procedural cards; immutable curated questions conforming to `StudyLab-Source-APKG-Contract(1).txt` for source cards). The runtime executes or reconciles problems and persists historical attempts exclusively in `collection.procedural`.
 - **Pedagogical Rationale:** Separating static curricular definitions from dynamic attempt history enables universal deck sharing without leaking user-specific attempt data.
-- **Executable Code Evidence:** `rslib/procedural/src/anchor/mod.rs` (`ProceduralCardAnchor`); `rslib/procedural/src/storage/store.rs` (`ProceduralStore`).
-- **Test Evidence:** `rslib/procedural/tests/phase35_apkg_self_contained.rs` (2 tests).
+- **Executable Code Evidence:** `rslib/procedural/src/anchor/mod.rs` (`ProceduralCardAnchor`, `SourceQuestion`); `rslib/procedural/src/storage/store.rs` (`ProceduralStore`).
+- **Test Evidence:** `rslib/procedural/tests/phase35_apkg_self_contained.rs` (2 tests); `rslib/tests/canonical_source_apkg_runtime_e2e_tests.rs`.
 - **Violation Failure Mode:** Bloated deck exports containing private user attempt histories, or shared decks overwriting existing learner states.
 
 ---
@@ -150,7 +150,7 @@ This document defines the **16 Frozen Architecture Invariants** of StudyLab. The
 ---
 
 ### Invariant 12: Single Canonical Evaluation Source
-- **Invariant Statement:** While the TypeScript frontend evaluates locally for zero-latency UI feedback, the Rust backend contract (`StepValidator`, `ProblemFamilyContract`) is the authoritative source of truth for answer evaluation and evidence compilation.
+- **Invariant Statement:** While the TypeScript frontend evaluates locally for zero-latency UI feedback, the Rust backend contract (`StepValidator`, `ProblemFamilyContract`, `SourceQuestion`) is the authoritative source of truth for answer evaluation and evidence compilation.
 - **Pedagogical Rationale:** Prevents divergence between client-side JavaScript math approximations and backend database persistence.
 - **Executable Code Evidence:** `ts/reviewer/answering.ts` (`mutateNextCardStates`); `rslib/src/scheduler/answering/mod.rs:353–505`.
 - **Test Evidence:** `qt/tests/test_phase13.py`; `ts/reviewer/lib.test.ts`.
@@ -159,7 +159,7 @@ This document defines the **16 Frozen Architecture Invariants** of StudyLab. The
 ---
 
 ### Invariant 13: Standard Anki Cards Remain Completely Untouched
-- **Invariant Statement:** Interception in `rslib/src/notetype/render.rs:123` strictly targets notes whose note type name starts with `"StudyLab Procedural Anchor"`. Standard cards (`Basic`, `Cloze`) render through Anki's standard Mustache pipeline with zero overhead.
+- **Invariant Statement:** Interception in `rslib/src/notetype/render.rs` strictly targets notes whose note type name starts with `"StudyLab Source"` or `"StudyLab Procedural Anchor"`. Standard cards (`Basic`, `Cloze`) render through Anki's standard Mustache pipeline with zero overhead.
 - **Pedagogical Rationale:** Guarantees 100% non-regression for existing user flashcard collections.
 - **Executable Code Evidence:** `rslib/src/notetype/render.rs:122–126`; `qt/aqt/reviewer.py:674–679` (`_is_procedural_card`).
 - **Test Evidence:** `qt/tests/` (84 passed in 30.50s); `pylib/tests/` (114 passed).
@@ -176,8 +176,8 @@ This document defines the **16 Frozen Architecture Invariants** of StudyLab. The
 
 ---
 
-### Invariant 15: Tier 1 Inline Contract Is the Preferred Content Path
-- **Invariant Statement:** Unless payload size is strictly prohibitive, declarative blueprints should be packaged directly into card anchors via `inline_contract`, ensuring self-contained deck portability.
+### Invariant 15: Tier 1 Inline Contract Is the Preferred Procedural Content Path
+- **Invariant Statement:** For procedural decks, unless payload size is strictly prohibitive, declarative blueprints should be packaged directly into card anchors via `inline_contract`, ensuring self-contained deck portability.
 - **Pedagogical Rationale:** Enables seamless deck distribution without requiring users to pre-seed external SQLite tables.
 - **Executable Code Evidence:** `rslib/procedural/src/anchor/mod.rs` (`ProceduralCardAnchor::inline_contract`); `rslib/procedural/src/service/mod.rs:484–600`.
 - **Test Evidence:** `rslib/procedural/tests/phase35_apkg_self_contained.rs` (2 tests).
@@ -185,14 +185,12 @@ This document defines the **16 Frozen Architecture Invariants** of StudyLab. The
 
 ---
 
-### Invariant 16: Documentation in `docs/` Is Supreme Source of Truth
-- **Invariant Statement:** The canonical documentation suite in `docs/` is the authoritative specification for all system architecture, boundaries, and learning models. Historical phase reports (`01_` through `08_`) and `.agents/` logs are archaeological context only.
-- **Pedagogical Rationale:** Ensures that clean-context AI agents and human engineers have a single, unified, contradiction-free specification.
-- **Executable Code Evidence:** `docs/DOCUMENTATION_TRUTH_MATRIX.md` (Source-of-Truth Hierarchy).
-- **Test Evidence:** Verified by the 15-Point Release Gate Audit (15/15 PASS).
-- **Violation Failure Mode:** Architectural confusion from stale phase reports and obsolete design assumptions.
-
----
+### Invariant 16: Documentation Hierarchy & Frozen Contract Primacy
+- **Invariant Statement:** `StudyLab-Source-APKG-Contract(1).txt` is the frozen Level 1 authoritative contract for canonical Source APKGs. The canonical documentation suite in `docs/` is the master architectural specification for system components. Historical phase reports (`01_` through `08_`) and `.agents/` logs are archaeological context only.
+- **Pedagogical Rationale:** Ensures that clean-context AI agents and human engineers have a single, unified, contradiction-free specification with explicit authority hierarchy.
+- **Executable Code Evidence:** `docs/DOCUMENTATION_TRUTH_MATRIX.md` (Source-of-Truth Hierarchy); `PROJECT.md`.
+- **Test Evidence:** Verified by the 15-Point Release Gate Audit (15/15 PASS) and Phase 4 Frozen Contract validation.
+- **Violation Failure Mode:** Architectural confusion from stale phase reports, obsolete design assumptions, or ambiguous content pathways.
 
 ## 3. Security, Sandboxing & Memory Safety Invariants
 

@@ -1,42 +1,107 @@
 # Project: StudyLab Release Candidate Full-System Audit
 
-## Architecture
-StudyLab is a procedural problem-solving and adaptive learning engine hosted inside the Anki desktop runtime, providing generative problem generation, step-by-step validation, mistake classification, longitudinal skill tracking, and adaptive remediation.
+## Documentation Authority Hierarchy
+
+```text
+Level 1 — Canonical Contract
+StudyLab-Source-APKG-Contract(1).txt (Authoritative Source of Truth — FROZEN)
+        ↓
+Level 2 — Project Architecture
+PROJECT.md (Defines dual content architectures: Source-first and Procedural)
+        ↓
+Level 3 — APKG / Content Documentation
+docs/APKG_CONTENT_CONTRACT.md (Details Source APKG and Procedural Blueprint specifications)
+        ↓
+Level 4 — Implementation / Runtime Docs
+docs/SYSTEM_ARCHITECTURE.md, docs/ARCHITECTURE_INVARIANTS.md, etc.
+        ↓
+Level 5 — Agent Handoff / Migration Status
+docs/APKG_CONTRACT_ALIGNMENT_STATUS.md
+```
+
+## Content Architecture Overview
+
+StudyLab supports two distinct, compatible content architectures:
+
+### 1. SOURCE-FIRST PATH (Canonical Static APKG)
+```text
+Canonical StudyLab Source APKG (.apkg)
+        ↓
+Anki Import Pipeline (`Collection::import_apkg` -> `col.reconcile_source_questions()`)
+        ↓
+Canonical SourceQuestion (`rslib/procedural/src/anchor/source.rs`)
+        ↓
+Deterministic Reconciliation (`collection.procedural` / `practice_items`)
+        ↓
+Runtime Translation (`PracticeItem` -> `ProblemInstance` with deterministic seed)
+        ↓
+Reviewer UI (`ts/reviewer/procedural.ts` — Open Canvas MCQ / Numerical)
+        ↓
+Learner State Firewall (`practice_attempts`, `skill_states`, `error_events`)
+```
+- **Governing Contract:** `StudyLab-Source-APKG-Contract(1).txt` (**Status: FROZEN**)
+- **Phases:** Phase 1 (COMPLETE), Phase 2 (COMPLETE), Phase 3 (COMPLETE), Phase 4 (COMPLETE & FROZEN).
+- **Core Invariant:** Curated source questions (e.g. PYQs) are static and immutable; dynamic generators are bypassed; learner telemetry is stored strictly in `collection.procedural`.
+
+### 2. PROCEDURAL PATH (Procedural / Generated Content)
+```text
+StudyLab Procedural Anchor Note
+        ↓
+ProceduralPayload (`ProceduralCardAnchor` / JSON Blueprint)
+        ↓
+3-Tier Target Resolution (`inline_contract` -> `content_ref` -> `proc_schema`)
+        ↓
+Declarative Generator (`DeclarativeProblemGenerator` / Rust AST Solvers)
+        ↓
+Generated ProblemInstance (Dynamic parameters sampled per review)
+        ↓
+Reviewer UI (`ts/reviewer/procedural.ts`)
+```
+- **Scope:** Declarative family blueprints across curriculum topics.
+- **Contract Boundary:** The procedural path is a separate compatible architecture and does **NOT** redefine or alter the canonical Source APKG contract.
+
+---
+
+## Architecture Topology & Data Flow
 
 ```
-[Canonical APKG / Static Source Exporter]
-             │ (StudyLab Source Note / static questions)
-             ▼
+[Canonical StudyLab Source APKG]              [Procedural Anchor Blueprint]
+               │ (StudyLab Source Notes)                     │ (ProceduralPayload)
+               ▼                                             ▼
 [Anki Collection: collection.anki2] ──(isolated)──> [Normal Cards: Basic, Cloze]
-             │
-             ▼ (rslib/src/notetype/render.rs Interception Hook)
-[Rust Procedural Engine: rslib/procedural/] (Bypasses Generation)
-             │
-             ├──> [Isolated DB: <collection>.procedural] (practice_items, pyq_sources)
-             │
-             ▼ (IPC / Qt Reviewer Bridge: qt/aqt/reviewer.py)
+               │
+               ▼ (rslib/src/notetype/render.rs Interception Hook)
+[Rust Procedural Engine: rslib/procedural/]
+               │
+               ├──> [Source Path]: Bypasses generation -> Reconciles `practice_items`
+               ├──> [Procedural Path]: Resolves blueprint -> Samples dynamic variant
+               │
+               ├──> [Isolated DB: <collection>.procedural] (practice_items, attempts, skills)
+               │
+               ▼ (IPC / Qt Reviewer Bridge: qt/aqt/reviewer.py)
 [Qt WebEngine Reviewer Viewport]
-             │
-             ▼ (TypeScript Reviewer State Machine: ts/reviewer/procedural.ts)
+               │
+               ▼ (TypeScript Reviewer State Machine: ts/reviewer/procedural.ts)
 [Component Hierarchy: MCQContainer, NumericalContainer, StepwiseContainer, MistakeFooter]
 ```
 
 ### Module Boundaries & Data Flow
-1. **Packaging Tier (`tools/studylab_content_factory.py`, Canonical APKG Exporters)**:
-   - Packages canonical `.apkg` files with standard note models:
-     * `StudyLab Source`: Immutable curated source questions (MCQ, Numerical) with full semantic and provenance metadata conforming to `StudyLab-Source-APKG-Contract(1).txt`.
+1. **Packaging Tier (`generate_canonical_source_apkg.py`, `tools/studylab_content_factory.py`)**:
+   - Packages `.apkg` files with standard note models:
+     * `StudyLab Source`: Immutable curated source questions (MCQ, Numerical) with full semantic and provenance metadata conforming strictly to `StudyLab-Source-APKG-Contract(1).txt` (Authoritative Source of Truth).
      * `StudyLab Procedural Anchor`: Declarative generator blueprints (`inline_contract`) across 175 curriculum topics.
 2. **Core Ingestion & Interception (`rslib/src/notetype/render.rs`)**:
    - `StudyLab Source*`: Intercepts notes and parses them into `SourceQuestion` (`rslib/procedural/src/anchor/source.rs`), storing them into `practice_items` via deterministic reconciliation and rendering directly without dynamic generation.
    - `StudyLab Procedural Anchor`: Resolves 3-tier target hierarchy (`inline_contract` -> `content_ref` -> `proc_schema`).
    - Standard Anki notes (`Basic`, `Cloze`) bypass procedural interception with zero overhead.
 3. **Backend Procedural Engine (`rslib/procedural/`)**:
-   - Generates dynamic variants, evaluates math/symbolic/dimensional expressions, and computes Bayesian mastery updates.
+   - For source questions: executes deterministic reconciliation and static problem instance mounting.
+   - For procedural anchors: generates dynamic variants, evaluates math/symbolic/dimensional expressions, and computes Bayesian mastery updates.
 4. **Storage Engine (`collection.procedural`)**:
    - Completely separate SQLite database from `collection.anki2`.
    - Manages 16 tables (`skills`, `skill_states`, `practice_attempts`, `error_events`, `remediation_queue_items`, etc.) with ACID single-transaction atomicity and `ON DELETE CASCADE`.
 5. **Host-Guest Bridge (`qt/aqt/reviewer.py`)**:
-   - Suppresses native Anki `#ansbut` and ease buttons on procedural cards.
+   - Suppresses native Anki `#ansbut` and ease buttons on procedural and source cards.
    - Routes bridge commands (`procedural_attempt`, `procedural_hint`, `procedural_mistake`, `procedural_answer:1..4`).
    - Evaluates `destroyActive()` before each card render to prevent event/state leaks.
 6. **Frontend State Machine & Open Canvas UI (`ts/reviewer/`)**:

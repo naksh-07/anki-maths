@@ -34,13 +34,45 @@ StudyLab is implemented across three tightly coordinated tiers in a polyglot wor
 
 ---
 
-## 2. The 17-Step End-to-End Processing Pipeline
+## 2. End-to-End Content & Processing Pipelines
 
-The end-to-end operational lifecycle of StudyLab traces a complete 17-step processing pipeline:
+StudyLab supports two distinct operational content paths: the **Canonical Source-First Path** (for curated static questions conforming to `StudyLab-Source-APKG-Contract(1).txt`) and the **Procedural Path** (for declarative problem blueprints).
+
+### 2.1 The Canonical Source-First Pipeline
+For static curated questions (such as official Previous Year Questions or textbook exercises), StudyLab operates via a streamlined ingestion and reconciliation pipeline without dynamic variant generation:
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                CANONICAL SOURCE-FIRST PIPELINE                                   │
+├──────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                  │
+│  [Canonical StudyLab Source APKG] ──► [Anki Import Pipeline] ──► [Canonical SourceQuestion]      │
+│                                                                                │                 │
+│  [Learner State Firewall] ◄── [Reviewer UI] ◄── [Runtime Translation] ◄── [Reconciliation]      │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **Canonical StudyLab Source APKG:** Curated `.apkg` files containing immutable source questions conforming strictly to `StudyLab-Source-APKG-Contract(1).txt` (**Status: FROZEN**).
+2. **Anki Import Pipeline (`Collection::import_apkg`):** Automatic interception hook triggers `col.reconcile_source_questions()` within the import transaction.
+3. **Canonical SourceQuestion Extraction (`rslib/procedural/src/anchor/source.rs`):** Strict parsing and validation of content, question type (`mcq`, `numerical`), finite difficulty, and provenance fields.
+4. **Deterministic Storage Reconciliation (`collection.procedural` / `practice_items`):** Deterministic state tracking (`New`, `Updated`, `Unchanged`, `Archived`) maintaining multi-identity separation.
+5. **Runtime Translation:** Translates `PracticeItem` into `ProblemInstance` with deterministic seed, mounting the exact authored prompt and solution.
+6. **Open Canvas Reviewer UI (`ts/reviewer/procedural.ts`):** Renders discrete interactive MCQ radio options or numerical input with zero text input fallbacks.
+7. **Learner State Firewall:** User attempts and mistake classifications mutate exclusively runtime tables (`practice_attempts`, `skill_states`, `error_events`); source content remains 100% static and immutable.
+
+---
+
+### 2.2 The Procedural Content Pipeline (17 Steps)
+
+> [!NOTE]
+> This section describes the procedural content architecture. It does not define the canonical StudyLab Source APKG contract.
+
+The operational lifecycle for generated and procedural practice items traces a complete 17-step processing pipeline:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                 THE 17-STEP PROCESSING PIPELINE                                  │
+│                                 THE 17-STEP PROCEDURAL PIPELINE                                  │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                                  │
 │  [1. Source Material] ──► [2. Content Factory] ──► [3. APKG Blueprint] ──► [4. Card Anchor]     │
@@ -218,11 +250,11 @@ Interactions from the TypeScript webview dispatch bridge messages via `pycmd(...
 ```
 
 ### 5.2 Reviewer Lifecycle & Non-Regression Hooks
-- **Question Display Hook (`reviewer_did_show_question`):** Evaluates `destroyActive()` to purge any lingering event listeners, then loads the procedural container if the card is a `StudyLab Procedural Anchor`.
+- **Question Display Hook (`reviewer_did_show_question`):** Evaluates `destroyActive()` to purge any lingering event listeners, then loads the interactive container if the card is a StudyLab note (`StudyLab Source*` or `StudyLab Procedural Anchor`).
 - **Answer Display Hook (`reviewer_did_show_answer`):** Reveals Anki ease buttons and synchronizes rating recommendations.
 - **Card Answer Hook (`reviewer_did_answer_card`):** Extracts telemetry, updates `procedural.db`, strips custom data, and triggers FSRS interval recalculation.
 - **Teardown Hook (`reviewer_will_end`):** Evaluates `destroyActive()` and nulls card references.
-- **Standard Card Non-Regression:** If `note_type.name` does not start with `"StudyLab Procedural Anchor"`, standard Mustache template rendering is executed with zero overhead.
+- **Standard Card Non-Regression:** If `note_type.name` does not start with `"StudyLab Source"` or `"StudyLab Procedural Anchor"`, standard Mustache template rendering is executed with zero overhead.
 
 ---
 

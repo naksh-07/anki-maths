@@ -1,28 +1,130 @@
-# StudyLab APKG Content Contract & Declarative Blueprints Specification
+# StudyLab APKG Content Contract & Architecture Specification
 
-**Document Version:** 1.0.0 (Canonical)  
-**Target Subsystems:** APKG Packaging (`generate_procedural_apkg.py`, `tools/studylab_content_factory.py`), Rust Deserializer (`rslib/procedural/src/anchor/`, `rslib/procedural/src/problems/contract.rs`), Notetype Interception (`rslib/src/notetype/render.rs`)  
-**Status:** AUTHORITATIVE CANONICAL SPECIFICATION  
-**Integrity Mode:** 100% Grounded in Executable Source Code, Tests, and Content Factory Blueprints  
+**Document Version:** 2.0.0 (Canonical Architecture Hierarchy)  
+**Document Authority:** Level 3 Content Specification  
+**Authoritative Canonical Contract:** `StudyLab-Source-APKG-Contract(1).txt` (Level 1 — FROZEN)  
+**Target Subsystems:** Canonical Source APKG Ingestion, Procedural Blueprints Packaging (`tools/studylab_content_factory.py`), Rust Deserializer (`rslib/procedural/src/anchor/`), Notetype Interception (`rslib/src/notetype/render.rs`)  
+**Status:** CANONICAL SPECIFICATION  
+**Contract Freeze Status:**
+```text
+Canonical StudyLab Source APKG Contract
+Status: FROZEN
+
+Phase 1: COMPLETE
+Phase 2: COMPLETE
+Phase 3: COMPLETE
+Phase 4: COMPLETE & FROZEN
+```
 
 ---
 
-## 1. Executive Summary & The StudyLab APKG Philosophy
+## 1. Documentation Authority & Content Architecture Scope
 
-StudyLab fundamentally transforms Anki from a static flashcard memorization tool into an interactive, generative problem-solving and cognitive diagnosis engine. Standard Anki cards store fixed question text on the front and fixed answer text on the back. In contrast, StudyLab packages **procedural problem blueprints** inside standard Anki `.apkg` files.
+This document defines the content specifications for StudyLab `.apkg` packages. StudyLab supports two distinct, compatible content architectures:
 
-### 1.1 Core Principles
-1. **APKG as an Executable Blueprint Package:** Rather than thousands of static flashcards, a single StudyLab `.apkg` deck contains compact declarative contracts. Each card acts as an anchor that generates infinite variations of mathematically sound, pedagogically calibrated problems at review time.
-2. **Zero-Rust Declarative Scalability:** Authors define parameter domains, algebraic relationships, multi-step derivation graphs, and diagnostic hints in standardized JSON schemas. No Rust binary recompilation is required to author new subjects, chapters, or problem families.
-3. **Seamless Native Interception:** Cards use the dedicated note type `"StudyLab Procedural Anchor"` (for generated items) or `"StudyLab Source Anchor"` (for static curated questions). When rendered in Anki's review window, `rslib/src/notetype/render.rs` intercepts the card and routes it through the procedural engine (`ProceduralService`), executing the blueprint or rendering the source, and mounting the interactive webview surface.
-4. **Clean AnkiWeb Sync Compatibility:** Procedural card anchors are tiny metadata records (< 2 KB). They do not bloat Anki's `collection.anki2` database or violate Anki's 100-byte custom card data limits, allowing seamless syncing across desktop, mobile, and web.
+```text
+StudyLab APKG Content Architecture
+│
+├── PART I: CANONICAL SOURCE-FIRST PATH (StudyLab Source)
+│   └── Canonical static APKGs containing immutable curated questions (MCQ / Numerical)
+│       Governed Authoritatively by: StudyLab-Source-APKG-Contract(1).txt
+│
+└── PART II: PROCEDURAL PATH (StudyLab Procedural Anchor)
+    └── Declarative problem blueprints generating dynamic mathematical variants
+        Governed by: DeclarativeFamilyContract & ProceduralPayload Schemas
+```
+
+> [!IMPORTANT]
+> **Authority Invariant:** `StudyLab-Source-APKG-Contract(1).txt` is the frozen Level 1 source of truth for the canonical StudyLab Source APKG. The procedural blueprint architecture (Part II) is a separate compatible content pathway that does **not** redefine, modify, or override the canonical Source APKG contract.
+
+---
+
+# PART I — CANONICAL STUDYLAB SOURCE APKG CONTRACT
+
+StudyLab natively ingests, reconciles, and renders curated static source questions (such as official Previous Year Questions or textbook exercises) without executing dynamic parameter generation.
+
+All static source packages must adhere strictly to `StudyLab-Source-APKG-Contract(1).txt`.
+
+## 2. Canonical Source Note Model & Field Specification
+
+### 2.1 Note Model & Interception
+- **Note Type Name:** Notes starting with `"StudyLab Source"` (e.g. `"StudyLab Source Question"`, `"StudyLab Source Anchor"`).
+- **Interception Hook:** Intercepted in [`rslib/src/notetype/render.rs`](file:///c:/Users/Suraj/Documents/Antigravity/Anki-maths/rslib/src/notetype/render.rs) via `render_source_anchor`.
+- **Target Ingestion Model:** Parsed and validated directly into `SourceQuestion` ([`rslib/procedural/src/anchor/source.rs`](file:///c:/Users/Suraj/Documents/Antigravity/Anki-maths/rslib/procedural/src/anchor/source.rs)).
+- **Reviewer Rendering:** Renders directly in the Open Canvas UI (`ts/reviewer/procedural.ts`) with zero dynamic parameter sampling.
+
+### 2.2 Canonical Field Specification
+
+| Field Name | Category | Required / Optional | Data Type | Description & Validation Rules |
+|---|---|---|---|---|
+| **`Prompt`** | Content | **Mandatory** | Plain Text / LaTeX | The primary question text or problem statement. Must not be empty. |
+| **`QuestionType`** | Semantics | **Mandatory** | String Enum | Explicit question type: `"mcq"` (or `"multiple_choice"`) or `"numerical"` (or `"numeric"`). Never inferred. |
+| **`CorrectAnswer`** | Content | **Mandatory** | String | The canonical answer. For MCQ: must match or resolve to one of the provided `Options`. For Numerical: must parse as numeric finite float. |
+| **`Options`** | Content | Mandatory for MCQ | JSON Array / Newlines | Array of at least 2 option strings (e.g. `["A", "B", "C", "D"]`). Omitted or ignored for Numerical. |
+| **`Difficulty`** | Semantics | Optional | Float String | Authored source difficulty rating in range `[1.0, 5.0]`. Preserved as immutable source metadata. |
+| **`Subject`** | Semantics | Optional | String | Discipline: `"mathematics"`, `"physics"`, `"chemistry"`, `"reasoning"`. |
+| **`Chapter`** | Semantics | Optional | String | Topic grouping (e.g. `"Algebra"`, `"Kinematics"`). |
+| **`Topic`** | Semantics | Optional | String | Specific problem concept (e.g. `"Linear Equations"`, `"Projectile Motion"`). |
+| **`Skill`** | Semantics | Optional | String | Fine-grained skill identifier (e.g. `"math.algebra.linear_two_step"`). |
+| **`ProblemType`** | Semantics | Optional | String | Pedagogical categorization (e.g. `"standard"`, `"trap_check"`, `"transfer"`). |
+| **`Hint`** | Content | Optional | Plain Text / LaTeX | Pedagogical hint revealed on learner request. |
+| **`Solution`** | Content | Optional | Plain Text / LaTeX | Full written derivation or solution walkthrough. |
+| **`Steps`** | Content | Optional | JSON Array / Newlines | Stepwise breakdown of the derivation graph. |
+| **`Explanation`** | Content | Optional | Plain Text / LaTeX | Conceptual explanation or distractor analysis. |
+| **`Source`** | Provenance | Optional | String | Source collection title (e.g. `"Official PYQ Corpus"`). |
+| **`Exam`** | Provenance | Optional | String | Competitive exam name (e.g. `"RRB ALP"`, `"SSC CGL"`, `"JEE Main"`). |
+| **`Year`** | Provenance | Optional | Integer String | Examination year (e.g. `"2024"`). Must be parseable as integer. |
+| **`Shift`** | Provenance | Optional | String | Examination shift/session (e.g. `"Shift 1"`, `"Morning"`). |
+| **`Paper`** | Provenance | Optional | String | Specific paper or tier (e.g. `"Paper 1 (CBT-1)"`). |
+| **`SourceQuestionID`**| Provenance | Optional | String | Authored canonical question identifier (e.g. `"RRB_ALP_2024_S1_Q42"`). |
+
+### 2.3 Structured Validation Errors (`SourceContractError`)
+If a note fails contract validation, `SourceQuestion::extract_from_card_fields` emits a structured, actionable error rather than crashing or guessing:
+- `MissingRequiredField`: When `Prompt`, `QuestionType`, or `CorrectAnswer` is missing or empty.
+- `InvalidQuestionType`: When `QuestionType` is unrecognized (e.g. `"essay"`, `"garbage"`).
+- `InvalidDifficulty`: When `Difficulty` is out of bounds (`< 1.0` or `> 5.0`), non-finite (`NaN`, `inf`), or unparseable.
+- `MissingMcqOptions`: When an MCQ card has missing `Options` or fewer than 2 non-empty choices.
+- `InvalidCorrectAnswer`: When an MCQ answer fails to match any option, or Numerical answer is non-numeric / non-finite (`NaN`, `inf`).
+- `InvalidProvenance`: When `Year` fails integer parsing.
+
+### 2.4 Ingestion, Reconciliation & Runtime Translation
+```text
+Anki Note Fields
+  │
+  ▼
+SourceQuestion::extract_from_card_fields (Strict Validation)
+  │
+  ▼
+SourceQuestion::into_practice_item (Deterministic ID: `pi_src_<guid>`)
+  │
+  ▼
+ProceduralService::reconcile_source_questions (SQL UPSERT into `practice_items`)
+  │
+  ▼
+ProceduralService::resolve_source_target (Mounts Open Canvas Reviewer UI)
+```
+
+### 2.5 Learner State Firewall Invariant
+- Imported source question records in `practice_items` (`Prompt`, `Options`, `CorrectAnswer`, `Difficulty`, `Provenance`, `QuestionType`) are **100% static and immutable**.
+- Learner attempts, mistake reflections, mastery updates, and scheduling states mutate exclusively runtime-owned tables (`practice_attempts`, `skill_states`, `error_events`) in `collection.procedural`.
+
+---
+
+# PART II — PROCEDURAL CONTENT & DECLARATIVE BLUEPRINTS ARCHITECTURE
+
+> [!NOTE]
+> This section describes the procedural content architecture. It does not define the canonical StudyLab Source APKG contract.
+
+## 3. Procedural Content Pipeline Overview
+
+StudyLab supports generating dynamic, mathematically sound problem variations from declarative blueprints packaged in standard Anki `.apkg` files.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                      STUDYLAB DECLARATIVE CONTENT PIPELINE                      │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                 │
-│   [Curriculum / PYQ Corpus]                                                     │
+│   [Curriculum / Topic Taxonomy]                                                 │
 │              │                                                                  │
 │              ▼                                                                  │
 │   [Declarative Blueprint] ──────────► `tools/studylab_content_factory.py`        │
@@ -45,9 +147,7 @@ StudyLab fundamentally transforms Anki from a static flashcard memorization tool
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
----
-
-## 2. 3-Tier Content Resolution Hierarchy
+## 4. 3-Tier Content Resolution Hierarchy
 
 When the Rust backend prepares to render a card with the `"StudyLab Procedural Anchor"` note type, `ProceduralService::resolve_procedural_target` (`rslib/procedural/src/service/mod.rs:484-600`) resolves the executable blueprint using a strict **3-Tier Precedence Hierarchy**:
 
@@ -77,11 +177,11 @@ When the Rust backend prepares to render a card with the `"StudyLab Procedural A
 
 ---
 
-## 3. Canonical APKG Note Type & Field Schema
+## 5. Procedural Note Type & Field Schema
 
-To guarantee deterministic interception across all Anki clients, decks authored for StudyLab must conform to the canonical note model specification.
+Decks authored for procedural generation conform to the following note model:
 
-### 3.1 Note Model Definition
+### 5.1 Note Model Definition
 - **Model Name:** `StudyLab Procedural Anchor` (Checked verbatim in `rslib/src/notetype/render.rs:123`)
 - **Card Template Name:** `Procedural Practice Card`
 - **Question Format (`qfmt`):** `<div style='padding:20px;font-family:sans-serif;color:#6366f1'>Loading StudyLab Procedural Card...</div>{{ProceduralPayload}}`
@@ -102,8 +202,8 @@ To guarantee deterministic interception across all Anki clients, decks authored 
 }
 ```
 
-### 3.2 Canonical Field Schema
-Anki notes for StudyLab contain up to 8 defined fields, with `ProceduralPayload` at ordinal position 0:
+### 5.2 Procedural Field Schema
+Anki notes for procedural generation contain up to 8 defined fields, with `ProceduralPayload` at ordinal position 0:
 
 | Field Name | Ordinal | Required / Optional | Data Type | Purpose & Contents |
 |---|---|---|---|---|
@@ -116,76 +216,14 @@ Anki notes for StudyLab contain up to 8 defined fields, with `ProceduralPayload`
 | **`Front`** | `6` | Fallback | Plain Text / HTML | Fallback question text for non-StudyLab standard Anki installations. |
 | **`Back`** | `7` | Fallback | Plain Text / HTML | Fallback solution text for non-StudyLab standard Anki installations. |
 
----
-
-## 3.5 Canonical Source Question APKG Contract (`StudyLab Source`)
-
-StudyLab supports purely static, curated source questions (such as official Previous Year Questions or curriculum problem sets) without requiring generator blueprints. Decks containing static questions conform to the **Canonical StudyLab Source Question Contract**.
-
-### 3.5.1 Note Model & Interception
-- **Note Type Name:** Notes starting with `"StudyLab Source"` (e.g. `"StudyLab Source Question"`, `"StudyLab Source Anchor"`).
-- **Interception Hook:** Intercepted in [`rslib/src/notetype/render.rs`](file:///c:/Users/Suraj/Documents/Antigravity/Anki-maths/rslib/src/notetype/render.rs) via `render_source_anchor`.
-- **Target Ingestion Model:** Parsed and validated directly into `SourceQuestion` ([`rslib/procedural/src/anchor/source.rs`](file:///c:/Users/Suraj/Documents/Antigravity/Anki-maths/rslib/procedural/src/anchor/source.rs)).
-
-### 3.5.2 Canonical Field Specification
-
-| Field Name | Category | Required / Optional | Data Type | Description & Validation Rules |
-|---|---|---|---|---|
-| **`Prompt`** | Content | **Mandatory** | Plain Text / LaTeX | The primary question text or problem statement. Must not be empty. |
-| **`QuestionType`** | Semantics | **Mandatory** | String Enum | Explicit question type: `"mcq"` (or `"multiple_choice"`) or `"numerical"` (or `"numeric"`). Never inferred. |
-| **`CorrectAnswer`** | Content | **Mandatory** | String | The canonical answer. For MCQ: must match or resolve to one of the provided `Options`. For Numerical: must parse as numeric floating point. |
-| **`Options`** | Content | Mandatory for MCQ | JSON Array / Newlines | Array of at least 2 option strings (e.g. `["A", "B", "C", "D"]`). Omitted or ignored for Numerical. |
-| **`Difficulty`** | Semantics | Optional | Float String | Authored source difficulty rating in range `[1.0, 5.0]`. Preserved as immutable source metadata. |
-| **`Subject`** | Semantics | Optional | String | Discipline: `"mathematics"`, `"physics"`, `"chemistry"`, `"reasoning"`. |
-| **`Chapter`** | Semantics | Optional | String | Topic grouping (e.g. `"Algebra"`, `"Kinematics"`). |
-| **`Topic`** | Semantics | Optional | String | Specific problem concept (e.g. `"Linear Equations"`, `"Projectile Motion"`). |
-| **`Skill`** | Semantics | Optional | String | Fine-grained skill identifier (e.g. `"math.algebra.linear_two_step"`). |
-| **`ProblemType`** | Semantics | Optional | String | Pedagogical categorization (e.g. `"standard"`, `"trap_check"`, `"transfer"`). |
-| **`Hint`** | Content | Optional | Plain Text / LaTeX | Pedagogical hint revealed on learner request. |
-| **`Solution`** | Content | Optional | Plain Text / LaTeX | Full written derivation or solution walkthrough. |
-| **`Steps`** | Content | Optional | JSON Array / Newlines | Stepwise breakdown of the derivation graph. |
-| **`Explanation`** | Content | Optional | Plain Text / LaTeX | Conceptual explanation or distractor analysis. |
-| **`Source`** | Provenance | Optional | String | Source collection title (e.g. `"Official PYQ Corpus"`). |
-| **`Exam`** | Provenance | Optional | String | Competitive exam name (e.g. `"RRB ALP"`, `"SSC CGL"`, `"JEE Main"`). |
-| **`Year`** | Provenance | Optional | Integer String | Examination year (e.g. `"2024"`). Must be parseable as integer. |
-| **`Shift`** | Provenance | Optional | String | Examination shift/session (e.g. `"Shift 1"`, `"Morning"`). |
-| **`Paper`** | Provenance | Optional | String | Specific paper or tier (e.g. `"Paper 1 (CBT-1)"`). |
-| **`SourceQuestionID`**| Provenance | Optional | String | Authored canonical question identifier (e.g. `"RRB_ALP_2024_S1_Q42"`). |
-
-### 3.5.3 Structured Validation Errors (`SourceContractError`)
-If a note fails contract validation, `SourceQuestion::extract_from_card_fields` emits a structured, actionable error rather than crashing or guessing:
-- `MissingRequiredField`: When `Prompt`, `QuestionType`, or `CorrectAnswer` is missing or empty.
-- `InvalidQuestionType`: When `QuestionType` is unrecognized (e.g. `"essay"`, `"garbage"`).
-- `InvalidDifficulty`: When `Difficulty` is out of bounds (`< 1.0` or `> 5.0`), non-finite (`NaN`, `inf`), or unparseable.
-- `MissingMcqOptions`: When an MCQ card has missing `Options` or fewer than 2 non-empty choices.
-- `InvalidCorrectAnswer`: When an MCQ answer fails to match any option, or Numerical answer is non-numeric / non-finite (`NaN`, `inf`).
-- `InvalidProvenance`: When `Year` fails integer parsing.
-
-### 3.5.4 Ingestion & Runtime Translation
-```text
-Anki Note Fields
-  │
-  ▼
-SourceQuestion::extract_from_card_fields (Strict Validation)
-  │
-  ▼
-SourceQuestion::into_practice_item (Deterministic ID: `pi_src_<guid>`)
-  │
-  ▼
-ProceduralService::reconcile_source_questions (SQL UPSERT into `practice_items`)
-  │
-  ▼
-ProceduralService::resolve_source_target (Mounts Open Canvas Reviewer UI)
-```
-
 
 ---
 
-## 4. `ProceduralPayload` JSON Schema
+## 6. `ProceduralPayload` JSON Schema
 
 The `ProceduralPayload` field contains the serialized `ProceduralCardAnchor` struct (`rslib/procedural/src/anchor/mod.rs:27-51`).
 
-### 4.1 Schema Definition
+### 6.1 Schema Definition
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -233,18 +271,18 @@ The `ProceduralPayload` field contains the serialized `ProceduralCardAnchor` str
 }
 ```
 
-### 4.2 Seed Mode Semantics (`SeedMode`)
+### 6.2 Seed Mode Semantics (`SeedMode`)
 - `{"seed_mode": "random"}`: **Dynamic Practice Mode.** Every time the card is reviewed, the Rust engine generates a brand new instance with newly sampled parameters and calculations.
 - `{"seed_mode": {"fixed": 42}}`: **Deterministic Verification Mode.** Generates the exact same parameter instance on every render. Used for test suites, benchmark cards, and worked examples.
 - `{"seed_mode": "daily"}`: **Daily Variant Mode.** Seeds the RNG with `(CardID + EpochDay)`, ensuring a consistent problem throughout a calendar day that refreshes the next morning.
 
 ---
 
-## 5. Declarative Family Contract JSON Schema
+## 7. Declarative Family Contract JSON Schema
 
 The `inline_contract` object conforms to `DeclarativeFamilyContract` (`rslib/procedural/src/problems/contract.rs:70-89`), containing the complete mathematical, pedagogical, and structural specification of the problem family.
 
-### 5.1 Root Contract Specification
+### 7.1 Root Contract Specification
 ```json
 {
   "contract": {
@@ -325,7 +363,7 @@ The `inline_contract` object conforms to `DeclarativeFamilyContract` (`rslib/pro
 
 ---
 
-## 6. Parameter Domain Catalog (16 Types)
+## 8. Parameter Domain Catalog (16 Types)
 
 `ParameterDomain` (`rslib/procedural/src/problems/contract.rs:188-285`) specifies how variables are sampled, constrained, or derived in dependency order:
 
@@ -349,7 +387,7 @@ The `inline_contract` object conforms to `DeclarativeFamilyContract` (`rslib/pro
 └─────────────────────────┴─────────────────────────────────────────────────────────────┘
 ```
 
-### 6.1 Exhaustive Domain Specification
+### 8.1 Exhaustive Domain Specification
 
 | # | Type Identifier | Required Fields | Mathematical Behavior & Example |
 |---|---|---|---|
@@ -372,18 +410,18 @@ The `inline_contract` object conforms to `DeclarativeFamilyContract` (`rslib/pro
 
 ---
 
-## 7. Constraint Engine & Rejection Sampling
+## 9. Constraint Engine & Rejection Sampling
 
 `ConstraintSpec` (`rslib/procedural/src/problems/contract.rs:290-340`) enforces mathematical and pedagogical validity before a generated problem instance is accepted.
 
-### 7.1 Rejection Sampling Loop
+### 9.1 Rejection Sampling Loop
 During `DeclarativeProblemGenerator::generate()`:
 1. Parameters are resolved in dependency order using a deterministic PRNG (`StdRng::seed_from_u64(seed)`).
 2. The sampled parameters are validated against all declared `ConstraintSpec` rules.
 3. If any constraint fails, the engine mutates the seed and re-samples.
 4. **Safety Bound:** A hard ceiling of `MAX_REJECTION_ATTEMPTS = 50` prevents infinite loops on over-constrained blueprints, raising `ProceduralError::ConstraintTimeout` if unsatisfiable.
 
-### 7.2 All 7 Constraint Specifications
+### 9.2 All 7 Constraint Specifications
 
 | # | Constraint Variant | Fields | Logical Validation Rule |
 |---|---|---|---|
@@ -397,7 +435,7 @@ During `DeclarativeProblemGenerator::generate()`:
 
 ---
 
-## 8. Answer Derivation Catalog (24+ Variants across 6 Domains)
+## 10. Answer Derivation Catalog (24+ Variants across 6 Domains)
 
 `AnswerDerivation` (`rslib/procedural/src/problems/contract.rs:345-480`) deterministically evaluates the canonical correct answer from resolved parameters:
 
@@ -431,7 +469,7 @@ During `DeclarativeProblemGenerator::generate()`:
 └─────────────────────────┴─────────────────────────────────────────────────────────────┘
 ```
 
-### 8.1 Mathematical Formulations
+### 10.1 Mathematical Formulations
 
 #### 1. Linear Equations
 - **`linear_two_step` ($ax + b = c$):** Solves $x = \frac{c - b}{a}$. Requires `a_param`, `b_param`, `c_param`.
@@ -456,11 +494,11 @@ During `DeclarativeProblemGenerator::generate()`:
 
 ---
 
-## 9. Step Nodes & 3-Tier Progressive Hint Architecture
+## 11. Step Nodes & 3-Tier Progressive Hint Architecture
 
 Every declarative archetype declares an array of `DeclarativeStepNode` objects (`rslib/procedural/src/problems/contract.rs:485-520`). These nodes power both interactive stepwise solving and progressive hint delivery.
 
-### 9.1 Step Node Schema
+### 11.1 Step Node Schema
 ```json
 {
   "id": "step_isolate_term",
@@ -475,7 +513,7 @@ Every declarative archetype declares an array of `DeclarativeStepNode` objects (
 }
 ```
 
-### 9.2 Complete Step Type Vocabulary (`StepType`)
+### 11.2 Complete Step Type Vocabulary (`StepType`)
 The engine recognizes 27 distinct step types across the 4 core domains (`rslib/procedural/src/problems/steps/step_graph.rs:7-77`):
 
 ```text
@@ -498,7 +536,7 @@ Reasoning:
   check_contradiction, verify_conclusion
 ```
 
-### 9.3 3-Tier Progressive Hint Architecture
+### 11.3 3-Tier Progressive Hint Architecture
 When the learner clicks **Request Hint** (`H`), hints are revealed in strict pedagogical order:
 1. **Tier 1 — Principle (`hint_principle`):** Explains the underlying physical law, mathematical theorem, or strategy without doing the calculation (e.g. *"Recall the third kinematic relation relating velocity, acceleration, and displacement"*).
 2. **Tier 2 — Operation (`hint_operation`):** Specifies the exact algebraic operation or formula substitution required (e.g. *"Rearrange $v^2 = u^2 + 2as$ for $s = \frac{v^2 - u^2}{2a}$"*).
@@ -506,7 +544,7 @@ When the learner clicks **Request Hint** (`H`), hints are revealed in strict ped
 
 ---
 
-## 10. Typography, LaTeX & Formatting Rules
+## 12. Typography, LaTeX & Formatting Rules
 
 To maintain high visual fidelity and avoid rendering bugs, StudyLab enforces strict string formatting rules:
 
@@ -524,9 +562,9 @@ To maintain high visual fidelity and avoid rendering bugs, StudyLab enforces str
 
 ---
 
-## 11. APKG Hygiene & Integrity Rules
+## 13. Procedural APKG Hygiene & Packaging Rules
 
-To eliminate runtime defects, every generated APKG package must strictly adhere to the following 7 hygiene invariants:
+To eliminate runtime defects, every generated procedural APKG package must strictly adhere to the following 7 hygiene invariants:
 
 1. **Exact Notetype Identity:** The notetype name must be exactly `"StudyLab Procedural Anchor"`. Any alteration breaks backend card interception.
 2. **Non-Empty Payload Field:** Field index 0 must be named `ProceduralPayload` and must contain valid, parseable JSON matching `ProceduralCardAnchor`.
@@ -538,7 +576,7 @@ To eliminate runtime defects, every generated APKG package must strictly adhere 
 
 ---
 
-## 12. Canonical Full-Universe Topic Taxonomy (175 Topics)
+## 14. Procedural Topic Taxonomy (175 Topics)
 
 The StudyLab curriculum spans **175 benchmark topics** across 4 major disciplines:
 
@@ -557,7 +595,7 @@ The StudyLab curriculum spans **175 benchmark topics** across 4 major discipline
 └─────────────────────────┴──────────────┴───────────────────────────────────────────────┘
 ```
 
-### 12.1 Mathematics (59 Topics across 9 Chapters)
+### 14.1 Mathematics (59 Topics across 9 Chapters)
 1. **Number System & Arithmetic (8 topics):** LCM & HCF, Divisibility Rules, Unit Digit, Prime Factorization, Surds & Indices, Fractions & Decimals, Remainders, Number Properties.
 2. **Percentages & Commercial Math (8 topics):** Successive Percentage, Profit & Loss, Marked Price & Discount, Simple Interest, Compound Interest, Installments, Ratio & Proportion, Partnership.
 3. **Algebra & Polynomials (8 topics):** Linear Equations 1-Var, Linear Equations 2-Var, Quadratic Equations, Algebraic Identities, Remainder Theorem, Factor Theorem, Progressions (AP/GP), Inequalities.
@@ -568,7 +606,7 @@ The StudyLab curriculum spans **175 benchmark topics** across 4 major discipline
 8. **Trigonometry (5 topics):** Trigonometric Ratios, Trigonometric Identities, Heights & Distances, Maximum/Minimum Values, Inverse Trigonometry.
 9. **Statistics & Modern Math (5 topics):** Mean Median Mode, Standard Deviation, Permutation & Combination, Basic Probability, Set Theory.
 
-### 12.2 Reasoning (30 Topics across 6 Chapters — 100% Discrete MCQ Modality)
+### 14.2 Reasoning (30 Topics across 6 Chapters — 100% Discrete MCQ Modality)
 1. **Arrangements & Puzzles (6 topics):** Linear Seating (North/South), Circular Seating, Floor & Flat Puzzles, Box Stacking, Scheduling Puzzles, Matrix Grid Puzzles.
 2. **Logic & Syllogisms (5 topics):** Syllogisms (Standard), Syllogisms (Possibility/Only a few), Statement & Assumptions, Statement & Conclusions, Course of Action.
 3. **Coding-Decoding & Series (5 topics):** Letter Coding, Number Coding, Coded Relations, Alphanumeric Series, Number/Letter Analogy.
@@ -576,7 +614,7 @@ The StudyLab curriculum spans **175 benchmark topics** across 4 major discipline
 5. **Blood Relations (4 topics):** Direct Relations, Pointing to Photograph, Coded Blood Relations, Family Tree Generation.
 6. **Inequalities & Data Sufficiency (6 topics):** Direct Inequalities, Coded Inequalities, Math Data Sufficiency, Logical Data Sufficiency, Input-Output Machine, Venn Diagrams.
 
-### 12.3 Physics (40 Topics across 8 Chapters)
+### 14.3 Physics (40 Topics across 8 Chapters)
 1. **Units, Measurements & Vectors (4 topics):** Dimensional Analysis, Error Analysis, Vector Addition/Dot/Cross, Significant Figures.
 2. **Kinematics (5 topics):** Uniform Motion, Uniformly Accelerated Motion, Projectile Motion, Relative Motion 1D, Relative Motion 2D.
 3. **Laws of Motion & Friction (5 topics):** Newton's Second Law, Pulley & Wedge Constraints, Static & Kinetic Friction, Inclined Plane Dynamics, Circular Motion Dynamics.
@@ -586,14 +624,14 @@ The StudyLab curriculum spans **175 benchmark topics** across 4 major discipline
 7. **Thermal Physics (5 topics):** Thermal Expansion & Calorimetry, Kinetic Theory of Gases, First Law of Thermodynamics, Heat Engines & Carnot Cycle, Heat Transfer (Conduction/Radiation).
 8. **Electrostatics & Current Electricity (5 topics):** Coulomb's Law & Electric Field, Gauss's Law & Flux, Electric Potential & Capacitors, Ohm's Law & Kirchhoff's Rules, Heating Effects & Power.
 
-### 12.4 Chemistry (46 Topics across 3 Disciplines)
+### 14.4 Chemistry (46 Topics across 3 Disciplines)
 1. **Physical Chemistry (18 topics):** Mole Concept & Molar Mass, Empirical & Molecular Formula, Limiting Reagent, Solution Concentration (Molarity/Molality), Ideal Gas Equation, Dalton's Law of Partial Pressure, Raoult's Law & Colligative Properties, First Law & Enthalpy, Hess's Law & Bond Energies, Chemical Equilibrium ($K_c/K_p$), Le Chatelier's Principle, Ionic Equilibrium ($pH$ & Buffers), Solubility Product ($K_{sp}$), Galvanic Cells & Nernst Equation, Faraday's Laws of Electrolysis, Rate Laws & Order of Reaction, Arrhenius Equation & Activation Energy, Radioactivity Kinetics.
 2. **Inorganic Chemistry (14 topics):** Quantum Numbers & Electronic Configuration, Periodic Trends (IE/EA/EN), Chemical Bonding & Lewis Structures, VSEPR & Molecular Geometry, Hybridization ($sp, sp^2, sp^3$), Hydrogen Bonding, Coordination Compounds & Nomenclature, Crystal Field Theory ($d$-orbital splitting), Metallurgy & Extraction, $s$-Block Alkali/Alkaline Earth, $p$-Block Group 15/16/17, $d$-Block & $f$-Block Transitions, Qualitative Salt Analysis (Cations), Qualitative Salt Analysis (Anions).
 3. **Organic Chemistry (14 topics):** IUPAC Nomenclature, Structural & Stereoisomerism, Inductive & Resonance Effects, Alkanes & Free Radical Halogenation, Alkenes & Markovnikov Addition, Alkynes & Acidic Hydrogen, Electrophilic Aromatic Substitution, Haloalkanes ($S_N1/S_N2$), Alcohols & Lucas Reagent, Aldehydes/Ketones & Nucleophilic Addition, Carboxylic Acids & Derivatives, Amines & Diazonium Salts, Carbohydrates & Amino Acids, Polymerization & Everyday Chemistry.
 
 ---
 
-## 13. Summary & Acceptance Checklist
+## 15. Procedural Summary & Acceptance Checklist
 
 | Requirement Area | Specification Standard | Verification Status |
 |---|---|---|
@@ -605,3 +643,4 @@ The StudyLab curriculum spans **175 benchmark topics** across 4 major discipline
 | **Progressive Hints** | 3-tier sequence (`hint_principle` $\to$ `hint_operation` $\to$ `hint_intermediate`) | Verified in `studylab_content_factory.py` |
 | **Full Universe Coverage**| 175 topics (59 Math, 30 Reasoning, 40 Physics, 46 Chemistry) | Verified in `studylab_content_factory.py` |
 | **Hygiene & Packaging** | Validated AST, zero unescaped strings, single canonical `.apkg` | Verified in Phase 36C test suite |
+

@@ -1,5 +1,8 @@
 # Procedural Practice Engine Architecture (Phase 1)
 
+> [!NOTE]
+> This section describes the procedural content architecture. It does not define the canonical StudyLab Source APKG contract.
+
 This document describes the architectural foundation for the Procedural Practice Engine subsystem in Anki, enabling procedural problem generation and skill-level mastery tracking across multiple domains (**Mathematics**, **Physics**, **Chemistry**, and **Reasoning**).
 
 ---

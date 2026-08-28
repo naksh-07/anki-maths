@@ -11,7 +11,10 @@
 
 ## 1. Executive Summary & The Zero-Rust Authoring Paradigm
 
-StudyLab replaces static question memorization with dynamic, generative procedural practice. Historically (Phases 01–03), adding a new topic or problem pattern required writing and compiling dedicated Rust generator code in `rslib/procedural/src/problems/generators/`. 
+> [!NOTE]
+> This section describes the procedural content architecture. It does not define the canonical StudyLab Source APKG contract. For the canonical static source APKG contract (such as curated PYQs), see `StudyLab-Source-APKG-Contract(1).txt` and [`docs/APKG_CONTENT_CONTRACT.md`](file:///c:/Users/Suraj/Documents/Antigravity/Anki-maths/docs/APKG_CONTENT_CONTRACT.md).
+
+StudyLab provides dynamic, generative procedural practice alongside its canonical source-first static question pipeline. Historically (Phases 01–03), adding a new procedural topic or problem pattern required writing and compiling dedicated Rust generator code in `rslib/procedural/src/problems/generators/`. 
 
 To achieve unbounded curricular scale without recompiling binaries, StudyLab introduced the **Zero-Rust Declarative Authoring Paradigm**:
 - Content authors define problem families, parameter domains, algebraic constraint rules, and answer derivations entirely in declarative JSON / YAML schemas.
