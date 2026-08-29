@@ -1047,16 +1047,16 @@ export class ProceduralReviewer {
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
 
-        // ANTI-08: Explicitly ensure solution container remains strictly hidden during reflection
+        // Solution container revealed during reflection (Phase 2)
         const solutionContainer = this.container.querySelector<HTMLElement>("#proc-solution-container");
-        solutionContainer?.classList.add("hidden");
+        solutionContainer?.classList.remove("hidden");
         if (solutionContainer) {
-            solutionContainer.style.display = "none";
+            solutionContainer.style.display = "";
         }
         const actionRow = this.container.querySelector<HTMLElement>(".proc-action-row");
-        actionRow?.classList.add("hidden");
+        actionRow?.classList.remove("hidden");
         if (actionRow) {
-            actionRow.style.display = "none";
+            actionRow.style.display = "";
         }
 
         this.resultPanel?.classList.remove("hidden");
@@ -1064,11 +1064,15 @@ export class ProceduralReviewer {
             this.resultTitle.textContent = "✗ Incorrect Answer";
         }
 
-        // ANTI-02: Withhold correct answer during reflection; prompt learner to classify error
         if (this.resultFeedback) {
+            const canonicalFormatted = this.options.correctAnswer?.formatted || 
+                this.options.correctAnswer?.correct_option || 
+                this.options.correctAnswer?.value || 
+                this.options.correctAnswer?.answer || "";
+                
             this.resultFeedback.innerHTML = `
-                <div class="proc-expected-row"><span class="proc-comparison-item"><strong>Your answer:</strong> ${escapeHtml(data.answer)}</span></div>
-                <div class="proc-mistake-hint-msg" style="margin-top: 6px; font-size: 0.85rem; color: var(--proc-text-muted, #94a3b8);"><em>Classify your error below to reflect and review canonical derivation.</em></div>
+                <div class="proc-expected-row"><span class="proc-comparison-item"><strong>Your answer:</strong> ${escapeHtml(data.answer)}</span> <span class="proc-crumb-sep">·</span> <span class="proc-comparison-item"><strong>Correct answer:</strong> ${escapeHtml(canonicalFormatted)}</span></div>
+                <div class="proc-mistake-hint-msg" style="margin-top: 6px; font-size: 0.85rem; color: var(--proc-text-muted, #94a3b8);"><em>Classify your error to continue.</em></div>
             `;
         }
 
@@ -1098,6 +1102,7 @@ export class ProceduralReviewer {
         this.pendingMistakeOutcome = null;
 
         this.finalizeAndShowFeedback(pending.outcome, pending.data, pending.mode, pending.timeTakenMs);
+        this.handleNext();
     }
 
     /**
@@ -1310,11 +1315,11 @@ export class ProceduralReviewer {
             }
         }
 
-        // Reveal next button for deliberate progression post-feedback
+        // Next button has been removed per StudyLab Phase 2 requirements
         const nextBtn = this.container.querySelector<HTMLElement>("#proc-next-btn, .proc-next-btn");
         if (nextBtn) {
-            nextBtn.classList.remove("hidden");
-            nextBtn.style.display = "";
+            nextBtn.classList.add("hidden");
+            nextBtn.style.display = "none";
         }
     }
 
@@ -1366,6 +1371,16 @@ export class ProceduralReviewer {
                     return;
                 }
                 this.handleQuickSubmit();
+            }
+        } else if (this.state === "feedback") {
+            this.handleNext();
+        } else if (this.state === "mistake_classification") {
+            const activeEl = document.activeElement as HTMLElement;
+            if (activeEl && (activeEl.classList.contains("proc-mistake-btn") || activeEl.classList.contains("proc-mistake-card"))) {
+                const val = activeEl.dataset.value;
+                if (val) {
+                    this.selectMistakeCategory(val);
+                }
             }
         }
     }

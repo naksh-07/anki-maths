@@ -700,6 +700,9 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         if self.state == "question":
             self._getTypedAnswer()
         elif self.state == "answer" and aqt.mw.pm.spacebar_rates_card():
+            if self._is_procedural_card():
+                self.web.eval("if(globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.handleNativeShowAnswer === 'function') { globalThis.anki.procedural.handleNativeShowAnswer(); }")
+                return
             self.bottom.web.evalWithCallback(
                 "selectedAnswerButton()", self._onAnswerButton
             )

@@ -1,0 +1,534 @@
+{
+  "card1_numerical_initial": {
+    "card": {
+      "objectType": "problem",
+      "prompt": "How many moles of $\\text{CO}_2$ are present in $88\\text{ g}$ of carbon dioxide gas? (Atomic masses: $\\text{C} = 12\\text{ u}, \\text{O} = 16\\text{ u}$)",
+      "options": [],
+      "hasMistakePanel": true,
+      "isMistakeVisible": false,
+      "mistakeButtons": [
+        {
+          "text": "1 Silly Slip",
+          "dataValue": "silly_mistake",
+          "dataKey": "1"
+        },
+        {
+          "text": "2 Pattern Missed",
+          "dataValue": "pattern_not_recognized",
+          "dataKey": "2"
+        },
+        {
+          "text": "3 Concept Gap",
+          "dataValue": "formula_or_concept_misapplied",
+          "dataKey": "3"
+        },
+        {
+          "text": "4 Prereq Unknown",
+          "dataValue": "concept_not_known",
+          "dataKey": "4"
+        }
+      ],
+      "hasNextBtn": true,
+      "isNextVisible": true,
+      "nextBtnHtml": "<button type=\"button\" id=\"proc-next-btn\" class=\"proc-btn proc-btn-primary\">Next Card</button>",
+      "hasHintBtn": true,
+      "isHintVisible": false,
+      "hintBtnHtml": "<button type=\"button\" id=\"proc-hint-btn\" class=\"proc-btn proc-btn-secondary\">\ud83d\udca1 Request Hint</button>",
+      "isSolutionVisible": false,
+      "isResultVisible": false,
+      "resultTitle": "",
+      "resultFeedback": "",
+      "isQuickVisible": true,
+      "isStepwiseVisible": false
+    },
+    "bottom": {
+      "middleHtml": "<table cellpadding=\"0\"><tbody><tr><td class=\"stat2\" align=\"center\"><span class=\"stattxt\">\n<span class=\"new-count\"><u>20</u></span> +\n<span class=\"learn-count\">0</span> +\n<span class=\"review-count\">0</span>\n</span></td></tr></tbody></table>",
+      "isAnsBtnPresent": false,
+      "easeButtons": [],
+      "mistakeButtons": [],
+      "nextButtons": []
+    }
+  },
+  "card1_numerical_stepwise": {
+    "card": {
+      "objectType": "problem",
+      "prompt": "How many moles of $\\text{CO}_2$ are present in $88\\text{ g}$ of carbon dioxide gas? (Atomic masses: $\\text{C} = 12\\text{ u}, \\text{O} = 16\\text{ u}$)",
+      "options": [],
+      "hasMistakePanel": true,
+      "isMistakeVisible": false,
+      "mistakeButtons": [
+        {
+          "text": "1 Silly Slip",
+          "dataValue": "silly_mistake",
+          "dataKey": "1"
+        },
+        {
+          "text": "2 Pattern Missed",
+          "dataValue": "pattern_not_recognized",
+          "dataKey": "2"
+        },
+        {
+          "text": "3 Concept Gap",
+          "dataValue": "formula_or_concept_misapplied",
+          "dataKey": "3"
+        },
+        {
+          "text": "4 Prereq Unknown",
+          "dataValue": "concept_not_known",
+          "dataKey": "4"
+        }
+      ],
+      "hasNextBtn": true,
+      "isNextVisible": true,
+      "nextBtnHtml": "<button type=\"button\" id=\"proc-next-btn\" class=\"proc-btn proc-btn-primary\">Next Card</button>",
+      "hasHintBtn": true,
+      "isHintVisible": true,
+      "hintBtnHtml": "<button type=\"button\" id=\"proc-hint-btn\" class=\"proc-btn proc-btn-secondary\">\ud83d\udca1 Request Hint</button>",
+      "isSolutionVisible": false,
+      "isResultVisible": false,
+      "resultTitle": "",
+      "resultFeedback": "",
+      "isQuickVisible": false,
+      "isStepwiseVisible": true
+    },
+    "bottom": {
+      "middleHtml": "<table cellpadding=\"0\"><tbody><tr><td class=\"stat2\" align=\"center\"><span class=\"stattxt\">\n<span class=\"new-count\"><u>20</u></span> +\n<span class=\"learn-count\">0</span> +\n<span class=\"review-count\">0</span>\n</span></td></tr></tbody></table>",
+      "isAnsBtnPresent": false,
+      "easeButtons": [],
+      "mistakeButtons": [],
+      "nextButtons": []
+    }
+  },
+  "card1_numerical_mistake": {
+    "card": {
+      "objectType": "problem",
+      "prompt": "How many moles of $\\text{CO}_2$ are present in $88\\text{ g}$ of carbon dioxide gas? (Atomic masses: $\\text{C} = 12\\text{ u}, \\text{O} = 16\\text{ u}$)",
+      "options": [],
+      "hasMistakePanel": true,
+      "isMistakeVisible": false,
+      "mistakeButtons": [
+        {
+          "text": "1 Silly Slip",
+          "dataValue": "silly_mistake",
+          "dataKey": "1"
+        },
+        {
+          "text": "2 Pattern Missed",
+          "dataValue": "pattern_not_recognized",
+          "dataKey": "2"
+        },
+        {
+          "text": "3 Concept Gap",
+          "dataValue": "formula_or_concept_misapplied",
+          "dataKey": "3"
+        },
+        {
+          "text": "4 Prereq Unknown",
+          "dataValue": "concept_not_known",
+          "dataKey": "4"
+        }
+      ],
+      "hasNextBtn": true,
+      "isNextVisible": true,
+      "nextBtnHtml": "<button type=\"button\" id=\"proc-next-btn\" class=\"proc-btn proc-btn-primary\">Next Card</button>",
+      "hasHintBtn": true,
+      "isHintVisible": true,
+      "hintBtnHtml": "<button type=\"button\" id=\"proc-hint-btn\" class=\"proc-btn proc-btn-secondary\">\ud83d\udca1 Request Hint</button>",
+      "isSolutionVisible": false,
+      "isResultVisible": false,
+      "resultTitle": "",
+      "resultFeedback": "",
+      "isQuickVisible": false,
+      "isStepwiseVisible": true
+    },
+    "bottom": {
+      "middleHtml": "<table cellpadding=\"0\"><tbody><tr><td class=\"stat2\" align=\"center\"><span class=\"stattxt\">\n<span class=\"new-count\"><u>20</u></span> +\n<span class=\"learn-count\">0</span> +\n<span class=\"review-count\">0</span>\n</span></td></tr></tbody></table>",
+      "isAnsBtnPresent": false,
+      "easeButtons": [],
+      "mistakeButtons": [],
+      "nextButtons": []
+    }
+  },
+  "card1_numerical_solution": {
+    "card": {
+      "objectType": "problem",
+      "prompt": "How many moles of $\\text{CO}_2$ are present in $88\\text{ g}$ of carbon dioxide gas? (Atomic masses: $\\text{C} = 12\\text{ u}, \\text{O} = 16\\text{ u}$)",
+      "options": [],
+      "hasMistakePanel": true,
+      "isMistakeVisible": false,
+      "mistakeButtons": [
+        {
+          "text": "1 Silly Slip",
+          "dataValue": "silly_mistake",
+          "dataKey": "1"
+        },
+        {
+          "text": "2 Pattern Missed",
+          "dataValue": "pattern_not_recognized",
+          "dataKey": "2"
+        },
+        {
+          "text": "3 Concept Gap",
+          "dataValue": "formula_or_concept_misapplied",
+          "dataKey": "3"
+        },
+        {
+          "text": "4 Prereq Unknown",
+          "dataValue": "concept_not_known",
+          "dataKey": "4"
+        }
+      ],
+      "hasNextBtn": true,
+      "isNextVisible": true,
+      "nextBtnHtml": "<button type=\"button\" id=\"proc-next-btn\" class=\"proc-btn proc-btn-primary\">Next Card</button>",
+      "hasHintBtn": true,
+      "isHintVisible": true,
+      "hintBtnHtml": "<button type=\"button\" id=\"proc-hint-btn\" class=\"proc-btn proc-btn-secondary\">\ud83d\udca1 Request Hint</button>",
+      "isSolutionVisible": false,
+      "isResultVisible": false,
+      "resultTitle": "",
+      "resultFeedback": "",
+      "isQuickVisible": false,
+      "isStepwiseVisible": true
+    },
+    "bottom": {
+      "middleHtml": "<table cellpadding=\"0\"><tbody><tr><td class=\"stat2\" align=\"center\"><span class=\"stattxt\">\n<span class=\"new-count\"><u>20</u></span> +\n<span class=\"learn-count\">0</span> +\n<span class=\"review-count\">0</span>\n</span></td></tr></tbody></table>",
+      "isAnsBtnPresent": false,
+      "easeButtons": [],
+      "mistakeButtons": [],
+      "nextButtons": []
+    }
+  },
+  "card2_mcq_initial": {
+    "card": {
+      "objectType": "mcq",
+      "prompt": "What is the volume occupied by $0.5\\text{ moles}$ of $\\text{N}_2$ gas at Standard Temperature and Pressure (STP)?",
+      "options": [
+        {
+          "id": "A. 5.6 L",
+          "label": "A\nA. 5.6 L",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "B. 11.2 L",
+          "label": "B\nB. 11.2 L",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "C. 22.4 L",
+          "label": "C\nC. 22.4 L",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "D. 44.8 L",
+          "label": "D\nD. 44.8 L",
+          "selected": false,
+          "ariaChecked": "false"
+        }
+      ],
+      "hasMistakePanel": true,
+      "isMistakeVisible": false,
+      "mistakeButtons": [
+        {
+          "text": "1 Silly Slip",
+          "dataValue": "silly_mistake",
+          "dataKey": "1"
+        },
+        {
+          "text": "2 Pattern Missed",
+          "dataValue": "pattern_not_recognized",
+          "dataKey": "2"
+        },
+        {
+          "text": "3 Concept Gap",
+          "dataValue": "formula_or_concept_misapplied",
+          "dataKey": "3"
+        },
+        {
+          "text": "4 Prereq Unknown",
+          "dataValue": "concept_not_known",
+          "dataKey": "4"
+        }
+      ],
+      "hasNextBtn": true,
+      "isNextVisible": true,
+      "nextBtnHtml": "<button type=\"button\" id=\"proc-next-btn\" class=\"proc-btn proc-btn-primary\">Next Card</button>",
+      "hasHintBtn": false,
+      "isHintVisible": false,
+      "hintBtnHtml": null,
+      "isSolutionVisible": false,
+      "isResultVisible": false,
+      "resultTitle": "",
+      "resultFeedback": "",
+      "isQuickVisible": false,
+      "isStepwiseVisible": false
+    },
+    "bottom": {
+      "middleHtml": "<table cellpadding=\"0\"><tbody><tr><td class=\"stat2\" align=\"center\"><span class=\"stattxt\">\n<span class=\"new-count\"><u>19</u></span> +\n<span class=\"learn-count\">1</span> +\n<span class=\"review-count\">0</span>\n</span></td></tr></tbody></table>",
+      "isAnsBtnPresent": false,
+      "easeButtons": [],
+      "mistakeButtons": [],
+      "nextButtons": []
+    }
+  },
+  "card2_mcq_mistake": {
+    "card": {
+      "objectType": "mcq",
+      "prompt": "What is the volume occupied by $0.5\\text{ moles}$ of $\\text{N}_2$ gas at Standard Temperature and Pressure (STP)?",
+      "options": [
+        {
+          "id": "A. 5.6 L",
+          "label": "A\nA. 5.6 L",
+          "selected": true,
+          "ariaChecked": "true"
+        },
+        {
+          "id": "B. 11.2 L",
+          "label": "B\nB. 11.2 L",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "C. 22.4 L",
+          "label": "C\nC. 22.4 L",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "D. 44.8 L",
+          "label": "D\nD. 44.8 L",
+          "selected": false,
+          "ariaChecked": "false"
+        }
+      ],
+      "hasMistakePanel": true,
+      "isMistakeVisible": true,
+      "mistakeButtons": [
+        {
+          "text": "1\nSilly Slip",
+          "dataValue": "silly_mistake",
+          "dataKey": "1"
+        },
+        {
+          "text": "2\nPattern Missed",
+          "dataValue": "pattern_not_recognized",
+          "dataKey": "2"
+        },
+        {
+          "text": "3\nConcept Gap",
+          "dataValue": "formula_or_concept_misapplied",
+          "dataKey": "3"
+        },
+        {
+          "text": "4\nPrereq Unknown",
+          "dataValue": "concept_not_known",
+          "dataKey": "4"
+        }
+      ],
+      "hasNextBtn": true,
+      "isNextVisible": true,
+      "nextBtnHtml": "<button type=\"button\" id=\"proc-next-btn\" class=\"proc-btn proc-btn-primary\">Next Card</button>",
+      "hasHintBtn": false,
+      "isHintVisible": false,
+      "hintBtnHtml": null,
+      "isSolutionVisible": false,
+      "isResultVisible": true,
+      "resultTitle": "\u2717 Incorrect Answer",
+      "resultFeedback": "Your answer: A. 5.6 L\nClassify your error below to reflect and review canonical derivation.",
+      "isQuickVisible": false,
+      "isStepwiseVisible": false
+    },
+    "bottom": {
+      "middleHtml": "<center><table cellpadding=\"0\" cellspacing=\"0\"><tbody><tr>\n<td align=\"center\"><button type=\"button\" class=\"proc-mistake-btn\" data-value=\"silly_mistake\" data-key=\"1\" title=\"Arithmetic or calculation slip\" onclick=\"pycmd('procedural_mistake_select:silly_mistake');\"><span class=\"nobold\">1</span>Silly Slip</button></td>\n<td align=\"center\"><button type=\"button\" class=\"proc-mistake-btn\" data-value=\"pattern_not_recognized\" data-key=\"2\" title=\"Failed to identify problem structure or schema\" onclick=\"pycmd('procedural_mistake_select:pattern_not_recognized');\"><span class=\"nobold\">2</span>Pattern Missed</button></td>\n<td align=\"center\"><button type=\"button\" class=\"proc-mistake-btn\" data-value=\"formula_or_concept_misapplied\" data-key=\"3\" title=\"Wrong formula or misapplied theorem\" onclick=\"pycmd('procedural_mistake_select:formula_or_concept_misapplied');\"><span class=\"nobold\">3</span>Concept Gap</button></td>\n<td align=\"center\"><button type=\"button\" class=\"proc-mistake-btn\" data-value=\"concept_not_known\" data-key=\"4\" title=\"Fundamental knowledge gap or missing prerequisite\" onclick=\"pycmd('procedural_mistake_select:concept_not_known');\"><span class=\"nobold\">4</span>Prereq Unknown</button></td>\n</tr></tbody></table></center>",
+      "isAnsBtnPresent": false,
+      "easeButtons": [],
+      "mistakeButtons": [
+        {
+          "text": "1\nSilly Slip",
+          "onclick": "pycmd('procedural_mistake_select:silly_mistake');",
+          "dataValue": "silly_mistake",
+          "dataKey": "1"
+        },
+        {
+          "text": "2\nPattern Missed",
+          "onclick": "pycmd('procedural_mistake_select:pattern_not_recognized');",
+          "dataValue": "pattern_not_recognized",
+          "dataKey": "2"
+        },
+        {
+          "text": "3\nConcept Gap",
+          "onclick": "pycmd('procedural_mistake_select:formula_or_concept_misapplied');",
+          "dataValue": "formula_or_concept_misapplied",
+          "dataKey": "3"
+        },
+        {
+          "text": "4\nPrereq Unknown",
+          "onclick": "pycmd('procedural_mistake_select:concept_not_known');",
+          "dataValue": "concept_not_known",
+          "dataKey": "4"
+        }
+      ],
+      "nextButtons": []
+    }
+  },
+  "card2_mcq_solution": {
+    "card": {
+      "objectType": "mcq",
+      "prompt": "What is the volume occupied by $0.5\\text{ moles}$ of $\\text{N}_2$ gas at Standard Temperature and Pressure (STP)?",
+      "options": [
+        {
+          "id": "A. 5.6 L",
+          "label": "A\nA. 5.6 L",
+          "selected": true,
+          "ariaChecked": "true"
+        },
+        {
+          "id": "B. 11.2 L",
+          "label": "B\nB. 11.2 L",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "C. 22.4 L",
+          "label": "C\nC. 22.4 L",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "D. 44.8 L",
+          "label": "D\nD. 44.8 L",
+          "selected": false,
+          "ariaChecked": "false"
+        }
+      ],
+      "hasMistakePanel": true,
+      "isMistakeVisible": false,
+      "mistakeButtons": [
+        {
+          "text": "1 Silly Slip",
+          "dataValue": "silly_mistake",
+          "dataKey": "1"
+        },
+        {
+          "text": "2 Pattern Missed",
+          "dataValue": "pattern_not_recognized",
+          "dataKey": "2"
+        },
+        {
+          "text": "3 Concept Gap",
+          "dataValue": "formula_or_concept_misapplied",
+          "dataKey": "3"
+        },
+        {
+          "text": "4 Prereq Unknown",
+          "dataValue": "concept_not_known",
+          "dataKey": "4"
+        }
+      ],
+      "hasNextBtn": true,
+      "isNextVisible": true,
+      "nextBtnHtml": "<button type=\"button\" id=\"proc-next-btn\" class=\"proc-btn proc-btn-primary\">Next Card</button>",
+      "hasHintBtn": false,
+      "isHintVisible": false,
+      "hintBtnHtml": null,
+      "isSolutionVisible": true,
+      "isResultVisible": true,
+      "resultTitle": "\u2717 Incorrect Answer",
+      "resultFeedback": "Your answer: A. 5.6 L \u00b7 Correct answer: B. 11.2 L\nIncorrect option selected.",
+      "isQuickVisible": false,
+      "isStepwiseVisible": false
+    },
+    "bottom": {
+      "middleHtml": "<center><table cellpadding=\"0\" cellspacing=\"0\"><tbody><tr>\n<td align=\"center\"><button type=\"button\" id=\"defease\" class=\"proc-bottom-next-btn\" onclick=\"pycmd('procedural_next');\"><span class=\"nobold\">Space / Enter</span>Next Card</button></td>\n</tr></tbody></table></center>",
+      "isAnsBtnPresent": false,
+      "easeButtons": [],
+      "mistakeButtons": [],
+      "nextButtons": [
+        {
+          "text": "Space / Enter\nNext Card",
+          "onclick": "pycmd('procedural_next');",
+          "id": "defease",
+          "className": "proc-bottom-next-btn"
+        }
+      ]
+    }
+  },
+  "card3_mcq_correct": {
+    "card": {
+      "objectType": "mcq",
+      "prompt": "How many atoms of oxygen are contained in $18\\text{ g}$ of water ($\\text{H}_2\\text{O}$)? ($N_A = 6.022 \\times 10^{23}$)",
+      "options": [
+        {
+          "id": "A. 3.011 x 10^23",
+          "label": "A\nA. 3.011 x 10^23",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "B. 6.022 x 10^23",
+          "label": "B\nB. 6.022 x 10^23",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "C. 1.204 x 10^24",
+          "label": "C\nC. 1.204 x 10^24",
+          "selected": false,
+          "ariaChecked": "false"
+        },
+        {
+          "id": "D. 1.806 x 10^24",
+          "label": "D\nD. 1.806 x 10^24",
+          "selected": false,
+          "ariaChecked": "false"
+        }
+      ],
+      "hasMistakePanel": true,
+      "isMistakeVisible": false,
+      "mistakeButtons": [
+        {
+          "text": "1 Silly Slip",
+          "dataValue": "silly_mistake",
+          "dataKey": "1"
+        },
+        {
+          "text": "2 Pattern Missed",
+          "dataValue": "pattern_not_recognized",
+          "dataKey": "2"
+        },
+        {
+          "text": "3 Concept Gap",
+          "dataValue": "formula_or_concept_misapplied",
+          "dataKey": "3"
+        },
+        {
+          "text": "4 Prereq Unknown",
+          "dataValue": "concept_not_known",
+          "dataKey": "4"
+        }
+      ],
+      "hasNextBtn": true,
+      "isNextVisible": true,
+      "nextBtnHtml": "<button type=\"button\" id=\"proc-next-btn\" class=\"proc-btn proc-btn-primary\">Next Card</button>",
+      "hasHintBtn": false,
+      "isHintVisible": false,
+      "hintBtnHtml": null,
+      "isSolutionVisible": false,
+      "isResultVisible": false,
+      "resultTitle": "",
+      "resultFeedback": "",
+      "isQuickVisible": false,
+      "isStepwiseVisible": false
+    },
+    "bottom": {
+      "middleHtml": "<table cellpadding=\"0\"><tbody><tr><td class=\"stat2\" align=\"center\"><span class=\"stattxt\">\n<span class=\"new-count\"><u>18</u></span> +\n<span class=\"learn-count\">2</span> +\n<span class=\"review-count\">0</span>\n</span></td></tr></tbody></table>",
+      "isAnsBtnPresent": false,
+      "easeButtons": [],
+      "mistakeButtons": [],
+      "nextButtons": []
+    }
+  }
+}
