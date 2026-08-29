@@ -569,6 +569,11 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
             return
         if self.state != "answer":
             return
+            
+        if self._is_procedural_card() and not getattr(self, "_procedural_answer_authorized", False):
+            # Enforce UI interaction contract: space/enter/1-4 cannot bypass StudyLab classification
+            return
+            
         proceed, ease = gui_hooks.reviewer_will_answer_card(
             (True, ease), self, self.card
         )
@@ -758,7 +763,9 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
                 val = int(val_str)
                 if val in (1, 2, 3, 4):
                     self.state = "answer"
+                    self._procedural_answer_authorized = True
                     self._answerCard(val)  # type: ignore
+                    self._procedural_answer_authorized = False
                 return
 
             if ":" in url:
@@ -1017,9 +1024,16 @@ timerStopped = false;
             self.mw.progress.single_shot(50, self._showEaseButtons)
             return
 
+        conf = self.mw.col.decks.config_dict_for_deck_id(self.card.current_deck_id())
+        
+        if self._is_procedural_card():
+            self.bottom.web.eval(
+                f"showAnswer('', {json.dumps(conf['stopTimerOnAnswer'])});"
+            )
+            return
+
         middle = self._answerButtons()
 
-        conf = self.mw.col.decks.config_dict_for_deck_id(self.card.current_deck_id())
         self.bottom.web.eval(
             f"showAnswer({json.dumps(middle)}, {json.dumps(conf['stopTimerOnAnswer'])});"
         )

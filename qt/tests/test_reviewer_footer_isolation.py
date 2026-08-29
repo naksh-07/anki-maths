@@ -16,8 +16,8 @@ import pytest
 from aqt.reviewer import Reviewer
 
 
-def test_show_ease_buttons_always_outputs_native_answer_buttons():
-    """Verify Reviewer._showEaseButtons() renders native answer buttons for all cards."""
+def test_show_ease_buttons_suppresses_native_answer_buttons_for_procedural():
+    """Verify Reviewer._showEaseButtons() suppresses native answer buttons for procedural cards."""
     mw = MagicMock()
     mw.state = "review"
     mw.col.decks.config_dict_for_deck_id.return_value = {"stopTimerOnAnswer": False}
@@ -47,14 +47,13 @@ def test_show_ease_buttons_always_outputs_native_answer_buttons():
     js_call = eval_calls[0]
     assert js_call.startswith("showAnswer(")
 
-    # Must contain native Again/Good/Easy/Hard rating elements
-    assert "ansbut" not in js_call  # show answer button is gone
-    assert "proc-mistake-btn" not in js_call  # mistake buttons MUST NOT be in bottom toolbar
-    assert "procedural_mistake_select" not in js_call  # no procedural mistake onclick in native footer
+    # Must NOT contain native Again/Good/Easy/Hard rating elements for procedural cards
+    assert "Again" not in js_call
+    assert "ansbut" not in js_call
 
 
-def test_answer_card_passes_through_native_rating():
-    """Verify Reviewer._answerCard rates the card without being intercepted by mistake classification."""
+def test_answer_card_blocks_native_rating_unless_authorized():
+    """Verify Reviewer._answerCard blocks native rating unless explicitly authorized."""
     mw = MagicMock()
     mw.state = "review"
     mw.col.sched = MagicMock()
@@ -76,9 +75,14 @@ def test_answer_card_passes_through_native_rating():
         mock_answer_op = MagicMock()
         mock_answer_card.return_value.success.return_value = mock_answer_op
 
+        # 1. Un-authorized: Should return early
         reviewer._answerCard(1)
+        assert not mock_answer_card.called
+        assert reviewer.state == "answer"
 
-        # answer_card must be called for rating 1 (Again)
+        # 2. Authorized: Should proceed
+        reviewer._procedural_answer_authorized = True
+        reviewer._answerCard(1)
         assert mock_answer_card.called
         assert reviewer.state == "transition"
 
@@ -110,68 +114,6 @@ def test_state_a_question_before_answer_has_no_mistake_buttons_in_footer():
     assert "proc-mistake-btn" not in eval_calls[0]
     assert "proc-mistake-panel" not in eval_calls[0]
 
-
-def test_state_b_mcq_incorrect_answer_preserves_native_answer_buttons():
-    """STATE B: MCQ incorrect answer keeps native Again/Hard/Good/Easy buttons in footer."""
-    mw = MagicMock()
-    mw.state = "review"
-    mw.col.decks.config_dict_for_deck_id.return_value = {"stopTimerOnAnswer": False}
-    mw.col.sched.answerButtons.return_value = 4
-    card = MagicMock()
-    card.id = 101
-    card.current_deck_id.return_value = 1
-    card.note_type.return_value = {"name": "StudyLab Procedural Anchor - MCQ"}
-
-    reviewer = Reviewer.__new__(Reviewer)
-    reviewer.mw = mw
-    reviewer.card = card
-    reviewer.state = "answer"
-    reviewer.bottom = MagicMock()
-    reviewer._states_mutated = True
-    reviewer._last_procedural_attempt = {"is_correct": False, "mode": "mcq", "score": 0.0}
-    reviewer._last_procedural_mistake = None
-    reviewer._answerButtons = MagicMock(return_value="<table class=stat><tr><td>Again</td><td>Hard</td><td>Good</td><td>Easy</td></tr></table>")
-
-    eval_calls = []
-    reviewer.bottom.web.eval = lambda js: eval_calls.append(js)
-
-    reviewer._showEaseButtons()
-
-    assert len(eval_calls) == 1
-    assert "showAnswer(" in eval_calls[0]
-    assert "Again" in eval_calls[0]
-    assert "proc-mistake-btn" not in eval_calls[0]
-
-
-def test_state_c_numerical_incorrect_answer_preserves_native_rating_buttons():
-    """STATE C: Numerical incorrect answer keeps native rating buttons intact."""
-    mw = MagicMock()
-    mw.state = "review"
-    mw.col.decks.config_dict_for_deck_id.return_value = {"stopTimerOnAnswer": False}
-    mw.col.sched.answerButtons.return_value = 4
-    card = MagicMock()
-    card.id = 102
-    card.current_deck_id.return_value = 1
-    card.note_type.return_value = {"name": "StudyLab Procedural Anchor - Mathematics"}
-
-    reviewer = Reviewer.__new__(Reviewer)
-    reviewer.mw = mw
-    reviewer.card = card
-    reviewer.state = "answer"
-    reviewer.bottom = MagicMock()
-    reviewer._states_mutated = True
-    reviewer._last_procedural_attempt = {"is_correct": False, "mode": "quick", "score": 0.0}
-    reviewer._last_procedural_mistake = None
-    reviewer._answerButtons = MagicMock(return_value="<table class=stat><tr><td>Again</td><td>Hard</td><td>Good</td><td>Easy</td></tr></table>")
-
-    eval_calls = []
-    reviewer.bottom.web.eval = lambda js: eval_calls.append(js)
-
-    reviewer._showEaseButtons()
-
-    assert len(eval_calls) == 1
-    assert "Again" in eval_calls[0]
-    assert "proc-mistake-btn" not in eval_calls[0]
 
 
 def test_state_d_mistake_category_selected_records_signal():

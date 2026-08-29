@@ -559,15 +559,7 @@ export class ProceduralReviewer {
             }
         });
 
-        // Next Problem button (feedback state progression)
-        const nextBtns = this.container.querySelectorAll<HTMLButtonElement>("#proc-next-btn, .proc-next-btn");
-        nextBtns.forEach((btn) => {
-            this.addListener(btn, "click", (e: Event) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.handleNext();
-            });
-        });
+
 
         // WorkedExample "Try Similar" button
         const trySimilarBtn = this.container.querySelector<HTMLButtonElement>("#proc-try-similar-btn");
@@ -1321,6 +1313,13 @@ export class ProceduralReviewer {
             nextBtn.classList.add("hidden");
             nextBtn.style.display = "none";
         }
+
+        // Auto-advance transient feedback after a short delay
+        setTimeout(() => {
+            if (this.state === "feedback") {
+                this.handleNext();
+            }
+        }, 1500);
     }
 
     public handleTrySimilar(): void {
