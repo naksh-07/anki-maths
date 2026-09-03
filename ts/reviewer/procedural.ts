@@ -8,7 +8,7 @@
 import { bridgeCommand } from "@tslib/bridgecommand";
 
 import { MCQContainer, type MCQEvaluationResult, type MCQOption } from "./components/mcq_container";
-import { MistakeFooter } from "./components/mistake_footer";
+
 import {
     NumericalContainer,
     NumericalParser,
@@ -184,8 +184,6 @@ export class ProceduralReviewer {
     private selectedOptionId: string | null = null;
     private hasSubmitted = false;
     private mistakeType: string | null = null;
-    private mistakePanel: HTMLElement | null = null;
-    private mistakeFooter: MistakeFooter | null = null;
 
     private mcqContainer: MCQContainer | null = null;
     private numericalContainer: NumericalContainer | null = null;
@@ -271,7 +269,7 @@ export class ProceduralReviewer {
         this.resultTitle = this.container.querySelector("#proc-result-title");
         this.resultFeedback = this.container.querySelector("#proc-result-feedback");
         this.actualTimeEl = this.container.querySelector("#proc-actual-time");
-        this.mistakePanel = this.container.querySelector("#proc-mistake-panel");
+
 
         if (this.stepwiseContainer) {
             this.stepwiseContainerComponent = new StepwiseContainer(this.container, {
@@ -322,16 +320,6 @@ export class ProceduralReviewer {
                 targetTimeMs: this.options.targetTimeMs,
             });
         }
-
-        // Mistake Footer Component Integration
-        this.mistakeFooter = new MistakeFooter({
-            container: this.container,
-            instanceId: this.options.instanceId,
-            familyId: this.options.familyId,
-            onSelect: (val) => {
-                this.selectMistakeCategory(val);
-            },
-        });
 
         // Centralized Modality Invariant Enforcement
         this.enforceModalityInvariants();
@@ -506,20 +494,20 @@ export class ProceduralReviewer {
                     }
                 }
             } else if (this.state === "mistake_classification") {
-                if (this.mistakeFooter?.handleKeydown(kbEvent)) {
-                    return;
-                }
-
                 // Numbers 1-4 for mistake categories fallback
                 const keyNum = parseInt(kbEvent.key, 10);
                 if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= 4) {
                     kbEvent.preventDefault();
                     kbEvent.stopPropagation();
-                    const targetBtn = this.container.querySelector<HTMLButtonElement>(
-                        `.proc-mistake-btn[data-key="${keyNum}"], .proc-mistake-card[data-key="${keyNum}"]`
-                    );
-                    if (targetBtn) {
-                        const val = targetBtn.dataset.value || "";
+                    
+                    const map: Record<number, string> = {
+                        1: "silly_mistake",
+                        2: "pattern_not_recognized",
+                        3: "formula_or_concept_misapplied",
+                        4: "concept_not_known",
+                    };
+                    const val = map[keyNum];
+                    if (val) {
                         this.selectMistakeCategory(val);
                     }
                     return;
@@ -527,16 +515,6 @@ export class ProceduralReviewer {
 
                 // Space or Enter in mistake classification MUST NOT bypass reflection (ANTI-08 Lock)
                 if (kbEvent.key === " " || kbEvent.code === "Space" || kbEvent.key === "Enter" || kbEvent.code === "Enter") {
-                    const activeEl = document.activeElement as HTMLElement;
-                    if (activeEl && (activeEl.classList.contains("proc-mistake-btn") || activeEl.classList.contains("proc-mistake-card"))) {
-                        const val = activeEl.dataset.value || "";
-                        if (val) {
-                            kbEvent.preventDefault();
-                            kbEvent.stopPropagation();
-                            this.selectMistakeCategory(val);
-                            return;
-                        }
-                    }
                     kbEvent.preventDefault();
                     kbEvent.stopPropagation();
                     return;
@@ -1068,14 +1046,6 @@ export class ProceduralReviewer {
             `;
         }
 
-        if (this.mistakeFooter) {
-            this.mistakeFooter.show((val) => {
-                this.selectMistakeCategory(val);
-            });
-        } else if (this.mistakePanel) {
-            this.mistakePanel.classList.remove("hidden");
-        }
-
         this.typesetMathJax(this.resultPanel);
     }
 
@@ -1094,7 +1064,6 @@ export class ProceduralReviewer {
         this.pendingMistakeOutcome = null;
 
         this.finalizeAndShowFeedback(pending.outcome, pending.data, pending.mode, pending.timeTakenMs);
-        this.handleNext();
     }
 
     /**
@@ -1112,8 +1081,8 @@ export class ProceduralReviewer {
         this.state = "feedback";
         this.lastAttemptIsCorrect = outcome.isCorrect;
 
-        this.mistakeFooter?.hide();
-        this.mistakePanel?.classList.add("hidden");
+
+
 
         // Hide input containers, show result panel, solution
         this.quickContainer?.classList.add("hidden");
@@ -1374,13 +1343,7 @@ export class ProceduralReviewer {
         } else if (this.state === "feedback") {
             this.handleNext();
         } else if (this.state === "mistake_classification") {
-            const activeEl = document.activeElement as HTMLElement;
-            if (activeEl && (activeEl.classList.contains("proc-mistake-btn") || activeEl.classList.contains("proc-mistake-card"))) {
-                const val = activeEl.dataset.value;
-                if (val) {
-                    this.selectMistakeCategory(val);
-                }
-            }
+            // Do nothing, handled by native bottom bar or keyboard listener
         }
     }
 
@@ -1443,10 +1406,7 @@ export class ProceduralReviewer {
             this.numericalContainer.destroy();
             this.numericalContainer = null;
         }
-        if (this.mistakeFooter) {
-            this.mistakeFooter.destroy();
-            this.mistakeFooter = null;
-        }
+
         if (this.stepwiseContainerComponent) {
             this.stepwiseContainerComponent.destroy();
             this.stepwiseContainerComponent = null;

@@ -809,8 +809,11 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         self._last_procedural_hint = data
 
     def _on_procedural_attempt(self, data: dict[str, Any]) -> None:
-        """Handle procedural attempt submission telemetry."""
+        """Handle procedural attempt submission telemetry and synchronize review state."""
         self._last_procedural_attempt = data
+        if self.state == "question":
+            self.state = "answer"
+            self._showEaseButtons()
 
     def _on_procedural_mistake(self, data: dict[str, Any]) -> None:
         """Handle mistake classification reflection signal."""
@@ -1027,16 +1030,33 @@ timerStopped = false;
         conf = self.mw.col.decks.config_dict_for_deck_id(self.card.current_deck_id())
         
         if self._is_procedural_card():
-            self.bottom.web.eval(
-                f"showAnswer('', {json.dumps(conf['stopTimerOnAnswer'])});"
-            )
-            return
-
-        middle = self._answerButtons()
+            attempt = getattr(self, "_last_procedural_attempt", {}) or {}
+            is_correct = attempt.get("is_correct", False) or attempt.get("isCorrect", False)
+            if not is_correct:
+                middle = self._mistakeButtons()
+            else:
+                middle = self._answerButtons()
+        else:
+            middle = self._answerButtons()
 
         self.bottom.web.eval(
             f"showAnswer({json.dumps(middle)}, {json.dumps(conf['stopTimerOnAnswer'])});"
         )
+
+    def _mistakeButtons(self) -> str:
+        buttons = [
+            (1, "silly_mistake", "1 Silly Slip", "Arithmetic or calculation slip", "1"),
+            (2, "pattern_not_recognized", "2 Pattern Missed", "Failed to identify problem structure or schema", "2"),
+            (3, "formula_or_concept_misapplied", "3 Concept Gap", "Wrong formula or misapplied theorem", "3"),
+            (4, "concept_not_known", "4 Prereq Unknown", "Fundamental knowledge gap or missing prerequisite", "4"),
+        ]
+        html = "<tr>"
+        for key, val, label, title, badge in buttons:
+            html += f"""
+<td align=center><button class="proc-mistake-btn" title="{title}" data-ease="{key}" onclick='pycmd("procedural_mistake_select:{val}");'>\
+{label}</button></td>"""
+        html += "</tr>"
+        return f"<table cellpadding=0>{html}</table>"
 
     def _remaining(self) -> str:
         if not self.mw.col.conf.get("dueCounts", True):

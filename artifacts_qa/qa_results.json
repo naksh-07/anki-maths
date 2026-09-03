@@ -1,0 +1,239 @@
+{
+  "tests": {
+    "A": {
+      "dom": {
+        "is_proc": true,
+        "mistake_panel_visible": true,
+        "mistake_btns": 4,
+        "result_visible": true,
+        "solution_visible": true,
+        "next_btn": 0,
+        "native_ease": 0,
+        "options": 4
+      },
+      "bottom": {
+        "native_ease": 0,
+        "text": "Edit\t\n3 + 16 + 0\n\tMore ▼",
+        "has_again_good": false
+      },
+      "no_classification_footer": false,
+      "no_native_ease_main": true,
+      "no_native_ease_bottom": true,
+      "no_next_btn": true,
+      "is_procedural": true,
+      "PASS": false
+    },
+    "B": {
+      "dom": {
+        "is_proc": true,
+        "mistake_panel_visible": true,
+        "mistake_btns": 4,
+        "result_visible": true,
+        "solution_visible": true,
+        "next_btn": 0,
+        "native_ease": 0,
+        "options": 4
+      },
+      "bottom": {
+        "native_ease": 0,
+        "text": "Edit\t\n3 + 16 + 0\n\tMore ▼",
+        "has_again_good": false
+      },
+      "has_feedback": true,
+      "has_solution": true,
+      "mistake_panel_shows": true,
+      "exactly_one_footer": true,
+      "no_native_ease": true,
+      "no_next_btn": true,
+      "body_snippet": "Mathematics\n›\nNumber System\n›\nFactors\nLevel 2: Standard\nPYQ: DEMO 2026 · DEMO\nFind the total number of factors of 360.\nA\nA. 18\nB\nB. 24\nC\nC. 28\nD\nD. 32\n✗ Incorrect Answer\nYour answer: C. 28 · Correct answer: B. 24\nClassify your error to continue.\n\n            Step-by-Step Solution:\n            \nPrime",
+      "PASS": true
+    },
+    "C": {
+      "Silly Slip": {
+        "button": "Silly Slip",
+        "clicked": true,
+        "card_advanced": true,
+        "prev_footer_gone": true,
+        "next_card_clean": true,
+        "PASS": true
+      },
+      "Pattern Missed": {
+        "button": "Pattern Missed",
+        "clicked": true,
+        "card_advanced": true,
+        "prev_footer_gone": true,
+        "next_card_clean": true,
+        "PASS": true
+      },
+      "Concept Gap": {
+        "button": "Concept Gap",
+        "clicked": true,
+        "card_advanced": true,
+        "prev_footer_gone": true,
+        "next_card_clean": true,
+        "PASS": true
+      },
+      "Prereq Unknown": {
+        "button": "Prereq Unknown",
+        "clicked": true,
+        "card_advanced": true,
+        "prev_footer_gone": true,
+        "next_card_clean": true,
+        "PASS": true
+      }
+    },
+    "D": {
+      "key_1": {
+        "key": "1",
+        "advanced": true,
+        "PASS": true
+      },
+      "key_2": {
+        "key": "2",
+        "advanced": true,
+        "PASS": true
+      },
+      "key_3": {
+        "key": "3",
+        "advanced": false,
+        "PASS": false
+      },
+      "key_4": {
+        "key": "4",
+        "advanced": true,
+        "PASS": true
+      },
+      "key_Space": {
+        "key": "Space",
+        "did_NOT_advance": true,
+        "still_in_classification": true,
+        "PASS": true
+      },
+      "key_Enter": {
+        "key": "Enter",
+        "did_NOT_advance": true,
+        "still_in_classification": true,
+        "PASS": true
+      }
+    },
+    "E": {
+      "correct_feedback": true,
+      "no_classification": false,
+      "no_native_ease": true,
+      "no_next_btn": true,
+      "auto_advanced": false,
+      "next_card_clean": true,
+      "PASS": false
+    },
+    "F": {
+      "iterations": [
+        {
+          "i": 0,
+          "type": "incorrect",
+          "method": "keyboard",
+          "advanced": true,
+          "footers": 0,
+          "ease": 0,
+          "next": 0
+        },
+        {
+          "i": 1,
+          "type": "incorrect",
+          "method": "keyboard",
+          "advanced": true,
+          "footers": 0,
+          "ease": 0,
+          "next": 0
+        },
+        {
+          "i": 2,
+          "type": "incorrect",
+          "method": "mouse",
+          "advanced": true,
+          "footers": 0,
+          "ease": 0,
+          "next": 0
+        },
+        {
+          "i": 3,
+          "type": "incorrect",
+          "method": "keyboard",
+          "advanced": true,
+          "footers": 0,
+          "ease": 0,
+          "next": 0
+        },
+        {
+          "i": 4,
+          "type": "correct",
+          "method": "mouse",
+          "advanced": false,
+          "footers": 1,
+          "ease": 0,
+          "next": 0
+        },
+        {
+          "i": 5,
+          "type": "incorrect",
+          "method": "mouse",
+          "advanced": false,
+          "footers": 0,
+          "ease": 0,
+          "next": 0
+        },
+        {
+          "i": 6,
+          "type": "incorrect",
+          "method": "keyboard",
+          "advanced": true,
+          "footers": 0,
+          "ease": 0,
+          "next": 0
+        },
+        {
+          "i": 7,
+          "type": "incorrect",
+          "method": "mouse",
+          "advanced": true,
+          "footers": 0,
+          "ease": 0,
+          "next": 0
+        },
+        {
+          "i": 8,
+          "type": "incorrect",
+          "method": "keyboard",
+          "advanced": true,
+          "footers": 0,
+          "ease": 0,
+          "next": 0
+        },
+        {
+          "i": 9,
+          "type": "correct",
+          "method": "keyboard",
+          "advanced": false,
+          "footers": 1,
+          "ease": 0,
+          "next": 0
+        }
+      ],
+      "all_advanced": false,
+      "any_leaked_ease": false,
+      "any_leaked_next": false,
+      "stale_footer": true,
+      "PASS": false
+    }
+  },
+  "errors": [],
+  "screenshots": [
+    "artifacts_qa\\A_fresh.png",
+    "artifacts_qa\\B_incorrect.png",
+    "artifacts_qa\\C_after_classify.png",
+    "artifacts_qa\\D_keyboard.png",
+    "artifacts_qa\\E_correct_feedback.png",
+    "artifacts_qa\\E_after_advance.png",
+    "artifacts_qa\\F_stress.png"
+  ],
+  "verdict": "NEEDS FIX"
+}

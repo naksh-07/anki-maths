@@ -556,27 +556,6 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         </div>
     </div>
 
-    <!-- Procedural Bottom Interaction Surface (Single Progression Footer) -->
-    <div id="proc-interaction-footer" class="proc-interaction-footer">
-        <!-- Mistake Classification (1-4 Metacognitive Reflection Gate) -->
-        <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
-            <div class="proc-mistake-heading">Classify error (1-4) to reflect and optimize spaced repetition:</div>
-            <div class="proc-mistake-footer">
-                <button type="button" class="proc-mistake-btn" data-value="silly_mistake" data-key="1">
-                    <span class="proc-key-badge">1</span> Silly Slip
-                </button>
-                <button type="button" class="proc-mistake-btn" data-value="pattern_not_recognized" data-key="2">
-                    <span class="proc-key-badge">2</span> Pattern Missed
-                </button>
-                <button type="button" class="proc-mistake-btn" data-value="formula_or_concept_misapplied" data-key="3">
-                    <span class="proc-key-badge">3</span> Concept Gap
-                </button>
-                <button type="button" class="proc-mistake-btn" data-value="concept_not_known" data-key="4">
-                    <span class="proc-key-badge">4</span> Prereq Unknown
-                </button>
-            </div>
-        </div>
-
     </div>
 
     <script>
@@ -651,7 +630,6 @@ mod tests {
         assert!(html.contains("id=\"proc-answer-input\""));
         assert!(html.contains("id=\"proc-submit-btn\""));
         assert!(html.contains("id=\"proc-result-panel\""));
-        assert!(html.contains("id=\"proc-mistake-panel\""));
         assert!(html.contains("Step-by-Step Solution:"));
         assert!(html.contains("Level"));
         assert!(html.contains("Quick Solve"));

@@ -1,0 +1,29 @@
+
+<script src="http://127.0.0.1:40000/_anki/js/webview.js"></script>
+<script src="http://127.0.0.1:40000/_anki/js/vendor/jquery.min.js"></script>
+<script src="http://127.0.0.1:40000/_anki/js/reviewer-bottom.js"></script>
+
+<center id="outer">
+<table id="innertable" width="100%" cellspacing="0" cellpadding="0">
+<tbody><tr>
+<td align="start" valign="top" class="stat">
+<button title="Shortcut key: ⁨E⁩" onclick="pycmd('edit');">Edit</button></td>
+<td align="center" valign="top" id="middle"><table cellpadding="0"><tbody><tr><td class="stat2" align="center"><span class="stattxt">
+<span class="new-count">3</span> +
+<span class="learn-count"><u>16</u></span> +
+<span class="review-count">0</span>
+</span></td></tr></tbody></table></td>
+<td align="end" valign="top" class="stat">
+<button title="Shortcut key: ⁨M⁩" onclick="pycmd('more');">
+More ▼
+<span id="time" class="stattxt"></span>
+</button>
+</td>
+</tr>
+</tbody></table>
+</center>
+<script>
+time = 0;
+timerStopped = false;
+</script>
+
