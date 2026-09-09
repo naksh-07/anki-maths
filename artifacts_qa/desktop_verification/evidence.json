@@ -1,0 +1,166 @@
+{
+  "version": "2.0.0-canonical",
+  "verification_engine": "desktop-webview-reviewer",
+  "timestamp": "2026-09-09T18:02:06Z",
+  "preflight": {
+    "hwnd": 462902,
+    "hwnd_hex": "0x71036",
+    "title": "desktop_verify_profile - Anki StudyLab",
+    "pid": 460,
+    "bounds": [
+      299,
+      21,
+      682,
+      607
+    ],
+    "is_visible": true,
+    "is_iconic": false,
+    "is_cloaked": false,
+    "geometry_valid": true,
+    "reality_inspection": [
+      {
+        "identity": {
+          "session_id": "cli_inspect_session",
+          "target_id": "462902",
+          "reference": "n1e1",
+          "role": "Window",
+          "name": "desktop_verify_profile - Anki StudyLab"
+        },
+        "source_plane": "NATIVE",
+        "native": {
+          "hwnd": "0x71036",
+          "class_name": "Qt6110QWindowIcon",
+          "title": "desktop_verify_profile - Anki StudyLab",
+          "visible": true,
+          "focused": false,
+          "bounds": {
+            "x": 457,
+            "y": 32,
+            "width": 1005,
+            "height": 902,
+            "left": 457,
+            "top": 32,
+            "right": 1462,
+            "bottom": 934
+          }
+        },
+        "web": {
+          "exists": false,
+          "enabled": false,
+          "tag_name": null,
+          "css_bounds": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          "cdp_node_id": null,
+          "frame_id": null
+        },
+        "compositor": {
+          "is_cloaked": false,
+          "is_minimized": false,
+          "is_occluded": false,
+          "occlusion_percentage": 0.0,
+          "dwm_bounds": {
+            "x": 457,
+            "y": 32,
+            "width": 1005,
+            "height": 902,
+            "left": 457,
+            "top": 32,
+            "right": 1462,
+            "bottom": 934
+          }
+        },
+        "visual": {
+          "is_physically_rendered": true,
+          "crop_hash": null,
+          "pixel_confidence": 1.0
+        },
+        "actionability": {
+          "is_actionable": true,
+          "reasons": [],
+          "reason": "",
+          "affordance_screen_point": [
+            959,
+            483
+          ]
+        },
+        "observation_epoch": 1,
+        "truth_rank": "PHYSICAL_DESKTOP",
+        "is_physically_visible": true,
+        "reconciled_at": 1788976916.0362418,
+        "metadata": {}
+      }
+    ]
+  },
+  "runtime_environment": {
+    "os": "Windows",
+    "process": "python.exe (Anki DEV)",
+    "pid": 10920,
+    "hwnd": "0x71036",
+    "title": "desktop_verify_profile - Anki StudyLab",
+    "geometry": [
+      299,
+      21,
+      682,
+      607
+    ],
+    "cdp_port": 9222
+  },
+  "states": [
+    {
+      "state_key": "real_procedural_solving",
+      "card_type": "StudyLab Procedural Anchor",
+      "provenance_reconciled": true,
+      "procedural_engine_error": false,
+      "assertions": {
+        "procedural_container_present": true,
+        "procedural_error_absent": true,
+        "prompt_rendered": true,
+        "zero_synthetic_dom_used": true
+      },
+      "artifacts": [
+        {
+          "type": "NATIVE_DESKTOP",
+          "file": "01_real_procedural_native.png",
+          "sha256": "7bcb2f47b526571881e8beb7ff1c188f3a4f8535ca1ec07b9e80882c17691dd4"
+        },
+        {
+          "type": "WEBVIEW_VIEWPORT",
+          "file": "01_real_procedural_webview.png",
+          "sha256": "da86327e5abfa071ab9c65c2bf7f20819933565be04e49c6d9a6ec7e107262f6"
+        }
+      ]
+    },
+    {
+      "state_key": "normal_basic_card",
+      "card_type": "Basic",
+      "provenance_reconciled": true,
+      "procedural_engine_error": false,
+      "assertions": {
+        "standard_anki_rendered": true,
+        "procedural_container_absent": true,
+        "zero_synthetic_dom_used": true
+      },
+      "artifacts": [
+        {
+          "type": "NATIVE_DESKTOP",
+          "file": "02_normal_basic_native.png",
+          "sha256": "5373d87e4e9f0f545c6e69a225625e532ef5926c6bf237b7db180a2030b3f839"
+        },
+        {
+          "type": "WEBVIEW_VIEWPORT",
+          "file": "02_normal_basic_webview.png",
+          "sha256": "7ae8e8658f788e877bd1092f2eb7b2628228cf430640bed726e4c72a2f511e71"
+        }
+      ]
+    }
+  ],
+  "verdict": "PASS"
+}

@@ -1,9 +1,17 @@
 """
-artifacts_qa/live_visual_audit_runner.py — StudyLab Final Live Visual UI Audit Runner
-Attaches to the running visible Anki desktop window (HWND, PID, CDP),
-interacts and steps through all 14 required canonical states from STUDYLAB_UI_COMPOSITION_CONTRACT.md §8.2,
-captures dual screenshots (Native Win32 OS HWND + CDP Webview Page),
-computes SHA-256 hashes, and outputs comprehensive evidence.json.
+================================================================================
+[INVALIDATED / NON-CERTIFYING HISTORICAL ARTIFACT]
+artifacts_qa/live_visual_audit_runner.py
+
+STATUS: RETIRED / NON-CERTIFYING HISTORICAL SCRIPT
+REASON: This script used direct CDP evaluate_js calls to inject synthetic HTML 
+(`qa.innerHTML = ...`) directly into the WebView DOM rather than driving real 
+procedural and native cards through Anki's review pipeline. Furthermore, it bypassed 
+the authoritative desktop-webview-reviewer tool suite.
+
+DO NOT USE THIS SCRIPT FOR VERIFICATION OR CERTIFICATION CLAIMS.
+Authoritative Canonical Runner: tools/verify_desktop_ui.py
+================================================================================
 """
 
 import asyncio
@@ -20,14 +28,18 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 REPO_ROOT = r"C:\Users\Suraj\Documents\Antigravity\Anki-maths"
-REVIEWER_DIR = r"C:\Users\Suraj\.gemini\config\skills\desktop-webview-reviewer"
+REVIEWER_DIR = os.environ.get("DESKTOP_REVIEWER_DIR", r"C:\Users\Suraj\Documents\Antigravity\scratch\desktop-webview-reviewer")
 AUDIT_DIR = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else os.path.join(REPO_ROOT, "artifacts_qa", "final_release_audit")
 os.makedirs(AUDIT_DIR, exist_ok=True)
 
-sys.path.insert(0, REVIEWER_DIR)
-from core.session import CDPSession, MultiTargetSessionManager
-from core.models import Target
-from core.window_forensics import WindowForensicsEngine
+if os.path.exists(REVIEWER_DIR):
+    sys.path.insert(0, REVIEWER_DIR)
+try:
+    from core.session import CDPSession, MultiTargetSessionManager
+    from core.models import Target
+    from core.window_forensics import WindowForensicsEngine
+except ImportError:
+    pass
 
 # Win32 desktop attaching
 user32 = ctypes.windll.user32
@@ -945,13 +957,15 @@ async def run_audit():
         {"desc": "Zero procedural DOM injection on standard cloze notes", "pass": True}
     ])
 
-    # Save evidence.json
+    # Save evidence.json (marked as non-certifying historical)
+    evidence["audit_verdict"] = "INVALIDATED_NON_CERTIFYING_HISTORICAL"
+    evidence["audit_warning"] = "DO NOT USE FOR CERTIFICATION. Synthetic DOM injection was used. See tools/verify_desktop_ui.py"
     evidence_path = os.path.join(AUDIT_DIR, "evidence.json")
     with open(evidence_path, "w", encoding="utf-8") as f:
         json.dump(evidence, f, indent=2)
     print(f"\nSaved structured audit evidence to {evidence_path}")
     print("=" * 80)
-    print("AUDIT COMPLETE — All 14 Canonical States Forensically Captured & Hashed.")
+    print("HISTORICAL RUNNER FINISHED (NON-CERTIFYING — SEE tools/verify_desktop_ui.py)")
     print("=" * 80)
 
 if __name__ == "__main__":

@@ -321,12 +321,13 @@ When evaluating or modifying StudyLab desktop UI, verify against these authorita
 | **Visual Design Spec** | `docs/FRONTEND_VISUAL_DESIGN_SPEC.md` | Open Canvas design tokens, anti-patterns `ANTI-01..08`, night mode variables. |
 | **UI Composition Contract** | `docs/STUDYLAB_UI_COMPOSITION_CONTRACT.md` | 12 screen compositions, 23-control matrix, modality specifications. |
 | **Architecture Invariants** | `docs/ARCHITECTURE_INVARIANTS.md` | The 16 frozen architectural rules, host-guest boundaries. |
-| **Forensic Baseline** | `docs/FINAL_LIVE_UI_FORENSIC_REPORT.md` | Physical desktop forensic baseline, HWND verification, 14 test states. |
+| **Canonical Desktop Verifier** | `tools/verify_desktop_ui.py` | Authoritative runner backed by `desktop-webview-reviewer` (Hard Preflight, Real Cards, Dual Evidence). |
+| **Historical Forensic Report** | `docs/FINAL_LIVE_UI_FORENSIC_REPORT.md` | Historical reference (INVALIDATED / NON-CERTIFYING due to duplicate hashes and unrendered engine error). |
 | **TypeScript State Machine** | `ts/reviewer/procedural.ts` | `ProceduralReviewer`, `handleNativeShowAnswer()`, `destroyActive()`. |
 | **Reviewer Stylesheet** | `ts/reviewer/reviewer.scss` | `:root` design tokens, `body.nightMode`, `.procedural-card-container`. |
 | **Python Reviewer Bridge** | `qt/aqt/reviewer.py` | `_is_procedural_card()`, button suppression, `onEnterKey()`, `_handle_procedural_command()`. |
 | **Rust Template Core** | `rslib/procedural/src/reviewer/template.rs` | `render_reviewer_html()`, `escape_html()`, Open Canvas HTML generation. |
-| **Desktop Reviewer Skill** | `C:\Users\Suraj\.gemini\config\skills\desktop-webview-reviewer\SKILL.md` | Underlying physical desktop inspection and evidence collection engine. |
+| **Desktop Reviewer Capability** | `desktop-webview-reviewer` (MCP & CLI) | Physical desktop inspection and cryptographic evidence collection engine (`desktop-reviewer.exe`). |
 
 ---
 

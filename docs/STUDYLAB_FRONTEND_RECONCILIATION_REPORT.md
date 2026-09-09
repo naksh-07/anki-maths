@@ -1,11 +1,17 @@
 # STUDYLAB FRONTEND RECONCILIATION & UI COMPOSITION REBUILD
 ## Comprehensive Forensic Audit Report & Proof of Verification
 
+> [!WARNING]
+> **INVALIDATED / NON-CERTIFYING HISTORICAL ARTIFACT**  
+> **Audit Finding (2026-09-09):** The desktop UI verification claimed under Milestone M5 in this report relied on `artifacts_qa/live_visual_audit_runner.py`, which used synthetic DOM injection (`qa.innerHTML = ...`) directly into the QtWebEngine WebView rather than passing real procedural card payloads through Anki's card rendering pipeline.
+> This report is strictly preserved for historical audit provenance and is **NON-CERTIFYING**.
+> Authoritative desktop verification is performed exclusively by `tools/verify_desktop_ui.py`.
+
 **Document Version:** 2.0.0-FINAL  
 **Date of Verification:** 2026-08-26  
 **Auditor:** Teamwork Project Orchestrator (Generation 2)  
 **Parent Conversation ID:** `527a18bd-8b6c-4d1e-a765-3fab171582e6`  
-**Verdict:** **100% PASS — UNCONDITIONAL PRODUCTION APPROVAL**
+**Verdict:** **INVALIDATED / NON-CERTIFYING HISTORICAL ARTIFACT (Milestone M5 relied on synthetic DOM injection)**
 
 ---
 

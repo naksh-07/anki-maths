@@ -1,11 +1,17 @@
 # StudyLab Final Live-UI Forensic Report
 
+> [!WARNING]
+> **INVALIDATED / NON-CERTIFYING HISTORICAL ARTIFACT**  
+> **Audit Finding (2026-09-09):** This historical report claimed a `SUCCESS` verdict (`LIVE_DEV_GUI_VERIFIED`), but forensic re-examination revealed that steps 01 through 13 produced identical SHA-256 screenshot hashes (`d34d8eefafc7225730c5ce74991d46cab841d84b2b668c8289f6cbd02fc21ae2`), capturing the unrendered fallback error screen ("Procedural Engine Error: ProceduralPayload field is missing or empty.") rather than active procedural cards.
+> This report is strictly preserved for audit provenance and is **NON-CERTIFYING**.
+> Authoritative verification is provided solely by `tools/verify_desktop_ui.py`.
+
 **Date:** 2026-08-25  
 **Version:** 1.0.0-FORENSIC  
 **Audit Harness:** `desktop-webview-reviewer` (QtWebEngine / Chromium Remote Debugging Engine)  
 **Host Application:** Anki 26.08.1 (DEV Build, Windows x86_64, Qt 6.6 / PyQt6)  
-**Verification Level:** `LIVE_DEV_GUI_VERIFIED`  
-**Execution Status:** `SUCCESS` (Absolute Gate #0 Passed, 14 Test States Audited, Zero Crashes)
+**Verification Level:** `INVALIDATED / NON-CERTIFYING HISTORICAL ARTIFACT`  
+**Execution Status:** `INVALIDATED` (Duplicate SHA-256 hashes d34d8eef... on steps 01-13; Procedural Engine Error captured)
 
 ---
 

@@ -1,5 +1,9 @@
 # 08. Authoritative Release Gate Decision & Victory Certification
 
+> [!WARNING]
+> **HISTORICAL AUDIT ARTIFACT — RULE 14 ANNOTATION (2026-09-09)**:
+> Rule 14 (Live Desktop QtWebEngine Verification) previously relied on historical ad-hoc CDP runners. Subsequent forensic auditing revealed synthetic DOM injection and unrendered procedural engine fallbacks in prior test runs. While unit, integration, and contract tests (Rules 1-13, 15) remain valid, all desktop UI verification is now canonically governed by `tools/verify_desktop_ui.py` backed by `desktop-webview-reviewer`.
+
 **Project**: StudyLab Final Reconciliation Mission  
 **Document**: `08_release_decision.md`  
 **Auditor**: Independent Verifier & Forensic Auditor  
@@ -42,7 +46,7 @@ Every claim, test suite, modality contract, native bridge handler, database tran
 | **Rule 11** | **Diagnostic Session & Mock Test Engine** | Verify balanced 4-domain diagnostic assessment (Math, Reasoning, Physics, Chemistry), measuring mode, 16-node question palette, active countdown timer. | `diagnostic_mock_session_tests.rs` (5/5 passed), `ts/reviewer/diagnostic/diagnostic_session.test.ts` (10 passed), `05_live_ui_screenshots/07_diagnostic_session.png`. | 🖚 PASS |
 | **Rule 12** | **Security & HTML Sanitization** | Verify zero XSS vulnerabilities, strict JSON string escaping, 100% parameterized SQL queries in `procedural.db`. | `template.rs:test_escape_json_for_script_prevents_breakout`, `store.rs` (all 24+ SQL queries parameterized), `07_test_summary.md § 4`. | 🖚 PASS |
 | **Rule 13** | **Memory & Lifecycle Teardown** | Verify `MutationObserver` cleanup, `destroyActive()` unmount hook, zero dangling event listeners or timer leaks during 1000 card transitions. | `procedural.ts:1250`, `desktop_validation_master_suite.rs:test_section_7_reviewer_lifecycle_stress_1000_transitions` (1000 transitions clean), `07_test_summary.md § 5.1`. | 🖚 PASS |
-| **Rule 14** | **Live Desktop QtWebEngine Verification** | Verify remote CDP attach against running Anki QtWebEngine desktop across all 8 live testing phases. | `04_live_ui_evidence.json`, `05_live_ui_screenshots/` (8 screenshots with SHA-256 digests), `07_test_summary.md § 3`. | 🖚 PASS |
+| **Rule 14** | **Live Desktop QtWebEngine Verification** | Verify remote CDP attach against running Anki QtWebEngine desktop across all 8 live testing phases. | `04_live_ui_evidence.json`, `05_live_ui_screenshots/` — **SUPERSEDED**: Historical ad-hoc CDP verifiers replaced by canonical desktop-webview-reviewer harness (`tools/verify_desktop_ui.py`). | ⚠️ SUPERSEDED |
 | **Rule 15** | **Hierarchical Evidence & Data Store Invariants** | Verify 4-tier diagnostic tree (`Subject` → `Chapter` → `Topic` → `Family`), 4-dimension cognitive taxonomy, and direct sync into `SkillState` without parallel state models. | `exam::mock::tests::test_diagnostic_evidence_store_sync_and_domain_evidence_updates`, `05_live_ui_screenshots/08_diagnostic_report.png`, `06_diagnostic_live_evidence.json`. | 🖚 PASS |
 
 ---

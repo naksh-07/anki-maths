@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """
 Live Dev Desktop Verification Harness for StudyLab Two-P0 Forensic Reconciliation.
-Launches the REAL visible Windows GUI Anki app, attaches via QtWebEngine CDP,
-executes the 6 forensic test scenarios, verifies GUI visibility, and saves screenshots
-and p0_reconciliation_evidence.json into artifacts_qa/final_p0_reconciliation/.
+(Historical specialized harness for Two-P0 reconciliation)
+NOTE: For authoritative end-to-end StudyLab Desktop UI verification and certification,
+use the canonical runner backed by desktop-webview-reviewer: tools/verify_desktop_ui.py
 """
 
 import os
