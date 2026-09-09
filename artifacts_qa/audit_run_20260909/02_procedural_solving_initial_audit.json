@@ -1,0 +1,117 @@
+{
+  "state_name": "02_procedural_solving_initial",
+  "forensics": {
+    "is_visible": true,
+    "is_iconic": false,
+    "x": 299,
+    "y": 29,
+    "width": 682,
+    "height": 599
+  },
+  "main_dom": {
+    "url": "http://127.0.0.1:56991/_anki/legacyPageData?id=1866731434896",
+    "hasQA": true,
+    "hasProceduralCard": true,
+    "hasError": false,
+    "errorText": null,
+    "promptText": "Find the highest common factor (HCF) of 144, 180, and 192.",
+    "buttons": [
+      {
+        "id": "tab-quick",
+        "className": "proc-tab active",
+        "text": "Quick Solve",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "tab-stepwise",
+        "className": "proc-tab",
+        "text": "Step-by-Step Solve",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "proc-submit-btn",
+        "className": "proc-btn proc-btn-primary",
+        "text": "Submit",
+        "disabled": false,
+        "visible": true
+      },
+      {
+        "id": "proc-add-step-btn",
+        "className": "proc-btn proc-btn-secondary",
+        "text": "+ Add Step",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "proc-hint-btn",
+        "className": "proc-btn proc-btn-secondary",
+        "text": "\ud83d\udca1 Request Hint",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "proc-reset-steps-btn",
+        "className": "proc-btn proc-btn-secondary",
+        "text": "Reset",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "proc-check-steps-btn",
+        "className": "proc-btn proc-btn-primary",
+        "text": "Check Solution",
+        "disabled": false,
+        "visible": false
+      }
+    ],
+    "inputs": [
+      {
+        "id": "proc-answer-input",
+        "className": "proc-input",
+        "type": "text",
+        "value": "",
+        "placeholder": "Type final answer...",
+        "visible": true
+      },
+      {
+        "id": "",
+        "className": "proc-input proc-step-input",
+        "type": "text",
+        "value": "",
+        "placeholder": "Write step 1 transformation or equation...",
+        "visible": false
+      }
+    ],
+    "mcqOptions": [],
+    "bodyClasses": "card card1 isWin fancy",
+    "cardHtmlSnippet": "<div class=\"procedural-card-container\" id=\"procedural-card\" data-instance-id=\"inst-pi-pi_src_sl_de67c7ba6d\" data-family-id=\"family.source.mathematics.lcm_and_hcf\" data-target-time=\"45000\" data-object-type=\"problem\">\n    \n    <div class=\"proc-header\">\n        <div class=\"proc-header-left\">\n            <nav class=\"proc-breadcrumbs\" aria-label=\"Topic breadcrumbs\">\n                <span class=\"proc-crumb proc-crumb-domain\">Mathematics</span>\n                <span class=\"proc-crumb-sep\">\u203a</span>\n    "
+  },
+  "top_dom": {
+    "visible": "Decks Add Browse Stats Sync",
+    "buttons": [
+      "Decks",
+      "Add",
+      "Browse",
+      "Stats",
+      "Sync"
+    ]
+  },
+  "bot_dom": {
+    "html": "\n<script src=\"http://127.0.0.1:56991/_anki/js/webview.js\"></script>\n<script src=\"http://127.0.0.1:56991/_anki/js/vendor/jquery.min.js\"></script>\n<script src=\"http://127.0.0.1:56991/_anki/js/reviewer-bottom.js\"></script>\n\n<center id=\"outer\">\n<table id=\"innertable\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\">\n<tbody><tr>\n<td align=\"start\" valign=\"top\" class=\"stat\">\n<button title=\"Shortcut key: \u2068E\u2069\"",
+    "visibleText": "Edit\t\n20 + 2 + 2\n\tMore \u25bc",
+    "buttons": [
+      {
+        "id": "",
+        "text": "Edit",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "More \u25bc",
+        "visible": true
+      }
+    ]
+  }
+}

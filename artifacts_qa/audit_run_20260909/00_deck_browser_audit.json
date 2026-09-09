@@ -1,0 +1,55 @@
+{
+  "state_name": "00_deck_browser",
+  "forensics": {
+    "is_visible": true,
+    "is_iconic": false,
+    "x": 299,
+    "y": 29,
+    "width": 682,
+    "height": 599
+  },
+  "main_dom": {
+    "url": "http://127.0.0.1:56991/_anki/legacyPageData?id=1866731434896",
+    "hasQA": false,
+    "hasProceduralCard": false,
+    "hasError": false,
+    "errorText": null,
+    "promptText": null,
+    "buttons": [],
+    "inputs": [],
+    "mcqOptions": [],
+    "bodyClasses": "isWin reduce-motion fancy",
+    "cardHtmlSnippet": "\n<script src=\"http://127.0.0.1:56991/_anki/js/webview.js\"></script>\n<script src=\"http://127.0.0.1:56991/_anki/js/vendor/jquery.min.js\"></script>\n<script src=\"http://127.0.0.1:56991/_anki/js/vendor/jquery-ui.min.js\"></script>\n<script src=\"http://127.0.0.1:56991/_anki/js/deckbrowser.js\"></script>\n\n<center>\n<table cellspacing=\"0\" cellpadding=\"3\">\n\n<tbody><tr><th colspan=\"5\" align=\"start\">Deck</th>\n<th class=\"count\">New</th>\n<th class=\"count\">Learn</th>\n<th class=\"count\">Due</th>\n<th class=\"optscol\""
+  },
+  "top_dom": {
+    "visible": "Decks Add Browse Stats Sync",
+    "buttons": [
+      "Decks",
+      "Add",
+      "Browse",
+      "Stats",
+      "Sync"
+    ]
+  },
+  "bot_dom": {
+    "html": "\n<script src=\"http://127.0.0.1:56991/_anki/js/webview.js\"></script>\n<script src=\"http://127.0.0.1:56991/_anki/js/vendor/jquery.min.js\"></script>\n\n<center id=\"outer\"><table width=\"100%\" id=\"header\"><tbody><tr><td align=\"center\">\n\n<button title=\"\" onclick=\"pycmd(&quot;shared&quot;);\">Get Shared</button>\n<button title=\"\" onclick=\"pycmd(&quot;create&quot;);\">Create Deck</button>\n<button title=\"Shortcu",
+    "visibleText": "Get Shared Create Deck Import File",
+    "buttons": [
+      {
+        "id": "",
+        "text": "Get Shared",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "Create Deck",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "Import File",
+        "visible": true
+      }
+    ]
+  }
+}

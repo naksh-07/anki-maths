@@ -208,6 +208,7 @@ class Reviewer:
             self.web.eval("if (globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.destroyActive === 'function') { globalThis.anki.procedural.destroyActive(); }")
         except Exception:
             pass
+        self.bottom.web.show()
 
     def refresh_if_needed(self) -> None:
         if self._refresh_needed is RefreshNeeded.QUEUES:
@@ -422,6 +423,10 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
         self._update_flag_icon()
         self._update_mark_icon()
         self._showAnswerButton()
+        if self._is_procedural_card():
+            self.bottom.web.hide()
+        else:
+            self.bottom.web.show()
         self.mw.web.setFocus()
         # user hook
         gui_hooks.reviewer_did_show_question(c)
@@ -795,6 +800,9 @@ window.anki._state_mutation_key = "{self._state_mutation_key}";
                 self._on_procedural_practice_prerequisite(data)
             elif cmd == "procedural_declarative_recall":
                 self._on_procedural_declarative_recall(data)
+            elif cmd == "procedural_mistake_select":
+                val = payload_str.strip('"\'')
+                self.web.eval(f"if (globalThis.anki && globalThis.anki.procedural && typeof globalThis.anki.procedural.selectMistakeCategory === 'function') {{ globalThis.anki.procedural.selectMistakeCategory('{val}'); }}")
             else:
                 pass
         except Exception as e:
@@ -1028,16 +1036,11 @@ timerStopped = false;
             return
 
         conf = self.mw.col.decks.config_dict_for_deck_id(self.card.current_deck_id())
-        
         if self._is_procedural_card():
-            attempt = getattr(self, "_last_procedural_attempt", {}) or {}
-            is_correct = attempt.get("is_correct", False) or attempt.get("isCorrect", False)
-            if not is_correct:
-                middle = self._mistakeButtons()
-            else:
-                middle = self._answerButtons()
-        else:
-            middle = self._answerButtons()
+            self.bottom.web.hide()
+            return
+            
+        middle = self._answerButtons()
 
         self.bottom.web.eval(
             f"showAnswer({json.dumps(middle)}, {json.dumps(conf['stopTimerOnAnswer'])});"

@@ -1,0 +1,127 @@
+{
+  "state_name": "04_feedback_solution_revealed",
+  "forensics": {
+    "is_visible": true,
+    "is_iconic": false,
+    "x": 448,
+    "y": 44,
+    "width": 1023,
+    "height": 899
+  },
+  "main_dom": {
+    "url": "http://127.0.0.1:56991/_anki/legacyPageData?id=1866731434896",
+    "hasQA": true,
+    "hasProceduralCard": true,
+    "hasMistakePanel": false,
+    "isMistakePanelVisible": false,
+    "hasSolutionContainer": true,
+    "isSolutionVisible": true,
+    "promptText": "Find the highest common factor (HCF) of 144, 180, and 192.",
+    "buttons": [
+      {
+        "id": "tab-quick",
+        "className": "proc-tab active",
+        "text": "Quick Solve",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "tab-stepwise",
+        "className": "proc-tab",
+        "text": "Step-by-Step Solve",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "proc-submit-btn",
+        "className": "proc-btn proc-btn-primary",
+        "text": "Submit",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "proc-add-step-btn",
+        "className": "proc-btn proc-btn-secondary",
+        "text": "+ Add Step",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "proc-hint-btn",
+        "className": "proc-btn proc-btn-secondary",
+        "text": "\ud83d\udca1 Request Hint",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "proc-reset-steps-btn",
+        "className": "proc-btn proc-btn-secondary",
+        "text": "Reset",
+        "disabled": false,
+        "visible": false
+      },
+      {
+        "id": "proc-check-steps-btn",
+        "className": "proc-btn proc-btn-primary",
+        "text": "Check Solution",
+        "disabled": false,
+        "visible": false
+      }
+    ],
+    "inputs": [
+      {
+        "id": "proc-answer-input",
+        "className": "proc-input",
+        "type": "text",
+        "value": "99999",
+        "placeholder": "Type final answer...",
+        "visible": false
+      },
+      {
+        "id": "",
+        "className": "proc-input proc-step-input",
+        "type": "text",
+        "value": "",
+        "placeholder": "Write step 1 transformation or equation...",
+        "visible": false
+      }
+    ],
+    "mistakeButtons": [],
+    "bodyClasses": "card card1 isWin fancy"
+  },
+  "bot_dom": {
+    "visibleText": "Edit\t\n1 Silly Slip\t2 Pattern Missed\t3 Concept Gap\t4 Prereq Unknown\n\tMore \u25bc",
+    "buttons": [
+      {
+        "id": "",
+        "text": "Edit",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "1 Silly Slip",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "2 Pattern Missed",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "3 Concept Gap",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "4 Prereq Unknown",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "More \u25bc",
+        "visible": true
+      }
+    ]
+  }
+}

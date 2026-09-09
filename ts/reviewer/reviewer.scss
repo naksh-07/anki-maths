@@ -21,9 +21,14 @@ body {
     background-attachment: fixed;
 }
 
-body.nightMode {
-    background-color: var(--canvas);
-    color: var(--fg);
+body.nightMode,
+body.nightMode.card {
+    background-color: var(--proc-bg, #1e1e2e) !important;
+    color: var(--proc-text-primary, #f8fafc) !important;
+}
+body.nightMode #qa {
+    background-color: transparent !important;
+    color: var(--proc-text-primary, #f8fafc) !important;
 }
 
 img {
@@ -245,7 +250,7 @@ body.nightMode {
 
 /* Ensure padding expands smoothly only when the fixed interaction footer is active */
 .procedural-card-container:has(.proc-interaction-footer:has(> :not(.hidden))) {
-    padding-bottom: 120px;
+    padding-bottom: 90px;
 }
 
 /* =========================================================================
@@ -368,7 +373,7 @@ body.nightMode {
     font-weight: 500;
     line-height: 1.6;
     color: var(--proc-text-primary);
-    margin: 0 0 24px 0;
+    margin: 0 0 20px 0;
     padding: 0;
     background: transparent;
     white-space: pre-wrap;

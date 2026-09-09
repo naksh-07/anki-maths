@@ -1,0 +1,63 @@
+{
+  "state_name": "01_deck_overview_math",
+  "forensics": {
+    "is_visible": true,
+    "is_iconic": false,
+    "x": 299,
+    "y": 29,
+    "width": 682,
+    "height": 599
+  },
+  "main_dom": {
+    "url": "http://127.0.0.1:56991/_anki/legacyPageData?id=1866731434896",
+    "hasQA": false,
+    "hasProceduralCard": false,
+    "hasError": false,
+    "errorText": null,
+    "promptText": null,
+    "buttons": [
+      {
+        "id": "study",
+        "className": "but ",
+        "text": "Study Now",
+        "disabled": false,
+        "visible": true
+      }
+    ],
+    "inputs": [],
+    "mcqOptions": [],
+    "bodyClasses": "isWin reduce-motion fancy",
+    "cardHtmlSnippet": "\n<script src=\"http://127.0.0.1:56991/_anki/js/webview.js\"></script>\n<script src=\"http://127.0.0.1:56991/_anki/js/vendor/jquery.min.js\"></script>\n\n<center>\n<h3>StudyLab Demo::Mathematics</h3>\n\n<p>\n\n</p><table width=\"400\" cellpadding=\"5\">\n<tbody><tr><td align=\"center\" valign=\"top\">\n<table cellspacing=\"5\">\n\n<tbody><tr>\n    <td>New:</td>\n    <td>\n        <b>\n            <span class=\"new-count\">20</span>\n            <span class=\"bury-count\" title=\"Counts differ from the deck list, because burying is "
+  },
+  "top_dom": {
+    "visible": "Decks Add Browse Stats Sync",
+    "buttons": [
+      "Decks",
+      "Add",
+      "Browse",
+      "Stats",
+      "Sync"
+    ]
+  },
+  "bot_dom": {
+    "html": "\n<script src=\"http://127.0.0.1:56991/_anki/js/webview.js\"></script>\n<script src=\"http://127.0.0.1:56991/_anki/js/vendor/jquery.min.js\"></script>\n\n<center id=\"outer\"><table width=\"100%\" id=\"header\"><tbody><tr><td align=\"center\">\n\n<button title=\"Shortcut key: \u2068O\u2069\" onclick=\"pycmd(&quot;opts&quot;)\">Options</button>\n<button title=\"Shortcut key: \u2068C\u2069\" onclick=\"pycmd(&quot;studymore&quot;)\">Custom Study<",
+    "visibleText": "Options Custom Study Description",
+    "buttons": [
+      {
+        "id": "",
+        "text": "Options",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "Custom Study",
+        "visible": true
+      },
+      {
+        "id": "",
+        "text": "Description",
+        "visible": true
+      }
+    ]
+  }
+}

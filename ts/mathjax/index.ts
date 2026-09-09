@@ -11,8 +11,9 @@ function packagesForLoading(packages: string[]): string[] {
 
 window.MathJax = {
     tex: {
+        inlineMath: [["\\(", "\\)"], ["$", "$"]],
         displayMath: [["\\[", "\\]"]],
-        processEscapes: false,
+        processEscapes: true,
         processEnvironments: false,
         processRefs: false,
         packages: {

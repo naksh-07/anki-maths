@@ -202,5 +202,5 @@ fn test_regression_pyq_and_html_xss_escaping() {
     assert!(html.contains("&lt;svg/onload=alert(1)&gt;"));
 
     // 3. Mathematical notation remains intact for MathJax rendering
-    assert!(html.contains("Solve $2x = 10$"));
+    assert!(html.contains("Solve \\(2x = 10\\)"));
 }

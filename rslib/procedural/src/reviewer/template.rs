@@ -3,6 +3,36 @@
 
 use crate::scheduling::PracticeSessionObject;
 
+/// Converts `$math$` to `\(math\)` for MathJax, while ignoring escaped `\$`
+pub fn convert_latex_dollars_to_mathjax_delimiters(text: &str) -> String {
+    let mut result = String::with_capacity(text.len() + 10);
+    let mut in_math = false;
+    let mut chars = text.chars().peekable();
+    
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            if let Some(&next_c) = chars.peek() {
+                if next_c == '$' {
+                    result.push('$');
+                    chars.next();
+                    continue;
+                }
+            }
+            result.push(c);
+        } else if c == '$' {
+            if in_math {
+                result.push_str("\\)");
+            } else {
+                result.push_str("\\(");
+            }
+            in_math = !in_math;
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
 /// Safely escapes HTML special characters to prevent XSS attacks while preserving
 /// valid LaTeX formulas for MathJax processing.
 pub fn escape_html(input: &str) -> String {
@@ -33,7 +63,8 @@ pub fn escape_json_for_script(json: &str) -> String {
 /// DeclarativeRecall bridges, and Prerequisite reviews, hooking directly into Anki's design tokens
 /// and `globalThis.anki.procedural` API according to STUDYLAB_UI_COMPOSITION_CONTRACT.md.
 pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
-    let prompt_text = escape_html(&session.instance.rendered_prompt);
+    let prompt_text = convert_latex_dollars_to_mathjax_delimiters(&session.instance.rendered_prompt);
+    let prompt_text = escape_html(&prompt_text);
     let family_id_attr = escape_html(session.instance.family_id.as_str());
     let instance_id_attr = escape_html(session.instance.id.as_str());
     let family_id_js = escape_json_for_script(session.instance.family_id.as_str());
@@ -102,7 +133,8 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         .or_else(|| session.instance.metadata.get("explanation").and_then(|v| v.as_str()))
         .or_else(|| session.instance.correct_answer.get("explanation").and_then(|v| v.as_str()))
         .unwrap_or("");
-    let solution_text = escape_html(raw_solution);
+    let solution_text = convert_latex_dollars_to_mathjax_delimiters(raw_solution);
+    let solution_text = escape_html(&solution_text);
 
     let solution_graph_opt = session.instance.solution_graph();
     let solution_graph_raw = solution_graph_opt
@@ -574,6 +606,28 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
         </div>
     </div>
 
+    <!-- Procedural Bottom Interaction Surface (Single Progression Footer) -->
+    <div id="proc-interaction-footer" class="proc-interaction-footer">
+        <!-- Mistake Classification (1-4 Metacognitive Reflection Gate) -->
+        <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
+            <div class="proc-mistake-heading">Classify error (1-4) to reflect and optimize spaced repetition:</div>
+            <div class="proc-mistake-footer">
+                <button type="button" class="proc-mistake-btn" data-value="silly_mistake" data-key="1">
+                    <span class="proc-key-badge">1</span> Silly Slip
+                </button>
+                <button type="button" class="proc-mistake-btn" data-value="pattern_not_recognized" data-key="2">
+                    <span class="proc-key-badge">2</span> Pattern Missed
+                </button>
+                <button type="button" class="proc-mistake-btn" data-value="formula_or_concept_misapplied" data-key="3">
+                    <span class="proc-key-badge">3</span> Concept Gap
+                </button>
+                <button type="button" class="proc-mistake-btn" data-value="concept_not_known" data-key="4">
+                    <span class="proc-key-badge">4</span> Prereq Unknown
+                </button>
+            </div>
+        </div>
+    </div>
+
     </div>
 
     <script>
@@ -599,24 +653,15 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
             remediationMessage: meta.remediation_message || null
         }};
 
-        if (window.anki && window.anki.procedural && window.anki.procedural.setup) {{
-            window.anki.procedural.setup(options);
-            return;
+        function initProcedural() {{
+            if (window.anki && window.anki.procedural && window.anki.procedural.setup) {{
+                window.anki.procedural.setup(options);
+                return true;
+            }}
+            return false;
         }}
-
-        // Standalone browser fallback
-        var inputEl = document.getElementById('proc-answer-input');
-        var submitBtn = document.getElementById('proc-submit-btn');
-        var resultPanel = document.getElementById('proc-result-panel');
-        var solutionContainer = document.getElementById('proc-solution-container');
-        var actionRow = document.querySelector('.proc-action-row');
-
-        if (submitBtn && inputEl) {{
-            submitBtn.addEventListener('click', function() {{
-                if (resultPanel) resultPanel.classList.remove('hidden');
-                if (solutionContainer) solutionContainer.classList.remove('hidden');
-                if (actionRow) actionRow.classList.remove('hidden');
-            }});
+        if (!initProcedural()) {{
+            setTimeout(initProcedural, 0);
         }}
     }})();
     </script>
