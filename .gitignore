@@ -35,5 +35,4 @@ all_anchors.jsonl
 audit_script.py
 list_windows.py
 windows.txt
-.agents/
 
