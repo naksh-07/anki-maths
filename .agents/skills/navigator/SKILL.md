@@ -34,8 +34,8 @@ Use this skill when you need to:
 │      contract StudyLab-Source-APKG-Contract(1).txt; generators bypassed.         │
 │    - Procedural Blueprints: Declarative family blueprints for 175 topics         │
 │      generating dynamic variants.                                                │
-│ 4. TOUCHPOINTS: Exactly 3 Rust touchpoints (Storage, Render hook, Answering hook) │
-│    and 1 Python Qt bridge (Reviewer command router and button suppressor).       │
+│ 4. TOUCHPOINTS: Exactly 4 Rust touchpoints (Storage, Render hook, Answering hook, │
+│    APKG reconciliation) and 1 Python Qt bridge (command router, button trap).   │
 │ 5. NO NEXT CARD BUTTON: Interaction contract mandates automatic advancement on   │
 │    correct answers, and reflection gating with [1..4] mistake classification     │
 │    buttons on incorrect answers.                                                 │

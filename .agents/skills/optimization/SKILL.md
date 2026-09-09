@@ -79,7 +79,7 @@ Rather than reading through dozens of markdown files in `docs/`:
 - **For Content Authors**: Follow Path 5 (`StudyLab-Source-APKG-Contract(1).txt` ➔ `docs/APKG_CONTENT_CONTRACT.md` ➔ `tools/studylab_content_factory.py`).
 
 ### 2.3 Bypass Historical Context Noise
-- Historical phase reports (`docs/01_research_findings.md` through `docs/08_release_decision.md` and `HANDOFF_REPORT.md`) record point-in-time explorations and historical bug reproductions.
+- Historical phase reports (`01_research_findings.md` through `08_release_decision.md` and `HANDOFF_REPORT.md`) record point-in-time explorations and historical bug reproductions.
 - **Optimization Rule**: Never read historical reports to understand how a component works today. Go directly to Tier 1 executable source code and Tier 5 master contracts (`docs/contracts/`, `StudyLab-Source-APKG-Contract(1).txt`).
 
 ### 2.4 Targeted Line-Bounded File Slices
@@ -102,7 +102,7 @@ StudyLab generates and maintains heavy binary and cache artifacts that must neve
 │ **SQLite Databases**      │ `*.anki2`, `*.anki21`, `*.procedural`, `*.sqlite*`   │
 │ **Build Outputs**         │ `target/`, `out/`, `dist/`, `node_modules/`, `bazel-*`│
 │ **Python Caches**         │ `__pycache__/`, `.pytest_cache/`, `.ruff_cache/`     │
-│ **Visual QA Screenshots** │ `artifacts_qa/final_release_audit/screenshots/`      │
+│ **Visual QA Screenshots** │ `artifacts_qa/final_release_audit/`, `*.png`          │
 │ **Upstream Anki Code**    │ `rslib/src/` (outside touchpoints), `ts/lib/`        │
 └───────────────────────────┴──────────────────────────────────────────────────────┘
 ```
