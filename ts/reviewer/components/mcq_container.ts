@@ -159,9 +159,18 @@ export class MCQContainer {
             const keyLetter = String.fromCharCode(65 + Math.min(optIdx, 25));
             const keyNumber = String(optIdx + 1);
             const labelEl = el.querySelector<HTMLElement>(".proc-option-label");
-            const label = labelEl?.textContent?.trim() || el.textContent?.trim() || optId;
+            const rawLabel = labelEl?.textContent?.trim() || el.textContent?.trim() || optId;
+            const label = rawLabel;
             const feedbackEl = el.querySelector<HTMLElement>(".proc-option-feedback");
             const feedback = feedbackEl?.textContent?.trim();
+
+            // Clean redundant leading key letter prefix if present in the displayed label (e.g. "A. 0.1 M" -> "0.1 M")
+            if (labelEl) {
+                const prefixRegex = new RegExp(`^\\s*\\(?${keyLetter}[.:)]\\s*`, "i");
+                if (prefixRegex.test(labelEl.textContent || "")) {
+                    labelEl.textContent = (labelEl.textContent || "").replace(prefixRegex, "").trim();
+                }
+            }
 
             this.optionItems.push({
                 id: optId,

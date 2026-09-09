@@ -425,6 +425,35 @@ export class ProceduralReviewer {
             });
         });
 
+        // Mistake classification buttons and cards
+        const mistakeBtns = this.container.querySelectorAll<HTMLElement>(".proc-mistake-btn, .proc-mistake-card");
+        mistakeBtns.forEach((btn) => {
+            const val = btn.dataset.value;
+            if (val) {
+                this.addListener(btn, "click", (e: Event) => {
+                    e.preventDefault();
+                    this.selectMistakeCategory(val);
+                });
+            }
+        });
+        // Next button (if present in DOM)
+        const nextBtnEl = this.container.querySelector<HTMLElement>("#proc-next-btn, .proc-next-btn");
+        this.addListener(nextBtnEl, "click", () => this.handleNext());
+
+        this.addListener(this.container, "click", (e: Event) => {
+            const nextTarget = (e.target as HTMLElement)?.closest<HTMLElement>("#proc-next-btn, .proc-next-btn");
+            if (nextTarget) {
+                e.preventDefault();
+                this.handleNext();
+                return;
+            }
+            const target = (e.target as HTMLElement)?.closest<HTMLElement>(".proc-mistake-btn, .proc-mistake-card");
+            if (target && target.dataset.value) {
+                e.preventDefault();
+                this.selectMistakeCategory(target.dataset.value);
+            }
+        });
+
         // MutationObserver to safely destroy when container is removed from DOM (e.g. navigation to standard card)
         if (typeof MutationObserver !== "undefined") {
             const observer = new MutationObserver(() => {
@@ -1017,16 +1046,22 @@ export class ProceduralReviewer {
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
 
-        // Solution container revealed during reflection (Phase 2)
+        // ANTI-08: Solution container is strictly hidden initially to prevent premature exposure during reflection
         const solutionContainer = this.container.querySelector<HTMLElement>("#proc-solution-container");
-        solutionContainer?.classList.remove("hidden");
+        solutionContainer?.classList.add("hidden");
         if (solutionContainer) {
-            solutionContainer.style.display = "";
+            solutionContainer.style.display = "none";
         }
         const actionRow = this.container.querySelector<HTMLElement>(".proc-action-row");
-        actionRow?.classList.remove("hidden");
+        actionRow?.classList.add("hidden");
         if (actionRow) {
-            actionRow.style.display = "";
+            actionRow.style.display = "none";
+        }
+
+        const mistakePanel = this.container.querySelector<HTMLElement>("#proc-mistake-panel, .proc-mistake-panel");
+        if (mistakePanel) {
+            mistakePanel.classList.remove("hidden");
+            mistakePanel.style.display = "";
         }
 
         this.resultPanel?.classList.remove("hidden");
@@ -1035,13 +1070,8 @@ export class ProceduralReviewer {
         }
 
         if (this.resultFeedback) {
-            const canonicalFormatted = this.options.correctAnswer?.formatted || 
-                this.options.correctAnswer?.correct_option || 
-                this.options.correctAnswer?.value || 
-                this.options.correctAnswer?.answer || "";
-                
             this.resultFeedback.innerHTML = `
-                <div class="proc-expected-row"><span class="proc-comparison-item"><strong>Your answer:</strong> ${escapeHtml(data.answer)}</span> <span class="proc-crumb-sep">·</span> <span class="proc-comparison-item"><strong>Correct answer:</strong> ${escapeHtml(canonicalFormatted)}</span></div>
+                <div class="proc-expected-row"><span class="proc-comparison-item"><strong>Your answer:</strong> ${escapeHtml(data.answer)}</span></div>
                 <div class="proc-mistake-hint-msg" style="margin-top: 6px; font-size: 0.85rem; color: var(--proc-text-muted, #94a3b8);"><em>Classify your error to continue.</em></div>
             `;
         }
@@ -1089,6 +1119,12 @@ export class ProceduralReviewer {
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
         this.resultPanel?.classList.remove("hidden");
+
+        const mistakePanel = this.container.querySelector<HTMLElement>("#proc-mistake-panel, .proc-mistake-panel");
+        if (mistakePanel) {
+            mistakePanel.classList.add("hidden");
+            mistakePanel.style.display = "none";
+        }
 
         // Reveal solution container and action row post-reflection
         const solutionContainer = this.container.querySelector<HTMLElement>("#proc-solution-container");

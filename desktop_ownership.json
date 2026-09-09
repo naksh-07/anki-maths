@@ -1,1 +1,10 @@
-{"pid": 10548, "launched_by_reviewer": false, "port": 9222}
+{
+  "pid": 24324,
+  "create_time": 1788944561.3715136,
+  "launched_by_reviewer": true,
+  "command": [
+    "c:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\out\\pyenv\\Scripts\\python.exe",
+    "c:\\Users\\Suraj\\Documents\\Antigravity\\Anki-maths\\tools\\run.py"
+  ],
+  "port": 9222
+}

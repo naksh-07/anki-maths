@@ -157,6 +157,24 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 for (i, opt) in opts.iter().enumerate() {
                     let letter = (b'A' + (i as u8).min(25)) as char;
                     let opt_text = opt.as_str().unwrap_or("");
+                    let opt_display = {
+                        let trimmed = opt_text.trim();
+                        let p1 = format!("{}.", letter);
+                        let p2 = format!("{}:", letter);
+                        let p3 = format!("{})", letter);
+                        let p4 = format!("({})", letter);
+                        if let Some(rest) = trimmed.strip_prefix(&p1) {
+                            rest.trim()
+                        } else if let Some(rest) = trimmed.strip_prefix(&p2) {
+                            rest.trim()
+                        } else if let Some(rest) = trimmed.strip_prefix(&p3) {
+                            rest.trim()
+                        } else if let Some(rest) = trimmed.strip_prefix(&p4) {
+                            rest.trim()
+                        } else {
+                            trimmed
+                        }
+                    };
                     s.push_str(&format!(
                         r#"<button type="button" class="proc-option-item" data-opt-id="{}" data-opt-idx="{}" role="radio" aria-checked="false">
                             <div class="proc-option-header">
@@ -167,7 +185,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                         escape_html(opt_text),
                         i,
                         letter,
-                        escape_html(opt_text)
+                        escape_html(opt_display)
                     ));
                 }
                 s

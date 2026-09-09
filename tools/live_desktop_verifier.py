@@ -33,7 +33,7 @@ if sys.platform == 'win32':
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(SCRIPT_DIR)
-REVIEWER_DIR = r"C:\Users\Suraj\.gemini\config\skills\desktop-webview-reviewer"
+REVIEWER_DIR = r"C:\Users\Suraj\.gemini\antigravity\scratch\desktop-webview-reviewer"
 
 sys.path.insert(0, REVIEWER_DIR)
 sys.path.extend([

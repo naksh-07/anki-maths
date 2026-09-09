@@ -11,7 +11,7 @@ import sys
 import time
 
 sys.stdout.reconfigure(encoding="utf-8")
-sys.path.insert(0, r"C:\Users\Suraj\.gemini\config\skills\desktop-webview-reviewer")
+sys.path.insert(0, r"C:\Users\Suraj\.gemini\antigravity\scratch\desktop-webview-reviewer")
 
 from core.models import Target, VerificationLevel
 from core.session import CDPSession, MultiTargetSessionManager
@@ -461,7 +461,7 @@ async def run_forensic_suite():
     # STEP 4: MCQ / Concept Check Live Verification
     # -------------------------------------------------------------
     print("\n--- [MODALITY 2: Multiple Choice / Concept Check Live Testing] ---")
-    setup_mcq_js = """
+    setup_mcq_js = r"""
     (() => {
         document.body.innerHTML = `
         <div id="qa">

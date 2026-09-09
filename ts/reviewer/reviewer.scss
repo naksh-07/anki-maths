@@ -233,7 +233,7 @@ body.nightMode {
 .procedural-card-container {
     max-width: 720px;
     margin: 0 auto;
-    padding: 16px 20px;
+    padding: 16px 20px 24px 20px;
     background: transparent;
     color: var(--proc-text-primary);
     border: none;
@@ -241,6 +241,11 @@ body.nightMode {
     box-shadow: none;
     box-sizing: border-box;
     transition: color 180ms ease;
+}
+
+/* Ensure padding expands smoothly only when the fixed interaction footer is active */
+.procedural-card-container:has(.proc-interaction-footer:has(> :not(.hidden))) {
+    padding-bottom: 120px;
 }
 
 /* =========================================================================
@@ -252,8 +257,8 @@ body.nightMode {
     justify-content: space-between;
     align-items: center;
     border-bottom: var(--proc-divider);
-    padding-bottom: 8px;
-    margin-bottom: 16px;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
     gap: 12px;
 }
 
@@ -271,6 +276,7 @@ body.nightMode {
     font-weight: 400;
     color: var(--proc-text-muted);
     flex-wrap: wrap;
+    line-height: 1.4;
 }
 
 .proc-crumb-domain,
@@ -292,7 +298,7 @@ body.nightMode {
 
 .proc-badges {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
     flex-wrap: wrap;
 }
@@ -305,8 +311,8 @@ body.nightMode {
     background: var(--proc-primary-light);
     color: var(--proc-primary);
     border: 1px solid var(--proc-border-subtle);
-    padding: 2px 8px;
-    border-radius: 4px;
+    padding: 3px 8px;
+    border-radius: 5px;
 }
 
 .proc-diff-badge {
@@ -315,8 +321,9 @@ body.nightMode {
     background: var(--proc-surface-subtle);
     color: var(--proc-text-secondary);
     border: 1px solid var(--proc-border-subtle);
-    padding: 2px 7px;
-    border-radius: 4px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    letter-spacing: 0.02em;
 }
 
 .proc-variant-tag {
@@ -326,20 +333,20 @@ body.nightMode {
     background: var(--proc-surface-subtle);
     color: var(--proc-text-secondary);
     border: 1px solid var(--proc-border-subtle);
-    padding: 2px 7px;
-    border-radius: 4px;
+    padding: 3px 8px;
+    border-radius: 5px;
 }
 
 .proc-pyq-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
+    gap: 5px;
+    padding: 3px 9px;
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-radius: 4px;
+    border-radius: 5px;
     background: var(--proc-primary-light);
     color: var(--proc-primary);
     border: 1px solid var(--proc-border-focus);
@@ -361,43 +368,134 @@ body.nightMode {
     font-weight: 500;
     line-height: 1.6;
     color: var(--proc-text-primary);
-    margin: 0 0 20px 0;
-    padding: 4px 0;
+    margin: 0 0 24px 0;
+    padding: 0;
     background: transparent;
     white-space: pre-wrap;
 }
 
 /* =========================================================================
- * Mode Switcher Tabs
+ * Mode Switcher (Polished Segmented Control Track)
  * ========================================================================= */
 
 .proc-mode-switch {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
+    display: inline-flex;
+    align-items: center;
+    background: var(--proc-surface-subtle);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid var(--proc-border);
+    margin-bottom: 20px;
+    gap: 2px;
 }
 
 .proc-tab {
-    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 16px;
     font-size: 13px;
-    font-weight: 600;
-    background: var(--proc-surface);
-    border: 1px solid var(--proc-border);
-    border-radius: 5px;
-    cursor: pointer;
+    font-weight: 500;
+    line-height: 1.4;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
     color: var(--proc-text-secondary);
-    transition: all 180ms ease;
+    cursor: pointer;
+    user-select: none;
+    transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
 }
 
-.proc-tab:hover {
-    border-color: var(--proc-border-subtle);
-    background: var(--proc-surface-hover);
+.proc-tab:hover:not(.active) {
+    color: var(--proc-text-primary);
+    background: rgba(0, 0, 0, 0.04);
+}
+
+body.nightMode .proc-tab:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.proc-tab:focus-visible {
+    outline: 2px solid var(--proc-border-focus);
+    outline-offset: 1px;
 }
 
 .proc-tab.active {
-    background: var(--proc-primary);
-    color: #ffffff;
-    border-color: var(--proc-primary);
+    background: #ffffff;
+    color: var(--proc-text-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+body.nightMode .proc-tab.active {
+    background: var(--proc-surface);
+    color: var(--proc-text-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--proc-border);
+}
+
+/* =========================================================================
+ * Quick Numerical Solving Workspace
+ * ========================================================================= */
+
+#proc-quick-container {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+    margin-bottom: 24px;
+
+    .proc-step-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 0;
+        background: transparent;
+        border: none;
+        padding: 0;
+        width: 100%;
+        box-sizing: border-box;
+        flex-wrap: wrap;
+    }
+
+    #proc-answer-input,
+    .proc-input {
+        flex: 1;
+        min-width: 220px;
+        height: 44px;
+        padding: 10px 14px;
+        font-size: 16px;
+        border-radius: 8px;
+        background: var(--proc-surface);
+        border: 1.5px solid var(--proc-border);
+        color: var(--proc-text-primary);
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 150ms ease, box-shadow 150ms ease;
+
+        &:focus {
+            border-color: var(--proc-border-focus);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+    }
+
+    #proc-submit-btn {
+        flex-shrink: 0;
+        height: 44px;
+        min-width: 110px;
+        padding: 0 22px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 8px;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .proc-num-preview-pill,
+    #proc-num-preview {
+        width: 100%;
+        margin-top: 6px;
+        align-self: flex-start;
+    }
 }
 
 /* =========================================================================
@@ -407,8 +505,25 @@ body.nightMode {
 .proc-step-row {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     margin-bottom: 12px;
+}
+
+#proc-stepwise-container .proc-step-row,
+#proc-steps-list .proc-step-row {
+    background: var(--proc-surface);
+    border: 1px solid var(--proc-border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+#proc-stepwise-container .proc-step-row:focus-within,
+#proc-steps-list .proc-step-row:focus-within {
+    border-color: var(--proc-border-focus);
+    box-shadow: 0 0 0 1px var(--proc-border-focus);
 }
 
 .proc-step-input-wrapper {
@@ -429,8 +544,8 @@ body.nightMode {
 .proc-step-desc {
     font-size: 13px;
     color: var(--proc-text-secondary);
-    margin-bottom: 4px;
-    line-height: 1.4;
+    margin-bottom: 6px;
+    line-height: 1.5;
 }
 
 .proc-input {
@@ -439,6 +554,7 @@ body.nightMode {
     height: 44px;
     padding: 10px 14px;
     font-size: 16px;
+    font-family: inherit;
     background: var(--proc-surface);
     color: var(--proc-text-primary);
     border: 1.5px solid var(--proc-border);
@@ -450,7 +566,7 @@ body.nightMode {
 
 .proc-input:focus {
     border-color: var(--proc-border-focus);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
 
 .proc-input.valid {
@@ -467,22 +583,27 @@ body.nightMode {
 
 .proc-num-preview-pill,
 #proc-num-preview {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     font-size: 12px;
+    font-weight: 500;
     color: var(--proc-text-secondary);
     background: var(--proc-surface-subtle);
-    border-radius: 4px;
-    padding: 3px 8px;
+    border: 1px solid var(--proc-border-subtle);
+    border-radius: 6px;
+    padding: 4px 10px;
     margin-top: 6px;
+    margin-bottom: 2px;
+    align-self: flex-start;
     transition: opacity 150ms ease;
 }
 
 .proc-step-badge {
     position: absolute;
-    right: 10px;
+    right: 12px;
     font-size: 11px;
     font-weight: 600;
-    padding: 2px 8px;
+    padding: 3px 9px;
     border-radius: 4px;
     pointer-events: none;
 }
@@ -512,9 +633,10 @@ body.nightMode {
 
 .proc-step-feedback {
     font-size: 12px;
-    margin-top: 2px;
+    margin-top: 4px;
     color: var(--proc-text-secondary);
     padding-left: 2px;
+    line-height: 1.4;
 }
 
 /* =========================================================================
@@ -531,6 +653,9 @@ body.nightMode {
 }
 
 .proc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 10px 20px;
     font-size: 14px;
     font-weight: 600;
@@ -539,12 +664,16 @@ body.nightMode {
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    transition: background-color 180ms ease, opacity 180ms ease;
+    box-sizing: border-box;
+    transition: background-color 150ms ease, opacity 150ms ease, transform 120ms ease;
 }
 
 .proc-btn:hover {
     background: var(--proc-primary-hover);
-    opacity: 0.95;
+}
+
+.proc-btn:active {
+    transform: translateY(1px);
 }
 
 .proc-btn:focus-visible {
@@ -563,6 +692,13 @@ body.nightMode {
     border-color: var(--proc-border-subtle);
 }
 
+#proc-check-steps-btn {
+    margin-left: auto;
+    min-width: 140px;
+    height: 42px;
+    padding: 0 20px;
+}
+
 #proc-next-btn {
     padding: 10px 24px;
     font-size: 15px;
@@ -579,19 +715,34 @@ body.nightMode {
 .proc-hint-box {
     margin-top: 14px;
     margin-bottom: 16px;
-    padding: 12px 16px;
+    padding: 14px 16px;
     background: var(--proc-surface-subtle);
     border-left: 3px solid var(--proc-primary);
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 8px 8px 0;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6;
     color: var(--proc-text-primary);
+    animation: procFadeIn 180ms ease-out;
 }
 
 .proc-hint-meta {
     font-size: 12px;
     color: var(--proc-text-muted);
     margin-top: 6px;
+}
+
+.proc-hint-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: var(--proc-surface-subtle);
+    color: var(--proc-text-muted);
+    border: 1px solid var(--proc-border-subtle);
+    margin-left: 6px;
+    vertical-align: middle;
 }
 
 .proc-transparency-banner {
@@ -602,7 +753,7 @@ body.nightMode {
     margin-bottom: 16px;
     background: var(--proc-surface-subtle);
     border-left: 3px solid var(--proc-primary);
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 6px 6px 0;
     font-size: 13px;
     font-weight: 500;
     color: var(--proc-text-primary);
@@ -615,85 +766,141 @@ body.nightMode {
 .proc-option-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 12px;
-    margin-bottom: 16px;
+    gap: 10px;
+    margin-top: 14px;
+    margin-bottom: 24px;
 }
 
 .proc-option-item {
     display: flex;
     flex-direction: column;
-    padding: 10px 14px;
-    min-height: 48px;
+    padding: 12px 16px;
+    min-height: 50px;
     background: var(--proc-surface);
-    border: 1px solid var(--proc-border);
-    border-radius: 6px;
+    border: 1.5px solid var(--proc-border);
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 120ms ease-in-out;
+    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 120ms ease;
     text-align: left;
     color: var(--proc-text-primary);
     box-sizing: border-box;
+
+    &:hover:not(.disabled) {
+        border-color: var(--proc-border-subtle);
+        background: var(--proc-surface-hover);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    &:active:not(.disabled) {
+        transform: translateY(1px);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--proc-border-focus);
+        outline-offset: 2px;
+    }
+
+    &.selected {
+        border: 2px solid var(--proc-primary);
+        background: var(--proc-primary-light);
+        box-shadow: 0 0 0 1px var(--proc-primary);
+    }
+
+    &.correct {
+        border: 2px solid var(--proc-success-border) !important;
+        background: var(--proc-success-bg) !important;
+    }
+
+    &.incorrect {
+        border: 2px solid var(--proc-error-border) !important;
+        background: var(--proc-error-bg) !important;
+    }
+
+    &:not(:has(.proc-option-header)) {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 12px;
+    }
 }
 
-.proc-option-item:hover:not(.disabled) {
-    border-color: var(--proc-border-subtle);
-    background: var(--proc-surface-hover);
-}
-
-.proc-option-item:focus-visible {
-    outline: 2px solid var(--proc-border-focus);
-    outline-offset: 1px;
-}
-
-.proc-option-item.selected {
-    border: 2px solid var(--proc-primary);
-    background: var(--proc-primary-light);
-}
-
-.proc-option-item.correct {
-    border: 2px solid var(--proc-success-border) !important;
-    background: var(--proc-success-bg) !important;
-}
-
-.proc-option-item.incorrect {
-    border: 2px solid var(--proc-error-border) !important;
-    background: var(--proc-error-bg) !important;
+body.nightMode .proc-option-item:hover:not(.disabled) {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .proc-option-header {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 500;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
 }
 
-.proc-option-key {
+.proc-option-key,
+.proc-opt-key {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
-    font-size: 11px;
+    width: 28px;
+    height: 28px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
     font-weight: 700;
-    border-radius: 4px;
+    border-radius: 6px;
     background: var(--proc-surface-subtle);
     color: var(--proc-text-secondary);
+    border: 1px solid var(--proc-border);
     flex-shrink: 0;
+    margin-top: 1px;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 
-.proc-option-label {
+.proc-option-item.selected .proc-option-key,
+.proc-option-item.selected .proc-opt-key {
+    background: var(--proc-primary);
+    color: #ffffff;
+    border-color: var(--proc-primary);
+}
+
+.proc-option-item.correct .proc-option-key,
+.proc-option-item.correct .proc-opt-key {
+    background: var(--proc-success);
+    color: #ffffff;
+    border-color: var(--proc-success);
+}
+
+.proc-option-item.incorrect .proc-option-key,
+.proc-option-item.incorrect .proc-opt-key {
+    background: var(--proc-error);
+    color: #ffffff;
+    border-color: var(--proc-error);
+}
+
+.proc-option-label,
+.proc-opt-text {
+    flex: 1;
     font-size: 15px;
-    line-height: 1.5;
+    line-height: 1.55;
     color: var(--proc-text-primary);
 }
 
 .proc-option-feedback {
     margin-top: 8px;
     font-size: 13px;
-    line-height: 1.45;
+    line-height: 1.5;
     border-left: 3px solid var(--proc-error);
-    padding-left: 12px;
+    padding: 6px 12px;
+    background: var(--proc-surface-subtle);
+    border-radius: 0 6px 6px 0;
     color: var(--proc-text-secondary);
+
+    &:empty {
+        display: none !important;
+    }
+}
+
+.proc-option-item.correct .proc-option-feedback {
+    border-left-color: var(--proc-success);
 }
 
 /* =========================================================================
@@ -716,7 +923,7 @@ body.nightMode {
     padding: 12px 16px;
     background: var(--proc-surface-subtle);
     border-left: 3px solid #6366f1;
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 6px 6px 0;
     font-size: 14px;
     line-height: 1.5;
     color: var(--proc-text-primary);
@@ -749,7 +956,7 @@ body.nightMode {
     padding: 12px 16px;
     background: var(--proc-warning-bg);
     border-left: 3px solid var(--proc-warning);
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 6px 6px 0;
     font-size: 14px;
     line-height: 1.5;
     color: var(--proc-text-primary);
@@ -757,13 +964,13 @@ body.nightMode {
 
 .proc-solution,
 #proc-solution-container {
-    margin-top: 16px;
-    padding: 16px 0;
+    margin-top: 20px;
+    padding: 18px 0 0 0;
     background: transparent;
     border: none;
     border-top: var(--proc-divider);
     border-radius: 0;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.6;
     color: var(--proc-text-primary);
     white-space: pre-wrap;
@@ -771,37 +978,74 @@ body.nightMode {
 }
 
 .proc-solution-body {
-    margin-top: 6px;
+    margin-top: 8px;
     font-size: 14px;
     line-height: 1.6;
     color: var(--proc-text-primary);
 }
 
 /* =========================================================================
- * Speed Quadrant Muted Status Pills (ANTI-04 Streamlined)
+ * Speed Quadrant Muted Status Pills (ANTI-04 Streamlined Semantic Tints)
  * ========================================================================= */
 
 .proc-speed-quadrant {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 2px 10px;
+    padding: 3px 12px;
     font-size: 12px;
     font-weight: 500;
     border-radius: 9999px;
-    background: var(--proc-surface-subtle);
-    color: var(--proc-text-secondary);
-    border: 1px solid var(--proc-border-subtle);
+    border: 1px solid transparent;
     margin-top: 0;
 }
 
-.proc-speed-fast-correct,
-.proc-speed-slow-correct,
-.proc-speed-fast-wrong,
+.proc-speed-fast-correct {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.proc-speed-slow-correct {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.proc-speed-fast-wrong {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
 .proc-speed-slow-wrong {
-    background: var(--proc-surface-subtle);
-    color: var(--proc-text-secondary);
-    border-color: var(--proc-border-subtle);
+    background: #fdf2f8;
+    color: #be185d;
+    border-color: #fbcfe8;
+}
+
+body.nightMode .proc-speed-fast-correct {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+body.nightMode .proc-speed-slow-correct {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+body.nightMode .proc-speed-fast-wrong {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+body.nightMode .proc-speed-slow-wrong {
+    background: rgba(244, 63, 94, 0.15);
+    color: #fb7185;
+    border-color: rgba(244, 63, 94, 0.35);
 }
 
 /* =========================================================================
@@ -809,24 +1053,24 @@ body.nightMode {
  * ========================================================================= */
 
 .proc-result {
-    margin-top: 16px;
-    padding: 14px 16px;
-    background: transparent;
+    margin-top: 18px;
+    padding: 16px 20px;
+    background: var(--proc-surface-subtle);
     border: none;
-    border-left: 3px solid var(--proc-border);
-    border-radius: 0 4px 4px 0;
+    border-left: 4px solid var(--proc-border);
+    border-radius: 0 8px 8px 0;
     color: var(--proc-text-primary);
     animation: procFadeIn 180ms ease-out;
 }
 
 .proc-result.correct {
-    border-left: 3px solid var(--proc-success);
-    background: var(--proc-surface-subtle);
+    border-left: 4px solid var(--proc-success);
+    background: var(--proc-success-bg);
 }
 
 .proc-result.incorrect {
-    border-left: 3px solid var(--proc-error);
-    background: var(--proc-surface-subtle);
+    border-left: 4px solid var(--proc-error);
+    background: var(--proc-error-bg);
 }
 
 .proc-result-title {
@@ -852,9 +1096,23 @@ body.nightMode {
 
 .proc-expected-row,
 .proc-answer-comparison {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
     font-size: 14px;
     color: var(--proc-text-secondary);
-    margin-top: 4px;
+    margin-top: 6px;
+}
+
+.proc-comparison-item {
+    font-size: 14px;
+    color: var(--proc-text-secondary);
+
+    strong {
+        font-weight: 600;
+        color: var(--proc-text-primary);
+    }
 }
 
 .proc-meta-row {
@@ -862,7 +1120,7 @@ body.nightMode {
     justify-content: space-between;
     align-items: center;
     font-size: 12px;
-    margin-top: 8px;
+    margin-top: 10px;
     color: var(--proc-text-muted);
 }
 
@@ -882,21 +1140,20 @@ body.nightMode {
     display: none;
     flex-direction: column;
     align-items: center;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+}
+
+body.nightMode .proc-interaction-footer {
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .proc-interaction-footer:has(> :not(.hidden)) {
     display: flex;
 }
 
-/* Ensure the main container has enough padding to not be obscured by the fixed footer */
-.procedural-card-container {
-    padding-bottom: 120px;
-}
-
 .proc-mistake-panel {
     width: 100%;
-    max-width: 600px;
+    max-width: 620px;
     margin: 0;
     padding: 0;
     background: transparent;
@@ -908,6 +1165,7 @@ body.nightMode {
     font-weight: 600;
     margin-bottom: 10px;
     color: var(--proc-text-primary);
+    text-align: center;
 }
 
 .proc-mistake-grid,
@@ -916,57 +1174,103 @@ body.nightMode {
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 6px;
+    justify-content: center;
 }
 
 .proc-mistake-btn,
 .proc-mistake-card {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 12px;
+    gap: 8px;
+    padding: 8px 14px;
     font-size: 13px;
     font-weight: 500;
     background: var(--proc-surface);
     color: var(--proc-text-primary);
-    border: 1px solid var(--proc-border);
+    border: 1.5px solid var(--proc-border);
     border-radius: 6px;
     cursor: pointer;
-    transition: all 120ms ease-in-out;
+    transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
     white-space: nowrap;
     box-shadow: none;
+
+    &:hover {
+        background: var(--proc-surface-hover);
+        border-color: var(--proc-border-focus);
+        color: var(--proc-text-primary);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--proc-border-focus);
+        outline-offset: 2px;
+    }
+
+    &.selected {
+        background: var(--proc-primary) !important;
+        color: #ffffff !important;
+        border-color: var(--proc-primary) !important;
+
+        .proc-key-badge {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+            border-color: transparent;
+        }
+
+        .proc-mistake-info {
+            strong {
+                color: #ffffff !important;
+            }
+            span {
+                color: rgba(255, 255, 255, 0.85) !important;
+            }
+        }
+    }
 }
 
-.proc-mistake-btn:hover,
-.proc-mistake-card:hover {
-    background: var(--proc-surface-hover);
-    border-color: var(--proc-border-focus);
-    color: var(--proc-text-primary);
-}
+.proc-mistake-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    line-height: 1.25;
 
-.proc-mistake-btn.selected,
-.proc-mistake-card.selected {
-    background: var(--proc-primary) !important;
-    color: #ffffff !important;
-    border-color: var(--proc-primary) !important;
+    strong {
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--proc-text-primary);
+    }
+
+    span {
+        font-size: 11px;
+        color: var(--proc-text-muted);
+        margin-top: 2px;
+    }
 }
 
 .proc-key-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 11px;
     font-weight: 700;
     background: var(--proc-surface-subtle);
     color: var(--proc-text-secondary);
-    border-radius: 3px;
+    border-radius: 4px;
+    border: 1px solid var(--proc-border);
     flex-shrink: 0;
 }
 
 .proc-mistake-btn.selected .proc-key-badge {
     background: rgba(255, 255, 255, 0.25);
     color: #ffffff;
+    border-color: transparent;
 }
 
 /* =========================================================================
@@ -982,7 +1286,7 @@ body.nightMode {
     padding: 16px;
     margin: 12px 0;
     background: var(--proc-surface-subtle);
-    border-radius: 6px;
+    border-radius: 8px;
 }
 
 .proc-controls-center {
@@ -1020,3 +1324,4 @@ body.nightMode {
         transform: translateY(0);
     }
 }
+

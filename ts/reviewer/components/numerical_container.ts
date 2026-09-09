@@ -929,7 +929,11 @@ export class NumericalContainer {
             this.previewPillEl.id = "proc-num-preview";
             this.previewPillEl.style.cssText =
                 "font-size: 0.78em; color: var(--text-muted, #666); margin-top: 4px; transition: opacity 0.2s;";
-            this.inputEl.parentElement.appendChild(this.previewPillEl);
+            if (this.inputEl.nextSibling) {
+                this.inputEl.parentElement.insertBefore(this.previewPillEl, this.inputEl.nextSibling);
+            } else {
+                this.inputEl.parentElement.appendChild(this.previewPillEl);
+            }
         }
 
         if (this.previewPillEl) {

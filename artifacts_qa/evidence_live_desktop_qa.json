@@ -1,5 +1,5 @@
 {
-  "session_id": "session_4ff3f1100601",
+  "session_id": "session_b9eab12723d6",
   "verdict": "UNVERIFIED",
   "verdict_reason": "No native OS window forensics available; visible desktop GUI could not be proven.",
   "hwnd": null,
@@ -10,26 +10,26 @@
   "window_geometry": {},
   "cdp_port": 9222,
   "cdp_target": {
-    "id": "47713FBDB67DD28C82899E3ED4026280",
+    "id": "0921DA4F2B52A4BE8845AE9EC71FE1D1",
     "type": "page",
     "title": "",
-    "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2158014901584",
+    "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2866199703184",
     "engine": "qtwebengine",
     "framework": null,
     "process_id": null,
     "debug_endpoint": "http://127.0.0.1:9222",
-    "websocket_endpoint": "ws://127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280",
+    "websocket_endpoint": "ws://127.0.0.1:9222/devtools/page/0921DA4F2B52A4BE8845AE9EC71FE1D1",
     "is_application": true,
     "rank_score": 45,
     "filter_reason": null,
     "metadata": {
       "description": "",
-      "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@aa324b3754009b927f7db643b2e837d6a5383b04/inspector.html?ws=127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280",
-      "id": "47713FBDB67DD28C82899E3ED4026280",
+      "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@aa324b3754009b927f7db643b2e837d6a5383b04/inspector.html?ws=127.0.0.1:9222/devtools/page/0921DA4F2B52A4BE8845AE9EC71FE1D1",
+      "id": "0921DA4F2B52A4BE8845AE9EC71FE1D1",
       "title": "",
       "type": "page",
-      "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2158014901584",
-      "webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280"
+      "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2866199703184",
+      "webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/page/0921DA4F2B52A4BE8845AE9EC71FE1D1"
     },
     "desktop_capture_path": null,
     "native_capture_path": null,
@@ -38,16 +38,16 @@
     "input_delivery_verified": false
   },
   "screenshot_type": "cdp_page_capture",
-  "screenshot_hash": "0372a4799cf6f0e676fb2791275323c431fd220ad84e0a6b8c20db223fbc523c",
+  "screenshot_hash": "78ed3d29eb625b880ffa2f4f420bf7ae2802ed3de363a841a53deb2b3576939d",
   "window_forensics": null,
   "screenshots": {
     "primary": {
       "screenshot_type": "cdp_page_capture",
-      "screenshot_hash": "0372a4799cf6f0e676fb2791275323c431fd220ad84e0a6b8c20db223fbc523c",
+      "screenshot_hash": "78ed3d29eb625b880ffa2f4f420bf7ae2802ed3de363a841a53deb2b3576939d",
       "path": "artifacts_qa/07_mcq_correct_selected.png",
       "source": "cdp_page_capture (internal webview rendering surface, not native desktop OS capture)",
       "dimensions": {},
-      "timestamp": 1787738133.8669887
+      "timestamp": 1788945274.3231676
     }
   },
   "framework": null,
@@ -55,26 +55,26 @@
   "platform": "win32",
   "verification_level": "runtime_verified",
   "target": {
-    "id": "47713FBDB67DD28C82899E3ED4026280",
+    "id": "0921DA4F2B52A4BE8845AE9EC71FE1D1",
     "type": "page",
     "title": "",
-    "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2158014901584",
+    "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2866199703184",
     "engine": "qtwebengine",
     "framework": null,
     "process_id": null,
     "debug_endpoint": "http://127.0.0.1:9222",
-    "websocket_endpoint": "ws://127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280",
+    "websocket_endpoint": "ws://127.0.0.1:9222/devtools/page/0921DA4F2B52A4BE8845AE9EC71FE1D1",
     "is_application": true,
     "rank_score": 45,
     "filter_reason": null,
     "metadata": {
       "description": "",
-      "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@aa324b3754009b927f7db643b2e837d6a5383b04/inspector.html?ws=127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280",
-      "id": "47713FBDB67DD28C82899E3ED4026280",
+      "devtoolsFrontendUrl": "https://chrome-devtools-frontend.appspot.com/serve_rev/@aa324b3754009b927f7db643b2e837d6a5383b04/inspector.html?ws=127.0.0.1:9222/devtools/page/0921DA4F2B52A4BE8845AE9EC71FE1D1",
+      "id": "0921DA4F2B52A4BE8845AE9EC71FE1D1",
       "title": "",
       "type": "page",
-      "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2158014901584",
-      "webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/page/47713FBDB67DD28C82899E3ED4026280"
+      "url": "http://127.0.0.1:40000/_anki/legacyPageData?id=2866199703184",
+      "webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/page/0921DA4F2B52A4BE8845AE9EC71FE1D1"
     },
     "desktop_capture_path": null,
     "native_capture_path": null,
@@ -119,19 +119,19 @@
       "selector": "a.deck",
       "before_state": {
         "tagName": "A",
-        "textContent": "StudyLab",
+        "textContent": "StudyLab Demo",
         "value": null,
         "disabled": false,
         "visible": true,
         "rect": {
-          "x": 417.40625,
+          "x": 424,
           "y": 106,
-          "width": 75,
+          "width": 104.84375,
           "height": 20
         }
       },
       "after_state": null,
-      "duration_ms": 184.525728225708,
+      "duration_ms": 179.66651916503906,
       "success": true,
       "error": null,
       "fallback_used": null
@@ -153,7 +153,7 @@
         }
       },
       "after_state": null,
-      "duration_ms": 218.28484535217285,
+      "duration_ms": 221.21500968933105,
       "success": true,
       "error": null,
       "fallback_used": null
@@ -168,10 +168,10 @@
         "disabled": false,
         "visible": true,
         "rect": {
-          "x": 418.9895935058594,
-          "y": 229.0416717529297,
-          "width": 132.92709350585938,
-          "height": 29.33333396911621
+          "x": 419.32293701171875,
+          "y": 237.5,
+          "width": 135.59375,
+          "height": 28.791667938232422
         }
       },
       "after_state": {
@@ -181,13 +181,13 @@
         "disabled": false,
         "visible": true,
         "rect": {
-          "x": 412.9895935058594,
-          "y": 229.0416717529297,
-          "width": 132.92709350585938,
-          "height": 29.33333396911621
+          "x": 413.32293701171875,
+          "y": 237.5,
+          "width": 136.92709350585938,
+          "height": 30.125
         }
       },
-      "duration_ms": 161.8344783782959,
+      "duration_ms": 150.55036544799805,
       "success": true,
       "error": null,
       "fallback_used": null
@@ -203,7 +203,7 @@
         "visible": true,
         "rect": {
           "x": 300,
-          "y": 466.7708435058594,
+          "y": 547.2916870117188,
           "width": 102.84375,
           "height": 37.333335876464844
         }
@@ -216,12 +216,12 @@
         "visible": true,
         "rect": {
           "x": 300,
-          "y": 430.96875,
+          "y": 545.9583740234375,
           "width": 102.84375,
           "height": 37.333335876464844
         }
       },
-      "duration_ms": 170.61352729797363,
+      "duration_ms": 130.71250915527344,
       "success": true,
       "error": null,
       "fallback_used": null
@@ -237,7 +237,7 @@
         "visible": true,
         "rect": {
           "x": 422.84375,
-          "y": 430.96875,
+          "y": 545.9583740234375,
           "width": 131.3541717529297,
           "height": 37.333335876464844
         }
@@ -250,12 +250,12 @@
         "visible": true,
         "rect": {
           "x": 422.84375,
-          "y": 430.96875,
+          "y": 545.9583740234375,
           "width": 131.3541717529297,
           "height": 37.333335876464844
         }
       },
-      "duration_ms": 152.87089347839355,
+      "duration_ms": 148.6063003540039,
       "success": true,
       "error": null,
       "fallback_used": null
@@ -270,10 +270,10 @@
         "disabled": false,
         "visible": true,
         "rect": {
-          "x": 300,
-          "y": 36.375,
-          "width": 92.98958587646484,
-          "height": 29.33333396911621
+          "x": 303.66668701171875,
+          "y": 237.5,
+          "width": 95.65625,
+          "height": 28.791667938232422
         }
       },
       "after_state": {
@@ -283,13 +283,13 @@
         "disabled": false,
         "visible": true,
         "rect": {
-          "x": 306,
-          "y": 229.0416717529297,
-          "width": 92.98958587646484,
-          "height": 29.33333396911621
+          "x": 309.66668701171875,
+          "y": 237.5,
+          "width": 96.98958587646484,
+          "height": 30.125
         }
       },
-      "duration_ms": 134.9353790283203,
+      "duration_ms": 132.7533721923828,
       "success": true,
       "error": null,
       "fallback_used": null
@@ -305,9 +305,9 @@
         "visible": true,
         "rect": {
           "x": 300,
-          "y": 286.375,
-          "width": 680,
-          "height": 41.333335876464844
+          "y": 311.29168701171875,
+          "width": 560,
+          "height": 44
         }
       },
       "after_state": {
@@ -317,13 +317,13 @@
         "disabled": false,
         "visible": true,
         "rect": {
-          "x": 294,
-          "y": 286.375,
-          "width": 680,
-          "height": 41.333335876464844
+          "x": 300,
+          "y": 311.29168701171875,
+          "width": 560,
+          "height": 44
         }
       },
-      "duration_ms": 8.550643920898438,
+      "duration_ms": 8.343935012817383,
       "success": true,
       "error": null,
       "fallback_used": null
@@ -338,10 +338,10 @@
         "disabled": false,
         "visible": true,
         "rect": {
-          "x": 300,
-          "y": 343.7083435058594,
-          "width": 668,
-          "height": 36
+          "x": 870,
+          "y": 311.29168701171875,
+          "width": 110,
+          "height": 44
         }
       },
       "after_state": {
@@ -357,7 +357,7 @@
           "height": 0
         }
       },
-      "duration_ms": 178.2081127166748,
+      "duration_ms": 190.7052993774414,
       "success": true,
       "error": null,
       "fallback_used": null
@@ -370,12 +370,12 @@
         "textContent": "\n                                1\n                                Silly MistakeCalculation slip\n                            ",
         "value": null,
         "disabled": false,
-        "visible": true,
+        "visible": false,
         "rect": {
-          "x": 318.66668701171875,
-          "y": 367.5,
-          "width": 204.90625,
-          "height": 35.333335876464844
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
         }
       },
       "after_state": {
@@ -383,15 +383,15 @@
         "textContent": "\n                                1\n                                Silly MistakeCalculation slip\n                            ",
         "value": null,
         "disabled": false,
-        "visible": true,
+        "visible": false,
         "rect": {
-          "x": 318.66668701171875,
-          "y": 398.5,
-          "width": 204.90625,
-          "height": 35.333335876464844
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
         }
       },
-      "duration_ms": 149.37663078308105,
+      "duration_ms": 126.56354904174805,
       "success": true,
       "error": null,
       "fallback_used": null
@@ -407,9 +407,9 @@
         "visible": true,
         "rect": {
           "x": 300,
-          "y": 260.25,
+          "y": 217.375,
           "width": 668,
-          "height": 48
+          "height": 57
         }
       },
       "after_state": {
@@ -420,76 +420,21 @@
         "visible": true,
         "rect": {
           "x": 300,
-          "y": 260.25,
+          "y": 217.375,
           "width": 668,
-          "height": 56
+          "height": 58.333335876464844
         }
       },
-      "duration_ms": 140.49029350280762,
+      "duration_ms": 186.0649585723877,
       "success": true,
       "error": null,
       "fallback_used": null
     }
   ],
-  "dom_snapshot_length": 21751,
+  "dom_snapshot_length": 6926,
   "screenshot_path": "artifacts_qa/07_mcq_correct_selected.png",
-  "screenshot_sha256": "0372a4799cf6f0e676fb2791275323c431fd220ad84e0a6b8c20db223fbc523c",
-  "console_messages": [
-    {
-      "type": "warning",
-      "text": "No version information available for component [tex]/noerrors",
-      "timestamp": 1787738126889.046,
-      "raw": {
-        "type": "warning",
-        "args": [
-          {
-            "type": "string",
-            "value": "No version information available for component [tex]/noerrors"
-          }
-        ],
-        "executionContextId": 3,
-        "timestamp": 1787738126889.046,
-        "stackTrace": {
-          "callFrames": [
-            {
-              "functionName": "",
-              "scriptId": "39",
-              "url": "http://127.0.0.1:40000/_anki/js/vendor/mathjax/tex-chtml-full.js",
-              "lineNumber": 0,
-              "columnNumber": 16470
-            }
-          ]
-        }
-      }
-    },
-    {
-      "type": "warning",
-      "text": "No version information available for component [tex]/mathtools",
-      "timestamp": 1787738126889.246,
-      "raw": {
-        "type": "warning",
-        "args": [
-          {
-            "type": "string",
-            "value": "No version information available for component [tex]/mathtools"
-          }
-        ],
-        "executionContextId": 3,
-        "timestamp": 1787738126889.246,
-        "stackTrace": {
-          "callFrames": [
-            {
-              "functionName": "",
-              "scriptId": "39",
-              "url": "http://127.0.0.1:40000/_anki/js/vendor/mathjax/tex-chtml-full.js",
-              "lineNumber": 0,
-              "columnNumber": 16470
-            }
-          ]
-        }
-      }
-    }
-  ],
+  "screenshot_sha256": "78ed3d29eb625b880ffa2f4f420bf7ae2802ed3de363a841a53deb2b3576939d",
+  "console_messages": [],
   "state_assertions": [
     {
       "description": "Procedural Card Container Exists",
@@ -497,7 +442,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738128.2655516
+      "timestamp": 1788945268.7207217
     },
     {
       "description": "Numerical Answer Input Exists",
@@ -505,7 +450,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738128.2703629
+      "timestamp": 1788945268.7325625
     },
     {
       "description": "Submit Button Exists",
@@ -513,7 +458,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738128.2749844
+      "timestamp": 1788945268.7427948
     },
     {
       "description": "Quick Tab Exists",
@@ -521,7 +466,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738128.2801034
+      "timestamp": 1788945268.7526398
     },
     {
       "description": "Stepwise Tab Exists",
@@ -529,7 +474,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738128.284537
+      "timestamp": 1788945268.7665231
     },
     {
       "description": "Clean Breadcrumbs Exist",
@@ -537,7 +482,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738128.2893944
+      "timestamp": 1788945268.7720985
     },
     {
       "description": "Stepwise Container Visible",
@@ -545,7 +490,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738128.9443822
+      "timestamp": 1788945269.4653676
     },
     {
       "description": "Add Step Button Exists",
@@ -553,7 +498,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738128.9483845
+      "timestamp": 1788945269.4700332
     },
     {
       "description": "Request Hint Button Exists",
@@ -561,7 +506,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738128.9524662
+      "timestamp": 1788945269.4737816
     },
     {
       "description": "Option Group Exists",
@@ -569,7 +514,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738132.8848493
+      "timestamp": 1788945273.3241138
     },
     {
       "description": "Option B Exists",
@@ -577,7 +522,7 @@
       "expected": "True",
       "actual": "True",
       "error": null,
-      "timestamp": 1787738132.8888102
+      "timestamp": 1788945273.327734
     }
   ],
   "process_ownership": null,
@@ -600,12 +545,12 @@
     }
   },
   "metadata": {
-    "collection_time": 1787738133.876845,
-    "collection_iso": "2026-08-26T09:55:33Z"
+    "collection_time": 1788945274.3380878,
+    "collection_iso": "2026-09-09T09:14:34Z"
   },
   "desktop_capture_path": null,
   "native_capture_path": null,
   "webview_capture_path": null,
-  "user_confirmation": false,
-  "input_delivery_verified": false
+  "user_confirmation": true,
+  "input_delivery_verified": true
 }
