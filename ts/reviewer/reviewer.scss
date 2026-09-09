@@ -245,13 +245,11 @@ body.nightMode {
     border-radius: 0;
     box-shadow: none;
     box-sizing: border-box;
+    overflow-x: hidden;
     transition: color 180ms ease;
 }
 
-/* Ensure padding expands smoothly only when the fixed interaction footer is active */
-.procedural-card-container:has(.proc-interaction-footer:has(> :not(.hidden))) {
-    padding-bottom: 90px;
-}
+/* StudyLab Pass 2: Natural document flow layout eliminates fixed-footer occlusion and arbitrary bottom padding hacks */
 
 /* =========================================================================
  * Header, Breadcrumbs & Provenance Badges
@@ -1145,22 +1143,16 @@ body.nightMode .proc-speed-slow-wrong {
  * ========================================================================= */
 
 .proc-interaction-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: var(--proc-surface);
-    border-top: 1px solid var(--proc-border);
-    padding: 12px 20px;
-    z-index: 1000;
     display: none;
     flex-direction: column;
     align-items: center;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+    margin-top: 16px;
+    margin-bottom: 8px;
+    width: 100%;
 }
 
 body.nightMode .proc-interaction-footer {
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+    /* No shadow needed for static flow */
 }
 
 .proc-interaction-footer:has(> :not(.hidden)) {
@@ -1169,7 +1161,7 @@ body.nightMode .proc-interaction-footer {
 
 .proc-mistake-panel {
     width: 100%;
-    max-width: 620px;
+    max-width: 100%;
     margin: 0;
     padding: 0;
     background: transparent;
@@ -1179,7 +1171,7 @@ body.nightMode .proc-interaction-footer {
 .proc-mistake-heading {
     font-size: 13px;
     font-weight: 600;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     color: var(--proc-text-primary);
     text-align: center;
 }
@@ -1188,8 +1180,8 @@ body.nightMode .proc-interaction-footer {
 .proc-mistake-footer {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 6px;
+    gap: 6px;
+    margin-top: 4px;
     justify-content: center;
 }
 
@@ -1197,9 +1189,9 @@ body.nightMode .proc-interaction-footer {
 .proc-mistake-card {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    font-size: 13px;
+    gap: 6px;
+    padding: 7px 11px;
+    font-size: 12.5px;
     font-weight: 500;
     background: var(--proc-surface);
     color: var(--proc-text-primary);

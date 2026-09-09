@@ -1108,6 +1108,12 @@ export class ProceduralReviewer {
             mistakePanel.style.display = "";
         }
 
+        const footer = this.container.querySelector<HTMLElement>("#proc-interaction-footer, .proc-interaction-footer");
+        if (footer) {
+            footer.classList.remove("hidden");
+            footer.style.display = "flex";
+        }
+
         this.resultPanel?.classList.remove("hidden");
         if (this.resultTitle) {
             this.resultTitle.textContent = "✗ Incorrect Answer";
@@ -1172,6 +1178,16 @@ export class ProceduralReviewer {
         if (mistakePanel) {
             mistakePanel.classList.add("hidden");
             mistakePanel.style.display = "none";
+        }
+
+        const footer = this.container.querySelector<HTMLElement>("#proc-interaction-footer, .proc-interaction-footer");
+        if (footer) {
+            const hasVisibleChild = Array.from(footer.children).some(
+                (c) => !c.classList.contains("hidden") && (c as HTMLElement).style.display !== "none"
+            );
+            if (!hasVisibleChild) {
+                footer.style.display = "none";
+            }
         }
 
         // Reveal solution container and action row post-reflection

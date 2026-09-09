@@ -1,6 +1,6 @@
 {
   "runtime": "PyQt6 / QtWebEngine Windows Desktop",
-  "pid": 20736,
+  "pid": 24564,
   "cdp_port": 9222,
   "scenarios": {
     "01_procedural_solving": {
@@ -27,10 +27,10 @@
       "screenshot": "04_mistake_classification.png"
     },
     "05_feedback": {
-      "feedback_visible": false,
-      "next_btn_visible": false,
-      "speed_quadrant": "",
-      "single_interaction_surface": false,
+      "feedback_visible": true,
+      "next_btn_visible": true,
+      "speed_quadrant": "?? Strategy Trap ? 2.9s",
+      "single_interaction_surface": true,
       "screenshot": "05_feedback.png"
     },
     "06_normal_anki": {

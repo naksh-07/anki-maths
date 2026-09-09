@@ -1364,5 +1364,226 @@ describe("ProceduralReviewer Performance Classification", () => {
             reviewer.destroy();
         });
     });
+
+    describe("StudyLab Pass 2: Reflection Footer + Non-Occluding Layout", () => {
+        let pass2Container: HTMLElement;
+
+        beforeEach(() => {
+            pass2Container = document.createElement("div");
+            pass2Container.id = "procedural-card";
+            pass2Container.className = "procedural-card-container";
+            pass2Container.innerHTML = `
+                <div id="proc-prompt" class="proc-prompt">What is 5 + 7?</div>
+                <div id="proc-quick-container">
+                    <input type="text" id="proc-answer-input" class="proc-input" />
+                    <button type="button" id="proc-submit-btn" class="proc-btn">Submit</button>
+                    <button type="button" id="proc-hint-btn" class="proc-btn proc-hint-btn">💡 Request Hint</button>
+                </div>
+                <div id="proc-hint-container" class="proc-hint-box hidden"></div>
+                <div id="proc-result-panel" class="proc-result hidden">
+                    <div id="proc-result-title" class="proc-result-title"></div>
+                    <div id="proc-result-feedback" class="proc-result-feedback"></div>
+                    <div class="proc-meta-row">
+                        <div id="proc-actual-time" class="proc-actual-time"></div>
+                    </div>
+                    <div id="proc-solution-container" class="proc-solution hidden">
+                        <div class="proc-solution-body">5 + 7 = 12</div>
+                    </div>
+                </div>
+                <div id="proc-interaction-footer" class="proc-interaction-footer">
+                    <div id="proc-mistake-panel" class="proc-mistake-panel hidden">
+                        <div class="proc-mistake-heading">Classify error (1-4) to reflect and optimize spaced repetition:</div>
+                        <div class="proc-mistake-footer">
+                            <button type="button" class="proc-mistake-btn" data-value="silly_mistake" data-key="1">
+                                <span class="proc-key-badge">1</span> Silly Slip
+                            </button>
+                            <button type="button" class="proc-mistake-btn" data-value="pattern_not_recognized" data-key="2">
+                                <span class="proc-key-badge">2</span> Pattern Missed
+                            </button>
+                            <button type="button" class="proc-mistake-btn" data-value="formula_or_concept_misapplied" data-key="3">
+                                <span class="proc-key-badge">3</span> Concept Gap
+                            </button>
+                            <button type="button" class="proc-mistake-btn" data-value="concept_not_known" data-key="4">
+                                <span class="proc-key-badge">4</span> Prereq Unknown
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(pass2Container);
+        });
+
+        afterEach(() => {
+            pass2Container.remove();
+        });
+
+        test("mounts #proc-interaction-footer with mistake panel in document flow on wrong answer", () => {
+            const reviewer = new ProceduralReviewer(pass2Container, {
+                instanceId: "inst-pass2-flow",
+                familyId: "math.linear",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 12 },
+            });
+
+            const input = pass2Container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+            input.value = "10";
+            pass2Container.querySelector<HTMLButtonElement>("#proc-submit-btn")!.click();
+
+            expect(reviewer.getState()).toBe("mistake_classification");
+
+            // Footer and mistake panel must be unhidden
+            const footer = pass2Container.querySelector<HTMLElement>("#proc-interaction-footer")!;
+            const mistakePanel = pass2Container.querySelector<HTMLElement>("#proc-mistake-panel")!;
+            expect(footer.classList.contains("hidden")).toBe(false);
+            expect(footer.style.display).not.toBe("none");
+            expect(mistakePanel.classList.contains("hidden")).toBe(false);
+            expect(mistakePanel.style.display).not.toBe("none");
+
+            // Problem prompt remains visible (visual hero invariant)
+            const prompt = pass2Container.querySelector<HTMLElement>("#proc-prompt")!;
+            expect(prompt.textContent).toBe("What is 5 + 7?");
+
+            // Result title indicates incorrect
+            const resultTitle = pass2Container.querySelector<HTMLElement>("#proc-result-title")!;
+            expect(resultTitle.textContent).toContain("Incorrect Answer");
+
+            // User answer is shown without leaking canonical solution
+            const resultFeedback = pass2Container.querySelector<HTMLElement>("#proc-result-feedback")!;
+            expect(resultFeedback.textContent).toContain("Your answer:");
+            expect(resultFeedback.textContent).toContain("10");
+            expect(resultFeedback.textContent).not.toContain("12");
+
+            // Solution remains strictly hidden (ANTI-08)
+            const solution = pass2Container.querySelector<HTMLElement>("#proc-solution-container")!;
+            expect(solution.classList.contains("hidden")).toBe(true);
+            expect(solution.style.display).toBe("none");
+
+            reviewer.destroy();
+        });
+
+        test("contains all four canonical reflection controls with exact labels and data keys", () => {
+            const reviewer = new ProceduralReviewer(pass2Container, {
+                instanceId: "inst-pass2-keys",
+                familyId: "math.linear",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 12 },
+            });
+
+            const input = pass2Container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+            input.value = "99";
+            pass2Container.querySelector<HTMLButtonElement>("#proc-submit-btn")!.click();
+
+            const buttons = pass2Container.querySelectorAll<HTMLButtonElement>(".proc-mistake-btn");
+            expect(buttons.length).toBe(4);
+
+            const expected = [
+                { key: "1", val: "silly_mistake", label: "Silly Slip" },
+                { key: "2", val: "pattern_not_recognized", label: "Pattern Missed" },
+                { key: "3", val: "formula_or_concept_misapplied", label: "Concept Gap" },
+                { key: "4", val: "concept_not_known", label: "Prereq Unknown" },
+            ];
+
+            buttons.forEach((btn, idx) => {
+                expect(btn.dataset.key).toBe(expected[idx].key);
+                expect(btn.dataset.value).toBe(expected[idx].val);
+                expect(btn.textContent).toContain(expected[idx].label);
+            });
+
+            reviewer.destroy();
+        });
+
+        test("traps Space and Enter keys in mistake_classification to prevent bypass", () => {
+            const reviewer = new ProceduralReviewer(pass2Container, {
+                instanceId: "inst-pass2-trap",
+                familyId: "math.linear",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 12 },
+            });
+
+            const input = pass2Container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+            input.value = "99";
+            pass2Container.querySelector<HTMLButtonElement>("#proc-submit-btn")!.click();
+
+            expect(reviewer.getState()).toBe("mistake_classification");
+
+            // Attempt to bypass with Space and Enter
+            const spaceEvent = new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true, cancelable: true });
+            window.dispatchEvent(spaceEvent);
+            expect(spaceEvent.defaultPrevented).toBe(true);
+            expect(reviewer.getState()).toBe("mistake_classification");
+
+            const enterEvent = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true });
+            window.dispatchEvent(enterEvent);
+            expect(enterEvent.defaultPrevented).toBe(true);
+            expect(reviewer.getState()).toBe("mistake_classification");
+
+            reviewer.destroy();
+        });
+
+        test("selecting a category dispatches bridge command and hides reflection panel", () => {
+            const reviewer = new ProceduralReviewer(pass2Container, {
+                instanceId: "inst-pass2-select",
+                familyId: "math.linear",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 12 },
+            });
+
+            const input = pass2Container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+            input.value = "99";
+            pass2Container.querySelector<HTMLButtonElement>("#proc-submit-btn")!.click();
+
+            // Click category 2 (Pattern Missed)
+            const btn2 = pass2Container.querySelector<HTMLButtonElement>('.proc-mistake-btn[data-key="2"]')!;
+            btn2.click();
+
+            const mistakeCalls = (window as any).bridgeCommand.mock.calls.filter((c: any) => c[0].startsWith("procedural_mistake:"));
+            expect(mistakeCalls.length).toBe(1);
+            expect(mistakeCalls[0][0]).toContain("pattern_not_recognized");
+
+            // State transitioned to feedback
+            expect(reviewer.getState()).toBe("feedback");
+
+            // Mistake panel must be hidden
+            const mistakePanel = pass2Container.querySelector<HTMLElement>("#proc-mistake-panel")!;
+            expect(mistakePanel.classList.contains("hidden")).toBe(true);
+            expect(mistakePanel.style.display).toBe("none");
+
+            // Footer must collapse when no visible children exist
+            const footer = pass2Container.querySelector<HTMLElement>("#proc-interaction-footer")!;
+            expect(footer.style.display).toBe("none");
+
+            // Solution is revealed post-reflection
+            const solution = pass2Container.querySelector<HTMLElement>("#proc-solution-container")!;
+            expect(solution.classList.contains("hidden")).toBe(false);
+            expect(solution.style.display).not.toBe("none");
+
+            reviewer.destroy();
+        });
+
+        test("Pass 1 Hint behavior is preserved in Quick Solve without regression", () => {
+            const reviewer = new ProceduralReviewer(pass2Container, {
+                instanceId: "inst-pass2-hint",
+                familyId: "math.linear",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 12 },
+                parameters: {
+                    hints: ["First step: add 5 and 7 together."],
+                },
+            });
+
+            const hintBtn = pass2Container.querySelector<HTMLButtonElement>("#proc-hint-btn")!;
+            expect(hintBtn).not.toBeNull();
+            expect(hintBtn.classList.contains("hidden")).toBe(false);
+
+            hintBtn.click();
+
+            const hintBox = pass2Container.querySelector<HTMLElement>("#proc-hint-container")!;
+            expect(hintBox.classList.contains("hidden")).toBe(false);
+            expect(hintBox.textContent).toContain("First step: add 5 and 7 together.");
+            expect(reviewer.getHintsUsed()).toBe(1);
+
+            reviewer.destroy();
+        });
+    });
 });
 

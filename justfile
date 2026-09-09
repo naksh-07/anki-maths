@@ -178,6 +178,18 @@ complexipy-diff:
 clean *args:
     ./tools/clean {{ args }}
 
+# Run fast StudyLab procedural Rust library tests
+test-proc:
+    cargo test -p procedural --lib
+
+# Run all 175-topic factory tests
+test-proc-factory:
+    cargo test -p procedural --test phase36c_all_175_topics_factory_tests
+
+# Run canonical APKG package validation
+validate-apkg:
+    python artifacts_qa/validate_canonical_apkg.py
+
 # Helpers to get the right commands for the platform
 
 ninja := if os() == "windows" { "tools\\ninja" } else { "./ninja" }

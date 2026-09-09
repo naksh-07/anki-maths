@@ -13,7 +13,7 @@ The `engineering-workflow` skill defines the canonical development lifecycle and
 
 Use this skill when you need to:
 - Plan, structure, and execute changes across Rust core, TypeScript reviewer, Python/Qt bridge, or content tools.
-- Coordinate multi-agent workflows across the specialist subagents (`explorer`, `implementer`, `reviewer-verifier`, `challenger-auditor`).
+- Coordinate multi-agent workflows across core agents (`explorer`, `implementer`, `reviewer-verifier`, `challenger-auditor`) and domain specialists (`cas-math-specialist`, `curriculum-factory`, `persistence-guard`, `visual-qa-inspector`).
 - Implement features following the strict bottom-up dependency ordering and frozen safety invariants.
 - Execute independent verification (Tier 2) and adversarial victory auditing (Tier 3/4) before claiming completion.
 
@@ -59,10 +59,16 @@ Engineering in StudyLab is governed by strict role specialization and permission
 ```
 
 ### Role Summary & Permitted Primitives
-- **`explorer`** (`model: flash`): 100% read-only (`view_file`, `grep_search`, `find_by_name`, `list_dir`). No file writes, no command execution.
-- **`implementer`** (`model: pro`): Controlled writer (`write_to_file`, `replace_file_content`, `run_command`). Adheres to write-set exclusivity and bottom-up spine.
-- **`reviewer-verifier`** (`model: flash`): Read & execute only (`run_command`, read tools). Never edits source code; independently executes tests and audits diffs.
-- **`challenger-auditor`** (`model: pro`): Read & execute only (`run_command`, read tools). Ultimate adversarial gatekeeper; runs hostile stress tests and emits `VICTORY CONFIRMED` or `AUDIT FAILED`.
+- **Core Orchestration & Engineering Agents**:
+  - **`explorer`** (`model: flash`): 100% read-only (`view_file`, `grep_search`, `find_by_name`, `list_dir`). No file writes, no command execution.
+  - **`implementer`** (`model: pro`): Controlled writer (`write_to_file`, `replace_file_content`, `run_command`). Adheres to write-set exclusivity and bottom-up spine.
+  - **`reviewer-verifier`** (`model: flash`): Read & execute only (`run_command`, read tools). Never edits source code; independently executes tests and audits diffs.
+  - **`challenger-auditor`** (`model: pro`): Read & execute only (`run_command`, read tools). Ultimate adversarial gatekeeper; runs hostile stress tests and emits `VICTORY CONFIRMED` or `AUDIT FAILED`.
+- **Domain Specialist Subagents**:
+  - **`cas-math-specialist`** (`model: pro`): CAS AST derivation trees, symbolic step validation, KaTeX equations, and math equivalence checks.
+  - **`curriculum-factory`** (`model: flash`): 175 STEM curriculum blueprint generation, JSON schema validation, and APKG packaging.
+  - **`persistence-guard`** (`model: pro`): SQLite schemas, migrations (v1-v5), parameterized queries, and 100-byte telemetry firewall.
+  - **`visual-qa-inspector`** (`model: flash`): Desktop UI reviewer, Night mode, 720px Open Canvas, and Two-P0 button suppression.
 
 ---
 
