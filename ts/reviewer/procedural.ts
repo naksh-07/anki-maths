@@ -235,6 +235,10 @@ export class ProceduralReviewer {
         return this.state;
     }
 
+    public getHintsUsed(): number {
+        return this.hintsUsed;
+    }
+
     public getMCQContainer(): MCQContainer | null {
         return this.mcqContainer;
     }
@@ -408,8 +412,17 @@ export class ProceduralReviewer {
         // Stepwise controls
         this.addListener(this.addStepBtn, "click", () => this.addStepRow());
         this.addListener(this.resetBtn, "click", () => this.resetSteps());
-        this.addListener(this.hintBtn, "click", () => this.requestHint());
         this.addListener(this.checkStepsBtn, "click", () => this.handleStepwiseSubmit());
+
+        // Hint buttons across all modalities (Numerical, MCQ, Stepwise)
+        const hintBtns = this.container.querySelectorAll<HTMLButtonElement>("#proc-hint-btn, #proc-stepwise-hint-btn, .proc-hint-btn");
+        hintBtns.forEach((btn) => {
+            this.addListener(btn, "click", (e: Event) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.requestHint();
+            });
+        });
 
         // Structured option items (MCQ, ConceptCheck, StrategyDrill)
         const optionItems = this.container.querySelectorAll<HTMLElement>(".proc-option-item");
@@ -441,6 +454,12 @@ export class ProceduralReviewer {
         this.addListener(nextBtnEl, "click", () => this.handleNext());
 
         this.addListener(this.container, "click", (e: Event) => {
+            const hintTarget = (e.target as HTMLElement)?.closest<HTMLElement>("#proc-hint-btn, #proc-stepwise-hint-btn, .proc-hint-btn");
+            if (hintTarget) {
+                e.preventDefault();
+                this.requestHint();
+                return;
+            }
             const nextTarget = (e.target as HTMLElement)?.closest<HTMLElement>("#proc-next-btn, .proc-next-btn");
             if (nextTarget) {
                 e.preventDefault();
@@ -501,6 +520,13 @@ export class ProceduralReviewer {
                     } else {
                         this.handleQuickSubmit();
                     }
+                    return;
+                }
+
+                // Hotkey H or ? for hint request
+                if (kbEvent.key === "h" || kbEvent.key === "H" || kbEvent.key === "?") {
+                    kbEvent.preventDefault();
+                    this.requestHint();
                     return;
                 }
 
@@ -665,7 +691,7 @@ export class ProceduralReviewer {
     }
 
     public requestHint(): void {
-        if (this.state !== "solving") {return;}
+        if (this.state !== "solving" && this.state !== "ready") {return;}
         this.hintsUsed += 1;
         this.hintTimestamps.push(Date.now() - this.startTime);
         this.state = "hint";
@@ -673,8 +699,18 @@ export class ProceduralReviewer {
         let hintTitle = "Hint";
         let hintContent = "";
         const graph = this.options.solutionGraph;
+        const hintsArray = (this.options as any).hints || this.options.parameters?.hints;
 
-        if (graph && graph.steps && graph.steps.length > 0) {
+        if (hintsArray && Array.isArray(hintsArray) && hintsArray.length > 0) {
+            const hintObj = hintsArray[(this.hintsUsed - 1) % hintsArray.length];
+            if (typeof hintObj === "string") {
+                hintTitle = `Hint ${this.hintsUsed}`;
+                hintContent = hintObj;
+            } else if (hintObj && typeof hintObj === "object") {
+                hintTitle = hintObj.title || `Hint ${this.hintsUsed}`;
+                hintContent = hintObj.content || hintObj.text || "";
+            }
+        } else if (graph && graph.steps && graph.steps.length > 0) {
             const stepIdx = Math.min(this.hintsUsed - 1, graph.steps.length - 1);
             const step = graph.steps[stepIdx];
             if (step.hints && step.hints.length > 0) {
@@ -1045,6 +1081,14 @@ export class ProceduralReviewer {
         this.quickContainer?.classList.add("hidden");
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
+        this.container.querySelectorAll<HTMLElement>("#proc-hint-btn, #proc-stepwise-hint-btn, .proc-hint-btn, .proc-controls:has(#proc-hint-btn)").forEach((el) => {
+            el.classList.add("hidden");
+            el.style.display = "none";
+        });
+        this.hintBox?.classList.add("hidden");
+        if (this.hintBox) {
+            this.hintBox.style.display = "none";
+        }
 
         // ANTI-08: Solution container is strictly hidden initially to prevent premature exposure during reflection
         const solutionContainer = this.container.querySelector<HTMLElement>("#proc-solution-container");
@@ -1118,6 +1162,10 @@ export class ProceduralReviewer {
         this.quickContainer?.classList.add("hidden");
         this.stepwiseContainer?.classList.add("hidden");
         this.container.querySelector(".proc-mode-switch")?.classList.add("hidden");
+        this.container.querySelectorAll<HTMLElement>("#proc-hint-btn, #proc-stepwise-hint-btn, .proc-hint-btn, .proc-controls:has(#proc-hint-btn)").forEach((el) => {
+            el.classList.add("hidden");
+            el.style.display = "none";
+        });
         this.resultPanel?.classList.remove("hidden");
 
         const mistakePanel = this.container.querySelector<HTMLElement>("#proc-mistake-panel, .proc-mistake-panel");

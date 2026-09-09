@@ -24,6 +24,7 @@ describe("ProceduralReviewer API", () => {
             <div id="proc-quick-container">
                 <input type="text" id="proc-answer-input" class="proc-input" />
                 <button type="button" id="proc-submit-btn" class="proc-btn">Submit</button>
+                <button type="button" id="proc-hint-btn" class="proc-btn proc-hint-btn" title="Show Hint (H)">Hint</button>
             </div>
             <div id="proc-stepwise-container" class="hidden">
                 <div id="proc-steps-list">
@@ -34,12 +35,13 @@ describe("ProceduralReviewer API", () => {
                 </div>
                 <div class="proc-controls">
                     <button type="button" id="proc-add-step-btn" class="proc-btn">+ Add Step</button>
-                    <button type="button" id="proc-hint-btn" class="proc-btn">Hint</button>
+                    <button type="button" id="proc-stepwise-hint-btn" class="proc-btn proc-hint-btn" title="Show Hint (H)">Hint</button>
                     <button type="button" id="proc-reset-steps-btn" class="proc-btn">Reset</button>
                     <button type="button" id="proc-check-steps-btn" class="proc-btn">Check</button>
                 </div>
             </div>
             <div id="proc-hint-container" class="proc-hint-box hidden"></div>
+            <div id="proc-solution-container" class="proc-solution hidden"></div>
             <div id="proc-result-panel" class="proc-result hidden">
                 <div id="proc-result-title"></div>
                 <div id="proc-result-feedback"></div>
@@ -1011,6 +1013,7 @@ describe("ProceduralReviewer Performance Classification", () => {
             <div id="proc-quick-container">
                 <input type="text" id="proc-answer-input" class="proc-input" />
                 <button type="button" id="proc-submit-btn" class="proc-btn">Submit</button>
+                <button type="button" id="proc-hint-btn" class="proc-btn proc-hint-btn" title="Show Hint (H)">Hint</button>
             </div>
             <div id="proc-stepwise-container" class="hidden">
                 <div id="proc-steps-list">
@@ -1021,7 +1024,7 @@ describe("ProceduralReviewer Performance Classification", () => {
                 </div>
                 <div class="proc-controls">
                     <button type="button" id="proc-add-step-btn" class="proc-btn">+ Add Step</button>
-                    <button type="button" id="proc-hint-btn" class="proc-btn">Hint</button>
+                    <button type="button" id="proc-stepwise-hint-btn" class="proc-btn proc-hint-btn" title="Show Hint (H)">Hint</button>
                     <button type="button" id="proc-reset-steps-btn" class="proc-btn">Reset</button>
                     <button type="button" id="proc-check-steps-btn" class="proc-btn">Check</button>
                 </div>
@@ -1192,6 +1195,171 @@ describe("ProceduralReviewer Performance Classification", () => {
             const enterEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
             window.dispatchEvent(enterEvent);
             expect(reviewer.getState()).toBe("next");
+
+            reviewer.destroy();
+        });
+    });
+
+    describe("Pass 1: Numerical and MCQ Hint Affordances", () => {
+        test("Quick Solve / Numerical: hint button is located inside #proc-quick-container and clicking displays hint without revealing solution", () => {
+            const reviewer = new ProceduralReviewer(container, {
+                instanceId: "inst-hint-num",
+                familyId: "math.linear",
+                targetTimeMs: 40000,
+                correctAnswer: { value: 42 },
+                parameters: {
+                    hints: ["First isolate x on one side.", "Subtract 5 from both sides."],
+                },
+            });
+
+            const hintBtn = container.querySelector<HTMLButtonElement>("#proc-hint-btn")!;
+            expect(hintBtn).not.toBeNull();
+            expect(hintBtn.closest("#proc-quick-container")).not.toBeNull();
+
+            const hintBox = container.querySelector<HTMLElement>("#proc-hint-container")!;
+            const solutionBox = container.querySelector<HTMLElement>("#proc-solution-container")!;
+            expect(hintBox.classList.contains("hidden")).toBe(true);
+
+            // Click hint button
+            hintBtn.click();
+
+            expect(reviewer.getState()).toBe("solving");
+            expect(reviewer.getHintsUsed()).toBe(1);
+            expect(hintBox.classList.contains("hidden")).toBe(false);
+            expect(hintBox.textContent).toContain("First isolate x on one side.");
+
+            // ANTI-08: Solution container must NEVER be revealed prematurely when requesting a hint
+            if (solutionBox) {
+                expect(solutionBox.classList.contains("hidden")).toBe(true);
+            }
+
+            // Click hint button second time to get next hint
+            hintBtn.click();
+            expect(hintBox.textContent).toContain("Subtract 5 from both sides.");
+
+            reviewer.destroy();
+        });
+
+        test("MCQ: hint button inside .proc-controls unhides hint box without prematurely revealing solution", () => {
+            const mcqContainer = document.createElement("div");
+            mcqContainer.id = "mcq-card";
+            mcqContainer.innerHTML = `
+                <div class="proc-header">
+                    <span class="proc-timer" id="proc-stopwatch">00:00</span>
+                </div>
+                <div class="proc-option-group">
+                    <div class="proc-option-item" data-index="0" data-key="1">Option A</div>
+                    <div class="proc-option-item" data-index="1" data-key="2">Option B</div>
+                </div>
+                <div class="proc-controls">
+                    <button type="button" id="proc-hint-btn" class="proc-btn proc-hint-btn">Hint</button>
+                </div>
+                <div id="proc-hint-container" class="proc-hint-box hidden"></div>
+                <div id="proc-solution-container" class="proc-solution hidden"></div>
+                <div id="proc-result-panel" class="proc-result hidden">
+                    <button type="button" id="proc-next-btn" class="proc-btn">Next</button>
+                </div>
+            `;
+            document.body.appendChild(mcqContainer);
+
+            const reviewer = new ProceduralReviewer(mcqContainer, {
+                instanceId: "inst-hint-mcq",
+                familyId: "math.mcq",
+                correctAnswer: { value: 0 },
+                parameters: {
+                    hints: ["Consider the sign of the discriminant."],
+                },
+            });
+
+            const hintBtn = mcqContainer.querySelector<HTMLButtonElement>("#proc-hint-btn")!;
+            expect(hintBtn).not.toBeNull();
+            expect(hintBtn.closest(".proc-controls")).not.toBeNull();
+
+            hintBtn.click();
+
+            const hintBox = mcqContainer.querySelector<HTMLElement>("#proc-hint-container")!;
+            expect(hintBox.classList.contains("hidden")).toBe(false);
+            expect(hintBox.textContent).toContain("Consider the sign of the discriminant.");
+
+            const solutionBox = mcqContainer.querySelector<HTMLElement>("#proc-solution-container")!;
+            expect(solutionBox.classList.contains("hidden")).toBe(true);
+
+            reviewer.destroy();
+            mcqContainer.remove();
+        });
+
+        test("Keyboard shortcuts 'H', 'h', and '?' trigger requestHint when not focused on an input", () => {
+            const reviewer = new ProceduralReviewer(container, {
+                instanceId: "inst-kb-hint",
+                familyId: "math.linear",
+                correctAnswer: { value: 10 },
+                parameters: {
+                    hints: ["Use reverse operations."],
+                },
+            });
+
+            // Focus on body / non-input
+            document.body.focus();
+
+            // Press 'h'
+            const hEvent = new KeyboardEvent("keydown", { key: "h", bubbles: true, cancelable: true });
+            window.dispatchEvent(hEvent);
+
+            const hintBox = container.querySelector<HTMLElement>("#proc-hint-container")!;
+            expect(hintBox.classList.contains("hidden")).toBe(false);
+            expect(hintBox.textContent).toContain("Use reverse operations.");
+
+            reviewer.destroy();
+        });
+
+        test("Keyboard shortcut 'h' does NOT trigger requestHint when typing inside an input field", () => {
+            const reviewer = new ProceduralReviewer(container, {
+                instanceId: "inst-kb-input-hint",
+                familyId: "math.linear",
+                correctAnswer: { value: 10 },
+                parameters: {
+                    hints: ["A hint that should not show."],
+                },
+            });
+
+            const input = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+            input.focus();
+
+            // Dispatch 'h' keydown with target being the input field
+            const hEvent = new KeyboardEvent("keydown", { key: "h", bubbles: true, cancelable: true });
+            input.dispatchEvent(hEvent);
+
+            const hintBox = container.querySelector<HTMLElement>("#proc-hint-container")!;
+            expect(hintBox.classList.contains("hidden")).toBe(true);
+
+            reviewer.destroy();
+        });
+
+        test("Hint buttons and container are hidden upon entering mistake_classification and feedback", () => {
+            const reviewer = new ProceduralReviewer(container, {
+                instanceId: "inst-hint-hide",
+                familyId: "math.linear",
+                targetTimeMs: 30000,
+                correctAnswer: { value: 50 },
+                parameters: {
+                    hints: ["Hint 1"],
+                },
+            });
+
+            // Request hint while solving
+            const hintBtn = container.querySelector<HTMLButtonElement>("#proc-hint-btn")!;
+            hintBtn.click();
+            const hintBox = container.querySelector<HTMLElement>("#proc-hint-container")!;
+            expect(hintBox.classList.contains("hidden")).toBe(false);
+
+            // Submit wrong answer
+            const input = container.querySelector<HTMLInputElement>("#proc-answer-input")!;
+            input.value = "999";
+            container.querySelector<HTMLButtonElement>("#proc-submit-btn")!.click();
+
+            expect(reviewer.getState()).toBe("mistake_classification");
+            expect(hintBtn.classList.contains("hidden") || hintBtn.style.display === "none").toBe(true);
+            expect(hintBox.classList.contains("hidden") || hintBox.style.display === "none").toBe(true);
 
             reviewer.destroy();
         });

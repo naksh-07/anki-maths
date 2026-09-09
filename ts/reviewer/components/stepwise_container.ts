@@ -120,7 +120,7 @@ export class StepwiseContainer {
         this.stepwiseContainer = this.container.querySelector<HTMLElement>("#proc-stepwise-container");
         this.stepsList = this.container.querySelector<HTMLElement>("#proc-steps-list");
         this.addStepBtn = this.container.querySelector<HTMLButtonElement>("#proc-add-step-btn");
-        this.hintBtn = this.container.querySelector<HTMLButtonElement>("#proc-hint-btn");
+        this.hintBtn = this.stepwiseContainer?.querySelector<HTMLButtonElement>("#proc-stepwise-hint-btn, #proc-hint-btn, .proc-hint-btn") || this.container.querySelector<HTMLButtonElement>("#proc-hint-btn, .proc-hint-btn");
         this.resetBtn = this.container.querySelector<HTMLButtonElement>("#proc-reset-steps-btn");
         this.checkStepsBtn = this.container.querySelector<HTMLButtonElement>("#proc-check-steps-btn");
         this.hintBox = this.container.querySelector<HTMLElement>("#proc-hint-container");

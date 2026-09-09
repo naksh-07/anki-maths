@@ -229,7 +229,11 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                 r#"<div class="proc-prompt">{prompt_text}</div>
                 <div class="proc-option-group" role="radiogroup" aria-label="Multiple choice options">
                     {options_html}
-                </div>"#
+                </div>
+                <div class="proc-controls">
+                    <button type="button" id="proc-hint-btn" class="proc-btn proc-btn-secondary">💡 Request Hint</button>
+                </div>
+                <div id="proc-hint-container" class="proc-hint-box hidden"></div>"#
             )
         }
         "concept_check" => {
@@ -477,6 +481,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                     <div class="proc-step-row">
                         <input type="text" id="proc-answer-input" class="proc-input" placeholder="Type final answer..." autocomplete="off" />
                         <button type="button" id="proc-submit-btn" class="proc-btn proc-btn-primary">Submit</button>
+                        <button type="button" id="proc-hint-btn" class="proc-btn proc-btn-secondary">💡 Request Hint</button>
                     </div>
                 </div>
 
@@ -487,7 +492,7 @@ pub fn render_reviewer_html(session: &PracticeSessionObject) -> String {
                     </div>
                     <div class="proc-controls">
                         <button type="button" id="proc-add-step-btn" class="proc-btn proc-btn-secondary">+ Add Step</button>
-                        <button type="button" id="proc-hint-btn" class="proc-btn proc-btn-secondary">💡 Request Hint</button>
+                        <button type="button" id="proc-stepwise-hint-btn" class="proc-btn proc-btn-secondary proc-hint-btn">💡 Request Hint</button>
                         <button type="button" id="proc-reset-steps-btn" class="proc-btn proc-btn-secondary">Reset</button>
                         <button type="button" id="proc-check-steps-btn" class="proc-btn proc-btn-primary">Check Solution</button>
                     </div>
@@ -870,5 +875,7 @@ mod tests {
         assert!(html.contains("Option 1"));
         assert!(html.contains("Option 4"));
         assert!(!html.contains("id=\"proc-answer-input\""));
+        assert!(html.contains("id=\"proc-hint-btn\""));
+        assert!(html.contains("id=\"proc-hint-container\""));
     }
 }

@@ -495,6 +495,17 @@ body.nightMode .proc-tab.active {
         cursor: pointer;
     }
 
+    #proc-hint-btn {
+        flex-shrink: 0;
+        height: 44px;
+        padding: 0 18px;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 8px;
+        margin: 0;
+        cursor: pointer;
+    }
+
     .proc-num-preview-pill,
     #proc-num-preview {
         width: 100%;
